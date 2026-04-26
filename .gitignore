@@ -1,0 +1,95 @@
+# ─── Python ────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+wheels/
+pip-wheel-metadata/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.hypothesis/
+.python-version
+.venv/
+venv/
+env/
+
+# ─── Node ──────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+.turbo/
+.pnpm-store/
+.yarn/
+*.tsbuildinfo
+next-env.d.ts
+
+# ─── Env & secrets ─────────────────────────────────────────
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+!nginx/default.conf.example
+master.key
+senharness.keyring
+
+# ─── Editor / OS ───────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+# Cursor IDE plan files + local AI state
+.cursor/
+# transient commit-message scratchpad used by the AI commit helper
+.git_commit_msg.tmp
+
+# ─── Docker ────────────────────────────────────────────────
+# Note: .dockerignore files ARE committed — they're part of the
+# build contract. Nothing to ignore here; left as a section header
+# for future entries.
+
+# ─── Logs & runtime ────────────────────────────────────────
+*.log
+logs/
+pids/
+tmp/
+.cache/
+
+# ─── Database / storage ────────────────────────────────────
+*.sqlite
+*.sqlite3
+*.db
+data/
+storage/
+uploads/
+media/
+
+# ─── Test artifacts ────────────────────────────────────────
+test-results/
+playwright-report/
+playwright/.cache/
+
+# ─── Alembic (keep versions, ignore local db) ─────────────
+backend/alembic/versions/__pycache__/
+
+# ─── References (developer-local reads only, never committed) ──
+# These are external open-source projects kept for *reading* during
+# development — they are not dependencies and must never ship with
+# SenHarness code, images, or git history. Treat them the way you'd
+# treat /node_modules or /.venv.
+references/

@@ -1,0 +1,45 @@
+# Backend-specific docker build exclusions.
+#
+# Keeps the backend image small AND prevents accidental secret /
+# developer-tool leakage. Root-level .dockerignore handles the common
+# stuff; this one handles backend-only patterns.
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.venv/
+venv/
+
+# Test artefacts — no reason to bloat the prod image with fixtures
+tests/
+scripts/legacy/
+scripts/probes/
+
+# Alembic build cache (migrations themselves are copied; caches aren't)
+alembic/versions/__pycache__/
+
+# Env + secrets
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Local dev databases / artifacts
+*.sqlite
+*.sqlite3
+storage/
+data/
