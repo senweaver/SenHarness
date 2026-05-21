@@ -1,0 +1,368 @@
+# ═══════════════════════════════════════════════════════════════
+# SenHarness · production stack (Traefik + TLS + hardened networking)
+#
+# This file is a STANDALONE deployment — do not layer it on top of
+# docker-compose.yml (which is dev-mode). Pass it alone via -f.
+#
+# Usage:
+#   1. Copy .env.example → .env and fill in prod values (see §Secrets below).
+#   2. DOMAIN=... ACME_EMAIL=... docker compose -f docker-compose.prod.yml up -d
+#
+# Guarantees this file delivers:
+#   * db + redis are NOT published to the host — reachable only from the
+#     internal network.
+#   * redis requires a password; empty REDIS_PASSWORD fails compose validation.
+#   * backend / worker / scheduler use the `prod` stage of the Dockerfile
+#     (non-root user, no dev watcher, hardened config).
+#   * backend healthcheck hits /readyz (touches DB) so Traefik doesn't route
+#     traffic until migrations are applied.
+#   * Traefik terminates TLS via Let's Encrypt and enforces HSTS /
+#     frameDeny / content-type sniff protection at the proxy layer. The
+#     app layer (SecurityHeadersMiddleware) sets the same headers too —
+#     defence in depth.
+#   * All services have resource limits; the DB / redis have generous
+#     reservations so an overloaded API tier can't starve the data tier.
+#
+# Secrets:
+#   The following env vars MUST be set to non-default values before
+#   `up -d`. SenHarness's lifespan also refuses to boot in production
+#   with defaults:
+#     DOMAIN, ACME_EMAIL
+#     JWT_SECRET_KEY          (openssl rand -base64 48)
+#     DB_USER, DB_PASSWORD, DB_NAME
+#     REDIS_PASSWORD
+#     SENHARNESS_MASTER_KEY   (python -c 'import secrets; print(secrets.token_urlsafe(48))')
+# ═══════════════════════════════════════════════════════════════
+
+services:
+  # ─── Reverse proxy · TLS terminator ──────────────────────
+  traefik:
+    image: traefik:v3.3
+    container_name: senharness_traefik
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesresolvers.le.acme.tlschallenge=true"
+      - "--certificatesresolvers.le.acme.email=${ACME_EMAIL:?ACME_EMAIL required}"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      - "--accesslog=true"
+      - "--accesslog.bufferingsize=100"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+    networks:
+      - edge
+      - backend-internal
+    labels:
+      # Reusable security-headers middleware. Every public router attaches
+      # @docker suffix so it binds to this instance.
+      - "traefik.http.middlewares.sh-secure.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.sh-secure.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.sh-secure.headers.stsPreload=true"
+      - "traefik.http.middlewares.sh-secure.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.sh-secure.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.sh-secure.headers.frameDeny=true"
+      - "traefik.http.middlewares.sh-secure.headers.referrerPolicy=strict-origin-when-cross-origin"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── PostgreSQL + pgvector ───────────────────────────────
+  # No published ports: the database is only reachable inside the
+  # backend-internal network. Reassign volumes if migrating from the
+  # dev stack's `db_data`.
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: senharness_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:?DB_USER required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD required}
+      POSTGRES_DB: ${DB_NAME:?DB_NAME required}
+    # No published ports — DB is only reachable on backend-internal.
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - backend-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ─── Redis (cache + queue + rate-limit store) ────────────
+  # Auth is required in prod — empty REDIS_PASSWORD fails fast. The
+  # command argument uses the `${VAR:?error}` shell check so docker compose
+  # refuses to start rather than silently launch an unauthenticated redis.
+  redis:
+    image: redis:7-alpine
+    container_name: senharness_redis
+    restart: unless-stopped
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--requirepass",
+        "${REDIS_PASSWORD:?REDIS_PASSWORD required}"
+      ]
+    # No published ports — only reachable on backend-internal.
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── Backend API ─────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: prod
+    container_name: senharness_backend
+    restart: unless-stopped
+    entrypoint: ["/app/scripts/ops/entrypoint.sh"]
+    command: ["python", "-m", "cli.commands", "server", "run"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      BACKEND_PORT: 8000
+      DB_HOST: db
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # JWT refresh cookies must be HTTPS-only in prod.
+      JWT_REFRESH_COOKIE_SECURE: "true"
+    env_file:
+      - .env
+    volumes:
+      - storage_data:/data/storage
+    # Traefik proxies via backend-internal — backend never published directly.
+    healthcheck:
+      # /readyz actually touches the DB — so Traefik only routes traffic
+      # after migrations are live. `start_period` gives alembic a minute
+      # to run entrypoint migrations before the first probe counts.
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/readyz', timeout=3).status==200 else 1)"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - backend-internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=senharness_backend-internal"
+      - "traefik.http.routers.sh-backend.rule=Host(`${DOMAIN:?DOMAIN required}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.sh-backend.entrypoints=websecure"
+      - "traefik.http.routers.sh-backend.tls.certresolver=le"
+      - "traefik.http.routers.sh-backend.middlewares=sh-secure@docker"
+      - "traefik.http.services.sh-backend.loadbalancer.server.port=8000"
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # ─── ARQ async worker ────────────────────────────────────
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: prod
+    container_name: senharness_worker
+    restart: unless-stopped
+    command: ["arq", "app.worker.arq_app.WorkerSettings"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      BACKEND_PORT: 8000
+      DB_HOST: db
+      REDIS_HOST: redis
+    env_file:
+      - .env
+    volumes:
+      - storage_data:/data/storage
+    networks:
+      - backend-internal
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    healthcheck:
+      disable: true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── APScheduler · cron fan-out for Flow triggers ────────
+  # IMPORTANT: scheduler uses a Redis lock to elect a single leader, so
+  # horizontal scaling is safe — only the holder of the lock registers
+  # cron jobs. Still, running N copies just wastes resources; keep
+  # replicas=1 unless you explicitly need HA.
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: prod
+    container_name: senharness_scheduler
+    restart: unless-stopped
+    command: ["python", "-m", "cli.commands", "scheduler", "run"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      BACKEND_PORT: 8000
+      DB_HOST: db
+      REDIS_HOST: redis
+    env_file:
+      - .env
+    networks:
+      - backend-internal
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    healthcheck:
+      disable: true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── Frontend · Next.js standalone ───────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runner
+      args:
+        NEXT_PUBLIC_API_BASE_URL: https://${DOMAIN}
+        NEXT_PUBLIC_WS_BASE_URL: wss://${DOMAIN}
+    container_name: senharness_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: production
+    # Traefik proxies — frontend never published directly.
+    networks:
+      - backend-internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=senharness_backend-internal"
+      - "traefik.http.routers.sh-frontend.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.sh-frontend.entrypoints=websecure"
+      - "traefik.http.routers.sh-frontend.tls.certresolver=le"
+      - "traefik.http.routers.sh-frontend.middlewares=sh-secure@docker"
+      - "traefik.http.services.sh-frontend.loadbalancer.server.port=3000"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  # Public-facing network. Only Traefik binds here.
+  edge:
+    driver: bridge
+  # Internal network — DB / Redis / backend / worker / scheduler /
+  # frontend communicate over this. No external exposure; Traefik
+  # bridges from `edge` to here for HTTP routes only.
+  backend-internal:
+    driver: bridge
+    internal: true
+
+volumes:
+  db_data:
+  redis_data:
+  storage_data:
+  traefik_letsencrypt:

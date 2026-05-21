@@ -1,0 +1,11 @@
+name: example_channel_plugin
+version: 0.1.0
+description: |
+  Reference plugin demonstrating the M3.5 register_channel_kind API.
+  Documentation asset only — not loaded by default. Copy the folder
+  to STORAGE_LOCAL_PATH/plugins/, sign it with the platform trust
+  root, file a PluginRegistry row via /admin/plugins/scan, then
+  approve via /admin/plugins/{id}/approve.
+capability_scopes:
+  - register_channel
+entry_module: example_channel_plugin.entry

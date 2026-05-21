@@ -1,0 +1,149 @@
+name: ci
+
+# Single CI workflow for SenHarness — three parallel jobs:
+#   * lint        · ruff / ty / eslint — fails fast on style
+#   * backend     · pytest unit + integration, with real Postgres + Redis
+#   * frontend    · vitest, typecheck, next build
+#
+# Playwright E2E lives in `ci-e2e.yml` (nightly) to keep PR cycle
+# time down — E2E against a full compose stack is slow and flaky by
+# nature, so it doesn't gate PRs.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ═══ Lint ══════════════════════════════════════════════════
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Backend (ruff / ty)
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+      - name: Backend deps
+        working-directory: backend
+        run: uv sync --all-extras --dev
+      - name: Ruff check
+        working-directory: backend
+        run: uv run ruff check .
+      - name: Ruff format check
+        working-directory: backend
+        run: uv run ruff format --check .
+      - name: Type check (ty, soft-gate)
+        working-directory: backend
+        run: uv run ty check app || true
+
+      # Frontend (eslint + tsc)
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Frontend deps
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+      - name: eslint
+        working-directory: frontend
+        run: pnpm lint
+      - name: typecheck
+        working-directory: frontend
+        run: pnpm typecheck
+
+  # ═══ Backend tests (unit + integration) ═══════════════════
+  backend-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: senharness
+          POSTGRES_PASSWORD: senharness
+          POSTGRES_DB: senharness_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U senharness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: senharness
+      DB_PASSWORD: senharness
+      DB_NAME: senharness_test
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      SENHARNESS_MASTER_KEY: test-master-key-do-not-use-in-prod-123456789
+      JWT_SECRET_KEY: test-jwt-secret-do-not-use-in-prod
+      APP_ENV: development
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with: { enable-cache: true }
+      - run: uv python install 3.12
+      - name: Sync deps
+        working-directory: backend
+        run: uv sync --all-extras --dev
+      - name: Apply migrations
+        working-directory: backend
+        run: uv run alembic upgrade head
+      - name: Tests (with coverage)
+        working-directory: backend
+        run: |
+          uv run pytest -x \
+            --cov=app \
+            --cov-report=xml \
+            --cov-report=term-missing:skip-covered
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+
+  # ═══ Frontend tests (vitest) ══════════════════════════════
+  frontend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+      - name: Vitest
+        working-directory: frontend
+        run: pnpm test
+      - name: Build (smoke)
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+          NEXT_PUBLIC_WS_BASE_URL: ws://localhost:8000
+        run: pnpm build

@@ -1,0 +1,57 @@
+# SenHarness · backend pre-commit hooks
+#
+# Run locally:
+#   cd backend && pre-commit install   # one-off install of git hook
+#   pre-commit run --all-files          # run against the whole tree
+#
+# CI mirrors these in `.github/workflows/ci.yml#lint`. Keeping the
+# config here (not at repo root) so contributors who only touch the
+# backend can run `pre-commit run` from `backend/` without dragging
+# the frontend's prettier/eslint into the same hook chain.
+
+default_language_version:
+  python: python3.12
+
+repos:
+  # ─── Generic hygiene ─────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.md$|\.lock$
+      - id: end-of-file-fixer
+        exclude: \.md$|\.lock$|\.json$
+      - id: check-yaml
+        args: ["--unsafe"]  # docker-compose uses tags ruff can't parse
+      - id: check-toml
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+
+  # ─── Ruff: lint + import sort + format ───────────────
+  # We keep `--fix` off in CI; locally pre-commit runs with --fix so
+  # contributors don't have to re-stage manually.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        name: ruff (lint)
+        args: ["--fix", "--exit-non-zero-on-fix"]
+        files: ^backend/(app|cli|tests)/.*\.py$
+      - id: ruff-format
+        name: ruff (format)
+        files: ^backend/(app|cli|tests)/.*\.py$
+
+  # ─── Secrets scan ────────────────────────────────────
+  # Catches accidental commits of .env / private keys / tokens. We
+  # whitelist the seed scripts and tests/fixtures via .gitleaks.toml
+  # if false positives bite later.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+        name: gitleaks (secret scan)

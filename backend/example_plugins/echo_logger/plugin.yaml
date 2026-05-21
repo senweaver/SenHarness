@@ -1,0 +1,11 @@
+name: echo_logger
+version: 0.1.0
+description: |
+  Reference plugin that prints every tool call to stdout. Documentation
+  asset only — not loaded by default. Copy the folder to
+  STORAGE_LOCAL_PATH/plugins/ and flip
+  platform_settings.plugins.allow_user_plugins to True before it runs.
+capability_scopes:
+  - pre_tool_call
+  - post_tool_call
+entry_module: echo_logger.entry

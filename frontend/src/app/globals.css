@@ -1,0 +1,205 @@
+@import "tailwindcss";
+
+@layer base {
+  /*
+   * Light mode — primary #4091F7, neutral surfaces, 8px radii baseline.
+   * Sidebar/menu sizing tokens (--sh-sidebar-*, --sh-menu-*) are read by
+   * the layout shell and the agent detail rail.
+   */
+  :root {
+    --color-bg: 240 242 245;
+    --color-fg: 25 28 29;
+    --color-muted: 100 116 139;
+    --color-border: 5 5 5;
+    --color-border-alpha: 0.06;
+    --color-card: 255 255 255;
+    --color-primary: 64 145 247;
+    --color-primary-hover: 31 115 218;
+    --color-primary-fg: 255 255 255;
+    --color-secondary: 100 116 139;
+    --radius-xs: 0.125rem;
+    --radius-sm: 0.25rem;
+    --radius-md: 0.375rem;
+    --radius-lg: 0.5rem;
+    --radius: 0.375rem;
+
+    /* Layout sizing tokens (sidebar / logo / menu / navbar) */
+    --sh-sidebar-width: 234px;
+    --sh-sidebar-collapsed-width: 54px;
+    --sh-sidebar-logo-height: 48px;
+    --sh-sidebar-collapse-height: 40px;
+    --sh-menu-item-height: 50px;
+    --sh-navbar-height: 48px;
+    --sh-transition-duration: 0.3s;
+    --sh-base-font-size: 14px;
+    --sh-icon-size: 18px;
+
+    /* Sidebar menu colour palette (light theme) */
+    --sh-menu-bg: 255 255 255;
+    --sh-menu-text: 0 0 0;
+    --sh-menu-text-alpha: 0.6;
+    --sh-menu-text-hover: 0 0 0;
+    --sh-menu-active-text: 0 0 0;
+    --sh-menu-active-text-alpha: 0.85;
+    --sh-menu-active-bar: var(--color-primary);
+  }
+
+  /* Dark — charcoal/navy with a brighter primary that pops. */
+  .dark {
+    --color-bg: 14 17 25;
+    --color-fg: 226 232 240;
+    --color-muted: 148 163 184;
+    --color-border: 200 200 200;
+    --color-border-alpha: 0.08;
+    --color-card: 21 25 35;
+    --color-primary: 81 156 255;
+    --color-primary-hover: 130 184 255;
+    --color-primary-fg: 17 24 39;
+    --color-secondary: 148 163 184;
+
+    --sh-menu-bg: 21 25 35;
+    --sh-menu-text: 254 254 254;
+    --sh-menu-text-alpha: 0.65;
+    --sh-menu-text-hover: 255 255 255;
+    --sh-menu-active-text: 255 255 255;
+    --sh-menu-active-text-alpha: 1;
+  }
+
+  /* Soft Gray — long-form reading mode. */
+  .soft {
+    --color-bg: 242 242 242;
+    --color-card: 250 250 250;
+    --color-fg: 38 41 51;
+    --color-muted: 95 99 115;
+    --color-border: 5 5 5;
+    --color-border-alpha: 0.08;
+    --color-primary: 64 145 247;
+    --color-primary-hover: 31 115 218;
+    --color-primary-fg: 255 255 255;
+    --color-secondary: 100 116 139;
+  }
+
+  html,
+  body {
+    background-color: rgb(var(--color-bg));
+    color: rgb(var(--color-fg));
+    font-family:
+      "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB",
+      "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+    font-size: var(--sh-base-font-size);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  * {
+    border-color: rgb(var(--color-border) / var(--color-border-alpha));
+  }
+}
+
+@layer utilities {
+  .sh-card {
+    background-color: rgb(var(--color-card));
+    border: 1px solid rgb(var(--color-border) / var(--color-border-alpha));
+    border-radius: var(--radius);
+  }
+
+  .sh-muted {
+    color: rgb(var(--color-muted));
+  }
+
+  .sh-primary {
+    background-color: rgb(var(--color-primary));
+    color: rgb(var(--color-primary-fg));
+  }
+
+  .sh-primary-soft {
+    background-color: rgb(var(--color-primary) / 0.1);
+    color: rgb(var(--color-primary));
+  }
+
+  .sh-focus-ring {
+    outline: 2px solid rgb(var(--color-primary));
+    outline-offset: 2px;
+  }
+
+  .sh-scroll-hidden {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .sh-scroll-hidden::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ─── Sidebar palette helpers ─────────────────────────────────── */
+
+  .sh-sidebar-surface {
+    background-color: rgb(var(--sh-menu-bg));
+    border-right: 1px solid rgb(var(--color-border) / var(--color-border-alpha));
+  }
+
+  .sh-menu-text {
+    color: rgb(var(--sh-menu-text) / var(--sh-menu-text-alpha));
+  }
+
+  .sh-menu-hover {
+    color: rgb(var(--sh-menu-text-hover));
+  }
+
+  /*
+   * Active sidebar item — two visual cues:
+   *   1. left vertical bar (3 px, primary colour) glued to the row
+   *   2. text colour upgraded to the active emphasis colour
+   * We DO NOT fill the whole row with primary background so the surface
+   * stays clean even when the sidebar is collapsed.
+   */
+  .sh-nav-active {
+    color: rgb(var(--sh-menu-active-text) / var(--sh-menu-active-text-alpha));
+    font-weight: 600;
+    background-color: rgb(var(--color-primary) / 0.08);
+    position: relative;
+  }
+  .sh-nav-active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 3px;
+    height: 60%;
+    transform: translateY(-50%);
+    background-color: rgb(var(--color-primary));
+    border-radius: 0 2px 2px 0;
+  }
+
+  /* Standard nav item interaction state. */
+  .sh-nav-item {
+    transition:
+      color var(--sh-transition-duration) ease,
+      background-color var(--sh-transition-duration) ease;
+  }
+  .sh-nav-item:hover:not(.sh-nav-active) {
+    background-color: rgb(0 0 0 / 0.04);
+  }
+  .dark .sh-nav-item:hover:not(.sh-nav-active) {
+    background-color: rgb(255 255 255 / 0.06);
+  }
+
+  .sh-divider {
+    background-color: rgb(var(--color-border) / var(--color-border-alpha));
+  }
+
+  /* Animation primitive used by sidebar collapse arrow & icon buttons. */
+  @keyframes sh-scale-bounce {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(0.9);
+    }
+  }
+  .sh-bounce-on-hover:hover {
+    animation: sh-scale-bounce 0.3s ease;
+  }
+}

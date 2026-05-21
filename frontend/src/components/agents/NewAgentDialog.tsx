@@ -1,0 +1,308 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { Link, useRouter } from "@/lib/navigation";
+import {
+  IconChevronRight,
+  IconLoader2,
+  IconPlus,
+  IconSearch,
+  IconSparkles,
+} from "@tabler/icons-react";
+import { useLocale, useTranslations } from "next-intl";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useCreateAgent } from "@/hooks/use-agent-mutations";
+import {
+  useCloneAgent,
+  useDiscoverAgents,
+  useDiscoverCategories,
+} from "@/hooks/use-marketplace";
+import type { AgentPublicCard } from "@/types/api";
+
+interface NewAgentDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onPickBlank: () => void;
+}
+
+export function NewAgentDialog({
+  open,
+  onOpenChange,
+  onPickBlank,
+}: NewAgentDialogProps) {
+  const t = useTranslations("newAgent");
+  const tCommon = useTranslations("common");
+  const router = useRouter();
+  const locale = useLocale();
+
+  const clone = useCloneAgent();
+  const create = useCreateAgent();
+
+  const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQ(q), 300);
+    return () => clearTimeout(id);
+  }, [q]);
+
+  const { data: rawTemplates } = useDiscoverAgents({
+    q: debouncedQ,
+    templateOnly: true,
+    limit: 60,
+  });
+  const { data: categories } = useDiscoverCategories();
+
+  const templates = useMemo(() => rawTemplates ?? [], [rawTemplates]);
+
+  const totalCount = useMemo(
+    () => categories?.reduce((acc, c) => acc + c.count, 0) ?? 0,
+    [categories],
+  );
+
+  const filteredTemplates = useMemo(() => {
+    if (!selectedCategory) return templates;
+    return templates.filter((card) => card.category === selectedCategory);
+  }, [templates, selectedCategory]);
+
+  const sections = useMemo(() => {
+    const order = (categories ?? []).map((c) => c.slug);
+    const groups = new Map<string, AgentPublicCard[]>();
+    for (const card of filteredTemplates) {
+      if (!card.category) continue;
+      const list = groups.get(card.category) ?? [];
+      list.push(card);
+      groups.set(card.category, list);
+    }
+    return order
+      .filter((slug) => groups.has(slug))
+      .map((slug) => {
+        const cat = categories?.find((c) => c.slug === slug);
+        const label = cat
+          ? locale === "zh-CN"
+            ? cat.name_cn
+            : cat.name_en
+          : slug;
+        return { slug, label, items: groups.get(slug) ?? [] };
+      });
+  }, [filteredTemplates, categories, locale]);
+
+  const cloneTemplate = async (id: string, defaultName: string) => {
+    try {
+      const cloned = await clone.mutateAsync({
+        agent_id: id,
+        name: defaultName,
+      });
+      toast.success(t("created"));
+      onOpenChange(false);
+      router.push(`/agents/${cloned.id}`);
+    } catch {
+      toast.error(t("createFailed"));
+    }
+  };
+
+  const createGeneral = async () => {
+    try {
+      const created = await create.mutateAsync({
+        name: t("general.defaultName"),
+        description: null,
+        default_model: null,
+        visibility: "private",
+      });
+      toast.success(t("created"));
+      onOpenChange(false);
+      router.push(`/agents/${created.id}`);
+    } catch {
+      toast.error(t("createFailed"));
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex h-[min(720px,85vh)] flex-col gap-0 p-0 sm:max-w-5xl">
+        <header className="flex flex-shrink-0 items-center gap-3 px-5 py-4 pr-12">
+          <DialogTitle className="flex-1 text-base font-semibold leading-none">
+            {t("title")}
+          </DialogTitle>
+          <div className="relative w-[240px]">
+            <IconSearch className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 sh-muted" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={t("searchPlaceholder")}
+              className="pl-7"
+            />
+          </div>
+        </header>
+
+        <div className="grid min-h-0 flex-1 grid-cols-1 border-t lg:grid-cols-[180px_1fr]">
+          <aside className="space-y-1 overflow-y-auto border-b p-3 lg:border-b-0 lg:border-r">
+            <button
+              type="button"
+              onClick={() => setSelectedCategory(null)}
+              className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm hover:bg-black/5 dark:hover:bg-white/5 ${
+                selectedCategory === null
+                  ? "bg-[rgb(var(--color-primary)/0.08)] font-medium text-[rgb(var(--color-primary))]"
+                  : ""
+              }`}
+            >
+              <span>{t("allCategories")}</span>
+              <span className="text-xs sh-muted tabular-nums">{totalCount}</span>
+            </button>
+            {(categories ?? []).map((c) => (
+              <button
+                key={c.slug}
+                type="button"
+                onClick={() => setSelectedCategory(c.slug)}
+                className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm hover:bg-black/5 dark:hover:bg-white/5 ${
+                  selectedCategory === c.slug
+                    ? "bg-[rgb(var(--color-primary)/0.08)] font-medium text-[rgb(var(--color-primary))]"
+                    : ""
+                }`}
+              >
+                <span className="truncate">
+                  {locale === "zh-CN" ? c.name_cn : c.name_en}
+                </span>
+                <span className="text-xs sh-muted tabular-nums">{c.count}</span>
+              </button>
+            ))}
+          </aside>
+
+          <div className="space-y-6 overflow-y-auto p-5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={onPickBlank}
+                data-testid="new-agent-blank-tile"
+                className="group flex w-full items-center gap-3 rounded-md border border-dashed p-4 text-left transition-all hover:-translate-y-px hover:border-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary)/0.06)]"
+              >
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-[rgb(var(--color-primary)/0.12)] text-[rgb(var(--color-primary))]">
+                  <IconPlus className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-semibold">
+                    {t("custom.title")}
+                  </p>
+                  <p className="line-clamp-2 text-[12px] sh-muted">
+                    {t("custom.subtitle")}
+                  </p>
+                </div>
+                <IconChevronRight className="size-4 shrink-0 sh-muted" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void createGeneral()}
+                disabled={create.isPending}
+                className="group flex w-full items-center gap-3 rounded-md border p-4 text-left transition-all hover:-translate-y-px hover:border-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary)/0.06)] disabled:cursor-wait disabled:opacity-60"
+              >
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-[rgb(var(--color-primary)/0.12)] text-[rgb(var(--color-primary))]">
+                  {create.isPending ? (
+                    <IconLoader2 className="size-5 animate-spin" />
+                  ) : (
+                    <IconSparkles className="size-5" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-semibold">
+                    {t("general.title")}
+                  </p>
+                  <p className="truncate text-[12px] sh-muted">
+                    {t("general.subtitle")}
+                  </p>
+                </div>
+                <IconChevronRight className="size-4 shrink-0 sh-muted" />
+              </button>
+            </div>
+
+            {sections.length === 0 ? (
+              <p className="rounded-md border border-dashed p-8 text-center text-sm sh-muted">
+                {t("templatesEmpty")}
+              </p>
+            ) : (
+              sections.map((section) => (
+                <section key={section.slug} className="space-y-2">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wide sh-muted">
+                    {section.label}{" "}
+                    <span className="tabular-nums">({section.items.length})</span>
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {section.items.map((agent) => (
+                      <TemplateCard
+                        key={agent.id}
+                        agent={agent}
+                        disabled={clone.isPending}
+                        onPick={() => void cloneTemplate(agent.id, agent.name)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))
+            )}
+          </div>
+        </div>
+
+        <footer className="flex flex-shrink-0 items-center justify-between border-t px-5 py-3">
+          <Link
+            href="/marketplace"
+            className="text-[12px] font-medium text-[rgb(var(--color-primary))] hover:underline"
+            onClick={() => onOpenChange(false)}
+          >
+            {t("browseMarketplace")}
+          </Link>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            {tCommon("cancel")}
+          </Button>
+        </footer>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TemplateCard({
+  agent,
+  disabled,
+  onPick,
+}: {
+  agent: AgentPublicCard;
+  disabled?: boolean;
+  onPick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onPick}
+      className="group relative flex h-full flex-col items-start gap-2 rounded-md border sh-card p-3 text-left transition-all hover:-translate-y-px hover:border-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary)/0.06)] disabled:cursor-wait disabled:opacity-60"
+    >
+      <IconChevronRight className="absolute right-2 top-2 size-4 shrink-0 sh-muted" />
+      <div className="flex w-full items-center gap-2 pr-5">
+        {agent.avatar_url ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={agent.avatar_url}
+            alt=""
+            className="size-8 shrink-0 rounded-md object-cover"
+          />
+        ) : (
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[rgb(var(--color-primary)/0.1)] text-[rgb(var(--color-primary))]">
+            <IconSparkles className="size-4" />
+          </div>
+        )}
+        <span className="truncate text-[13px] font-semibold">{agent.name}</span>
+      </div>
+      {agent.description && (
+        <p className="line-clamp-2 text-[12px] sh-muted">{agent.description}</p>
+      )}
+    </button>
+  );
+}
