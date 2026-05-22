@@ -11,7 +11,6 @@
 [![Next.js 15](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.117+-009688.svg)](https://fastapi.tiangolo.com)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/senweaver/SenHarness/pulls)
-[![Star History](https://api.star-history.com/svg?repos=senweaver/SenHarness&type=Date)](https://star-history.com/#senweaver/SenHarness&Date)
 
 [English](./README.md) · [简体中文](./README_zh-CN.md)
 
@@ -269,4 +268,3 @@ Yes. The provider catalog is pluggable with 17+ bundled adapters. The two-model-
 MIT — see [LICENSE](LICENSE).
 
 [![Contributors](https://contrib.rocks/image?repo=senweaver/SenHarness)](https://github.com/senweaver/SenHarness/graphs/contributors)
-
