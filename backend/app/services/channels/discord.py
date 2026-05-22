@@ -117,9 +117,7 @@ class DiscordProvider(ChannelProvider):
         sig = h.get("x-signature-ed25519")
         ts = h.get("x-signature-timestamp")
         if not sig or not ts:
-            raise SignatureInvalid(
-                "discord.missing_headers", "missing Discord signature headers"
-            )
+            raise SignatureInvalid("discord.missing_headers", "missing Discord signature headers")
         # Use cryptography's Ed25519 — ships with the wider "cryptography" dep
         # already required for JWT; no extra package needed.
         try:
@@ -135,9 +133,7 @@ class DiscordProvider(ChannelProvider):
             pk = Ed25519PublicKey.from_public_bytes(bytes.fromhex(pubkey_hex))
             pk.verify(bytes.fromhex(sig), ts.encode() + body)
         except (ValueError, InvalidSignature) as e:
-            raise SignatureInvalid(
-                "discord.bad_signature", "Discord signature mismatch"
-            ) from e
+            raise SignatureInvalid("discord.bad_signature", "Discord signature mismatch") from e
 
     def parse_inbound(
         self, payload: dict[str, Any], headers: dict[str, str]

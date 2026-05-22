@@ -86,9 +86,7 @@ class GatewayRepository(AsyncRepository[GatewayMessage]):
         await self.session.flush(rows)
         return rows
 
-    async def cancel_pending_for_run(
-        self, *, run_id: uuid.UUID
-    ) -> int:
+    async def cancel_pending_for_run(self, *, run_id: uuid.UUID) -> int:
         """Mark still-undelivered request rows as FAILED (after a cancel)."""
 
         stmt = (
@@ -109,9 +107,7 @@ class GatewayRepository(AsyncRepository[GatewayMessage]):
         result = await self.session.execute(stmt)
         return result.rowcount or 0
 
-    async def mark_run_terminal(
-        self, *, run_id: uuid.UUID, status: GatewayMessageStatus
-    ) -> int:
+    async def mark_run_terminal(self, *, run_id: uuid.UUID, status: GatewayMessageStatus) -> int:
         """Flip any outstanding request rows for a terminated run."""
 
         stmt = (
@@ -182,9 +178,7 @@ class GatewayRepository(AsyncRepository[GatewayMessage]):
         )
         return (await self.session.execute(stmt)).scalars().all()
 
-    async def ack_run_if_terminal(
-        self, *, run_id: uuid.UUID, kind: str
-    ) -> bool:
+    async def ack_run_if_terminal(self, *, run_id: uuid.UUID, kind: str) -> bool:
         """When the worker emits a ``final`` or ``error`` event, flip the
         originating request row to ``ACKED`` so stats show closure."""
 

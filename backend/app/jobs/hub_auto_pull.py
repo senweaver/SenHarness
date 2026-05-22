@@ -110,7 +110,7 @@ async def hub_auto_pull_sweep(ctx: dict[str, Any]) -> dict[str, Any]:
     async with factory() as db:
         try:
             await hub_svc.require_hub_enabled(db)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             # Hub disabled at the platform level → no-op sweep, but
             # still emit a summary so the operator UI can show the
             # tick happened.
@@ -119,13 +119,7 @@ async def hub_auto_pull_sweep(ctx: dict[str, Any]) -> dict[str, Any]:
             return summary
 
         ws_rows = (
-            (
-                await db.execute(
-                    select(Workspace.id).where(
-                        Workspace.deleted_at.is_(None)
-                    )
-                )
-            )
+            (await db.execute(select(Workspace.id).where(Workspace.deleted_at.is_(None))))
             .scalars()
             .all()
         )
@@ -177,9 +171,7 @@ async def _sweep_workspace(*, workspace_id: uuid.UUID) -> dict[str, int]:
             if sub.hub_pack_id in active_cursor:
                 continue
             active = await version_repo.get_active(hub_pack_id=sub.hub_pack_id)
-            active_cursor[sub.hub_pack_id] = (
-                active.version_no if active is not None else None
-            )
+            active_cursor[sub.hub_pack_id] = active.version_no if active is not None else None
 
     counts["seen"] = len(rows)
     if not rows:
@@ -190,10 +182,7 @@ async def _sweep_workspace(*, workspace_id: uuid.UUID) -> dict[str, int]:
         if active_no is None:
             counts["no_active"] += 1
             continue
-        if (
-            sub.last_pulled_version_no is not None
-            and sub.last_pulled_version_no >= active_no
-        ):
+        if sub.last_pulled_version_no is not None and sub.last_pulled_version_no >= active_no:
             counts["up_to_date"] += 1
             continue
 
@@ -247,7 +236,7 @@ async def _pull_one_with_retry(
             # Subscription vanished between the fetch and the pull —
             # nothing to retry. Treat as a soft skip.
             return "no_active"
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             last_exc = exc
             log.warning(
                 "hub_auto_pull attempt %d failed for ws=%s pack=%s: %s",
@@ -293,9 +282,7 @@ async def _pull_one_with_retry(
 
 
 # ── ARQ permanent-failure hook ──────────────────────────────
-async def on_hub_auto_pull_job_failed_permanent(
-    ctx: dict[str, Any], exc: BaseException
-) -> None:
+async def on_hub_auto_pull_job_failed_permanent(ctx: dict[str, Any], exc: BaseException) -> None:
     """Three-strike hook for the ARQ frame around the sweep.
 
     Sister to the curator / evolver / verifier hooks: writes one
@@ -312,13 +299,9 @@ async def on_hub_auto_pull_job_failed_permanent(
                 workspace_id=None,
                 resource_type="job",
                 resource_id=None,
-                summary=(
-                    f"{HUB_AUTO_PULL_SWEEP_NAME} failed permanently: {exc!r}"
-                ),
+                summary=(f"{HUB_AUTO_PULL_SWEEP_NAME} failed permanently: {exc!r}"),
                 metadata={
-                    "function": str(
-                        ctx.get("function") or HUB_AUTO_PULL_SWEEP_NAME
-                    ),
+                    "function": str(ctx.get("function") or HUB_AUTO_PULL_SWEEP_NAME),
                     "job_id": ctx.get("job_id"),
                     "exception": repr(exc),
                     "job_try": ctx.get("job_try"),

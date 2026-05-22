@@ -51,13 +51,9 @@ class VaultKeyring(Keyring):
                 "`pip install senharness-backend[kms-vault]`."
             )
         if not settings.VAULT_ADDR or not settings.VAULT_TRANSIT_KEY:
-            raise KeyringError(
-                "VAULT_ADDR and VAULT_TRANSIT_KEY must both be set."
-            )
+            raise KeyringError("VAULT_ADDR and VAULT_TRANSIT_KEY must both be set.")
         token = _get_vault_token()
-        self._client: _HVac = _hvac_mod.Client(
-            url=settings.VAULT_ADDR, token=token
-        )
+        self._client: _HVac = _hvac_mod.Client(url=settings.VAULT_ADDR, token=token)
         if not self._client.is_authenticated():
             raise KeyringError(
                 "Vault client failed to authenticate. Check VAULT_TOKEN / "
@@ -91,9 +87,7 @@ class VaultKeyring(Keyring):
 
     def unwrap(self, wrapped_dek: bytes, kek_version: str) -> bytes:
         if not kek_version.startswith("vault-"):
-            raise KeyringError(
-                f"KEK version {kek_version!r} was not sealed by VaultKeyring."
-            )
+            raise KeyringError(f"KEK version {kek_version!r} was not sealed by VaultKeyring.")
         try:
             resp = self._client.secrets.transit.decrypt_data(
                 name=self._transit_key,
@@ -138,6 +132,5 @@ def _get_vault_token() -> str:
     if tf.exists():
         return tf.read_text().strip()
     raise KeyringError(
-        "No Vault token available; set VAULT_TOKEN env var or provision "
-        "~/.vault-token before boot."
+        "No Vault token available; set VAULT_TOKEN env var or provision ~/.vault-token before boot."
     )

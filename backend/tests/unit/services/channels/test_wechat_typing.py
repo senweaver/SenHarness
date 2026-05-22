@@ -48,13 +48,15 @@ class _FakeClient:
         self._responses = responses
         self.calls: list[tuple[str, dict[str, Any]]] = []
 
-    async def __aenter__(self) -> "_FakeClient":
+    async def __aenter__(self) -> _FakeClient:
         return self
 
     async def __aexit__(self, *_exc: object) -> None:
         return None
 
-    async def post(self, url: str, *, json: dict[str, Any], headers: dict[str, str]) -> _FakeResponse:
+    async def post(
+        self, url: str, *, json: dict[str, Any], headers: dict[str, str]
+    ) -> _FakeResponse:
         for path, resp in self._responses.items():
             if url.endswith(path):
                 self.calls.append((path, json))
@@ -91,7 +93,9 @@ async def test_fetch_typing_ticket_returns_none_on_empty(monkeypatch: pytest.Mon
     assert await ilink.fetch_typing_ticket(bot_token="bot-2", base_url=ilink._BASE) is None
 
 
-async def test_fetch_typing_ticket_returns_none_on_http_error(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_fetch_typing_ticket_returns_none_on_http_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     client = _FakeClient({"/ilink/bot/getconfig": _FakeResponse(status_code=502)})
     _patch_client(monkeypatch, client)
 
@@ -185,9 +189,7 @@ async def test_provider_send_processing_uses_native_typing_when_available(
             break
         await asyncio.sleep(0)
 
-    assert any(
-        c[0] == "/ilink/bot/sendtyping" and c[1]["status"] == 1 for c in client.calls
-    )
+    assert any(c[0] == "/ilink/bot/sendtyping" and c[1]["status"] == 1 for c in client.calls)
     assert not sent_replies, "native typing must not fall back to text placeholder"
 
     task.cancel()

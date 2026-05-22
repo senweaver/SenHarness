@@ -81,9 +81,7 @@ async def test_second_distinct_content_increments_version_no(
     assert v1.content_hash != v2.content_hash
 
 
-async def test_duplicate_content_hash_raises_conflict(
-    db_session, workspace, identity
-) -> None:
+async def test_duplicate_content_hash_raises_conflict(db_session, workspace, identity) -> None:
     pack = await _make_pack(db_session, workspace_id=workspace.id)
     body = "exactly the same body"
     await svc.create_version(
@@ -139,14 +137,10 @@ async def test_compute_content_hash_is_deterministic_and_order_independent() -> 
     assert a != svc.compute_content_hash("body", {"a": "1"})
 
 
-async def test_repo_next_version_no_starts_at_one(
-    db_session, workspace, identity
-) -> None:
+async def test_repo_next_version_no_starts_at_one(db_session, workspace, identity) -> None:
     pack = await _make_pack(db_session, workspace_id=workspace.id)
     repo = SkillPackVersionRepository(db_session)
-    assert (
-        await repo.next_version_no(workspace_id=workspace.id, pack_id=pack.id) == 1
-    )
+    assert await repo.next_version_no(workspace_id=workspace.id, pack_id=pack.id) == 1
     await svc.create_version(
         db_session,
         workspace_id=workspace.id,
@@ -156,6 +150,4 @@ async def test_repo_next_version_no_starts_at_one(
         created_by="user",
         creator_identity_id=identity.id,
     )
-    assert (
-        await repo.next_version_no(workspace_id=workspace.id, pack_id=pack.id) == 2
-    )
+    assert await repo.next_version_no(workspace_id=workspace.id, pack_id=pack.id) == 2

@@ -91,11 +91,7 @@ async def _collect_targets() -> list[_WarmTarget]:
 
         out: list[_WarmTarget] = []
         for provider, _key, vault_item in rows:
-            kind = (
-                provider.kind.value
-                if hasattr(provider.kind, "value")
-                else str(provider.kind)
-            )
+            kind = provider.kind.value if hasattr(provider.kind, "value") else str(provider.kind)
             model_name = provider.default_model or _first_chat_model(kind)
             if not model_name:
                 continue

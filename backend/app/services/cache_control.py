@@ -42,9 +42,9 @@ from typing import Any
 log = logging.getLogger(__name__)
 
 __all__ = [
+    "PROVIDER_CACHE_PROFILES",
     "CacheBreakpointConfig",
     "CacheTtl",
-    "PROVIDER_CACHE_PROFILES",
     "annotate_cache_breakpoints",
     "build_anthropic_cache_settings",
     "estimate_prompt_tokens",
@@ -274,9 +274,7 @@ def _ttl_value(ttl: CacheTtl | str) -> str:
     return CacheTtl.DEFAULT.value
 
 
-def _pick_breakpoint_indices(
-    messages: list[dict[str, Any]], *, cap: int
-) -> list[int]:
+def _pick_breakpoint_indices(messages: list[dict[str, Any]], *, cap: int) -> list[int]:
     """Pick up to ``cap`` stable indices to mark.
 
     Order of preference (most stable first):
@@ -346,9 +344,7 @@ def _last_user_index(messages: list[dict[str, Any]]) -> int | None:
     return None
 
 
-def _annotate_message(
-    message: dict[str, Any], *, ttl_value: str
-) -> bool:
+def _annotate_message(message: dict[str, Any], *, ttl_value: str) -> bool:
     """Attach a marker to the last content block of ``message``.
 
     Returns True iff a marker was attached. The function widens
@@ -366,9 +362,7 @@ def _annotate_message(
     if isinstance(content, str):
         if not content.strip():
             return False
-        message["content"] = [
-            {"type": "text", "text": content, _MARKER_FIELD: marker}
-        ]
+        message["content"] = [{"type": "text", "text": content, _MARKER_FIELD: marker}]
         return True
 
     if isinstance(content, list) and content:

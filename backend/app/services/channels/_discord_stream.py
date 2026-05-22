@@ -29,8 +29,7 @@ async def run_gateway_stream(
         import discord
     except ImportError as e:  # pragma: no cover
         raise RuntimeError(
-            "discord.py extra missing; install with "
-            "'pip install \".[channels-stream]\"'"
+            "discord.py extra missing; install with 'pip install \".[channels-stream]\"'"
         ) from e
 
     plain = getattr(channel, "_plain_config", None) or (channel.config_json or {})

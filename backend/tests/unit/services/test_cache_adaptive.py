@@ -138,9 +138,7 @@ async def test_is_cache_disabled_false_after_window_expired():
 
     cache_adaptive.reset_cache()
     key = f"cache_adaptive:{ws}:anthropic"
-    redis.store[key]["disabled_until"] = (
-        (datetime.now(UTC) - timedelta(seconds=10)).isoformat()
-    )
+    redis.store[key]["disabled_until"] = (datetime.now(UTC) - timedelta(seconds=10)).isoformat()
     disabled = await cache_adaptive.is_cache_disabled(
         redis, workspace_id=ws, provider_kind="anthropic"
     )
@@ -163,9 +161,7 @@ async def test_recovery_audit_signal():
     # as recovery rather than a still-disabled hit.
     cache_adaptive.reset_cache()
     key = f"cache_adaptive:{ws}:anthropic"
-    redis.store[key]["disabled_until"] = (
-        (datetime.now(UTC) - timedelta(seconds=10)).isoformat()
-    )
+    redis.store[key]["disabled_until"] = (datetime.now(UTC) - timedelta(seconds=10)).isoformat()
 
     snap = await cache_adaptive.record_cache_result(
         redis,
@@ -186,9 +182,7 @@ async def test_redis_unreachable_fails_open():
     )
     assert disabled is False
 
-    snap = await cache_adaptive.get_stats(
-        None, workspace_id=ws, provider_kind="anthropic"
-    )
+    snap = await cache_adaptive.get_stats(None, workspace_id=ws, provider_kind="anthropic")
     assert snap.consecutive_misses == 0
 
 
@@ -204,9 +198,7 @@ async def test_distinct_providers_track_independently():
             provider_kind="anthropic",
             hit=False,
         )
-    or_snap = await cache_adaptive.get_stats(
-        redis, workspace_id=ws, provider_kind="openrouter"
-    )
+    or_snap = await cache_adaptive.get_stats(redis, workspace_id=ws, provider_kind="openrouter")
     anthropic_snap = await cache_adaptive.get_stats(
         redis, workspace_id=ws, provider_kind="anthropic"
     )

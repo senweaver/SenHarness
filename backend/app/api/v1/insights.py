@@ -80,18 +80,11 @@ async def generate_insights(
     breaker, day-window validation) is identical.
     """
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     # Validate the target session belongs to this workspace + caller
     # before we queue a job that would write a chat message into it.
-    session = await session_svc.get_session_or_404(
-        db, body.return_session_id, workspace_id=ws_id
-    )
-    if (
-        session.owner_identity_id is not None
-        and session.owner_identity_id != identity_id
-    ):
+    session = await session_svc.get_session_or_404(db, body.return_session_id, workspace_id=ws_id)
+    if session.owner_identity_id is not None and session.owner_identity_id != identity_id:
         raise NotFound("session_not_found", code="session.not_found")
 
     result = await insights_svc.queue_insights_generation(
@@ -107,9 +100,7 @@ async def generate_insights(
     return InsightsGenerateResponse(
         queued=bool(result.get("queued")),
         days=int(result.get("days", body.days or 30)),
-        expected_completion_seconds=int(
-            result.get("expected_completion_seconds", 30)
-        ),
+        expected_completion_seconds=int(result.get("expected_completion_seconds", 30)),
         job_id=result.get("job_id"),
     )
 
@@ -136,9 +127,7 @@ async def list_recent_insights(
     ``noInsightsYet`` empty state.
     """
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     since = utcnow_naive() - timedelta(days=int(days))
     rows = await AuditRepository(db).search(
         workspace_id=ws_id,

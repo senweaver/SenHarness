@@ -15,9 +15,7 @@ def test_every_known_provider_has_at_least_one_recommended_entry() -> None:
     for kind in known_provider_kinds():
         rows = list_models_for_provider(kind)
         recommended = [r for r in rows if r.recommended]
-        assert (
-            len(recommended) >= 1
-        ), f"provider {kind!r} has no recommended row in the catalog"
+        assert len(recommended) >= 1, f"provider {kind!r} has no recommended row in the catalog"
 
 
 def test_unknown_provider_returns_empty_list() -> None:

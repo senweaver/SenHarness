@@ -75,9 +75,7 @@ async def _seed_goal(db_session, workspace, identity) -> SessionGoal:
     return goal
 
 
-async def _seed_artifact(
-    db_session, workspace, identity, *, agent_id=None
-) -> SessionArtifact:
+async def _seed_artifact(db_session, workspace, identity, *, agent_id=None) -> SessionArtifact:
     sid = await _make_session(db_session, workspace, identity)
     artifact = SessionArtifact(
         workspace_id=workspace.id,
@@ -126,17 +124,13 @@ async def _seed_email_token(db_session, identity) -> EmailVerificationToken:
     return tok
 
 
-async def test_cascade_for_identity_soft_deletes_owned_rows(
-    db_session, workspace, identity
-):
+async def test_cascade_for_identity_soft_deletes_owned_rows(db_session, workspace, identity):
     goal = await _seed_goal(db_session, workspace, identity)
     artifact = await _seed_artifact(db_session, workspace, identity)
     score = await _seed_alignment_score(db_session, workspace, identity, goal)
     token = await _seed_email_token(db_session, identity)
 
-    affected = await retention_svc.cascade_for_identity(
-        db_session, identity_id=identity.id
-    )
+    affected = await retention_svc.cascade_for_identity(db_session, identity_id=identity.id)
 
     assert "session_goals" in affected
     assert "session_artifacts" in affected
@@ -148,16 +142,12 @@ async def test_cascade_for_identity_soft_deletes_owned_rows(
     assert affected["email_verification_tokens"] >= 1
 
     fresh_goal = (
-        await db_session.execute(
-            select(SessionGoal).where(SessionGoal.id == goal.id)
-        )
+        await db_session.execute(select(SessionGoal).where(SessionGoal.id == goal.id))
     ).scalar_one()
     assert fresh_goal.deleted_at is not None
 
     fresh_artifact = (
-        await db_session.execute(
-            select(SessionArtifact).where(SessionArtifact.id == artifact.id)
-        )
+        await db_session.execute(select(SessionArtifact).where(SessionArtifact.id == artifact.id))
     ).scalar_one()
     assert fresh_artifact.deleted_at is not None
 
@@ -172,9 +162,7 @@ async def test_cascade_for_identity_soft_deletes_owned_rows(
     # email_verification_tokens is hard-delete on cascade.
     remaining_token = (
         await db_session.execute(
-            select(EmailVerificationToken).where(
-                EmailVerificationToken.id == token.id
-            )
+            select(EmailVerificationToken).where(EmailVerificationToken.id == token.id)
         )
     ).scalar_one_or_none()
     assert remaining_token is None
@@ -184,14 +172,10 @@ async def test_cascade_for_identity_is_idempotent(db_session, workspace, identit
     goal = await _seed_goal(db_session, workspace, identity)
     await _seed_artifact(db_session, workspace, identity)
 
-    first = await retention_svc.cascade_for_identity(
-        db_session, identity_id=identity.id
-    )
+    first = await retention_svc.cascade_for_identity(db_session, identity_id=identity.id)
     assert first["session_goals"] >= 1
 
-    second = await retention_svc.cascade_for_identity(
-        db_session, identity_id=identity.id
-    )
+    second = await retention_svc.cascade_for_identity(db_session, identity_id=identity.id)
     # After the first pass every soft-delete row already carries
     # ``deleted_at`` so the predicate excludes them; the second pass
     # must report zero affected rows for those tables.
@@ -203,17 +187,13 @@ async def test_cascade_for_identity_is_idempotent(db_session, workspace, identit
     _ = goal
 
 
-async def test_cascade_for_workspace_soft_deletes_workspace_scoped(
-    db_session, workspace, identity
-):
+async def test_cascade_for_workspace_soft_deletes_workspace_scoped(db_session, workspace, identity):
     goal = await _seed_goal(db_session, workspace, identity)
     artifact = await _seed_artifact(db_session, workspace, identity)
     await _seed_alignment_score(db_session, workspace, identity, goal)
     token = await _seed_email_token(db_session, identity)
 
-    affected = await retention_svc.cascade_for_workspace(
-        db_session, workspace_id=workspace.id
-    )
+    affected = await retention_svc.cascade_for_workspace(db_session, workspace_id=workspace.id)
 
     assert affected["session_goals"] >= 1
     assert affected["session_artifacts"] >= 1
@@ -223,25 +203,19 @@ async def test_cascade_for_workspace_soft_deletes_workspace_scoped(
     assert "workspace_creation_logs" not in affected
 
     fresh_goal = (
-        await db_session.execute(
-            select(SessionGoal).where(SessionGoal.id == goal.id)
-        )
+        await db_session.execute(select(SessionGoal).where(SessionGoal.id == goal.id))
     ).scalar_one()
     assert fresh_goal.deleted_at is not None
 
     fresh_artifact = (
-        await db_session.execute(
-            select(SessionArtifact).where(SessionArtifact.id == artifact.id)
-        )
+        await db_session.execute(select(SessionArtifact).where(SessionArtifact.id == artifact.id))
     ).scalar_one()
     assert fresh_artifact.deleted_at is not None
 
     # Identity-scoped token survives a workspace-only cascade.
     surviving = (
         await db_session.execute(
-            select(EmailVerificationToken).where(
-                EmailVerificationToken.id == token.id
-            )
+            select(EmailVerificationToken).where(EmailVerificationToken.id == token.id)
         )
     ).scalar_one_or_none()
     assert surviving is not None
@@ -252,9 +226,7 @@ async def test_cascade_skips_missing_tables(db_session, workspace, identity):
     cascade must silently omit them rather than raising or counting
     zero rows on a non-existent table.
     """
-    affected = await retention_svc.cascade_for_identity(
-        db_session, identity_id=identity.id
-    )
+    affected = await retention_svc.cascade_for_identity(db_session, identity_id=identity.id)
     assert "judge_verdicts" not in affected
     assert "pending_memories" not in affected
     assert "workspace_creation_logs" not in affected

@@ -26,9 +26,7 @@ async def _bootstrap_admin_workspace(async_client) -> tuple[dict, str]:
         json={"email": email, "name": "Skills Tester", "password": password},
     )
     assert r.status_code == 201, r.text
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -93,9 +91,7 @@ async def test_import_bundle_persists_folder_structure(async_client):
     assert "bundle-demo" in names
 
     # Detail returns the SKILL.md content (with front-matter).
-    r = await async_client.get(
-        "/api/v1/skills/workspace/bundle-demo", headers=headers
-    )
+    r = await async_client.get("/api/v1/skills/workspace/bundle-demo", headers=headers)
     assert r.status_code == 200
     assert "Bundle demo" in r.json()["content"]
 

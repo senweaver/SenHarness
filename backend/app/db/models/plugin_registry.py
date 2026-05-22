@@ -63,9 +63,7 @@ class PluginRegistryStatus(StrEnum):
 class PluginRegistry(UuidPkMixin, TimestampMixin, Base):
     __tablename__ = "plugin_registry"
     __table_args__ = (
-        UniqueConstraint(
-            "name", "version", "sha256", name="uq_plugin_registry_name_version_sha"
-        ),
+        UniqueConstraint("name", "version", "sha256", name="uq_plugin_registry_name_version_sha"),
     )
 
     name: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
@@ -75,9 +73,7 @@ class PluginRegistry(UuidPkMixin, TimestampMixin, Base):
     signature: Mapped[str | None] = mapped_column(Text, nullable=True)
     trust_root: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
-    approved_by_platform_admin: Mapped[bool] = mapped_column(
-        nullable=False, default=False
-    )
+    approved_by_platform_admin: Mapped[bool] = mapped_column(nullable=False, default=False)
     approved_at: Mapped[datetime | None] = mapped_column(nullable=True)
     approved_by_identity_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
@@ -99,9 +95,7 @@ class PluginRegistry(UuidPkMixin, TimestampMixin, Base):
         index=True,
     )
 
-    capability_scopes: Mapped[list[str]] = mapped_column(
-        JSONB, nullable=False, default=list
-    )
+    capability_scopes: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
 
     last_load_attempt_at: Mapped[datetime | None] = mapped_column(nullable=True)
     last_load_error: Mapped[str | None] = mapped_column(Text, nullable=True)

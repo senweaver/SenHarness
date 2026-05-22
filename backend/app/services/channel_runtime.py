@@ -154,9 +154,7 @@ class ChannelRuntime:
             self._supervisor_stop.set()
             for entry in list(self._tasks.values()):
                 entry.stop.set()
-            tasks: list[asyncio.Task] = [
-                entry.task for entry in self._tasks.values()
-            ]
+            tasks: list[asyncio.Task] = [entry.task for entry in self._tasks.values()]
             if self._supervisor_task is not None:
                 tasks.append(self._supervisor_task)
 
@@ -350,9 +348,7 @@ class ChannelRuntime:
                 try:
                     status.connected = True
                     status.last_error = None
-                    await provider.run_stream(
-                        channel=channel, dispatch=_dispatch, stop=stop
-                    )
+                    await provider.run_stream(channel=channel, dispatch=_dispatch, stop=stop)
                     backoff = 1.0  # clean exit ⇒ reset
                     prior_auth_expired = False
                 except asyncio.CancelledError:
@@ -362,7 +358,11 @@ class ChannelRuntime:
                     status.last_error = str(e)[:240]
                     status.reconnect_attempts += 1
                     wait_s = max(backoff, _AUTH_EXPIRED_BACKOFF_FLOOR_S)
-                    wait_s = min(wait_s, max_backoff) if max_backoff >= _AUTH_EXPIRED_BACKOFF_FLOOR_S else wait_s
+                    wait_s = (
+                        min(wait_s, max_backoff)
+                        if max_backoff >= _AUTH_EXPIRED_BACKOFF_FLOOR_S
+                        else wait_s
+                    )
                     if not prior_auth_expired:
                         log.warning(
                             "channel %s auth expired: %s — will retry in %.0fs; "

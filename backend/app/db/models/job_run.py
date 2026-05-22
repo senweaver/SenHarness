@@ -90,9 +90,7 @@ class JobRun(UuidPkMixin, TimestampMixin, Base):
     )
 
     job_id: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
-    function_name: Mapped[str] = mapped_column(
-        String(100), nullable=False, index=True
-    )
+    function_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     workspace_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), nullable=True, index=True
     )
@@ -112,21 +110,13 @@ class JobRun(UuidPkMixin, TimestampMixin, Base):
         server_default=JobRunStatus.QUEUED.value,
         index=True,
     )
-    enqueued_at: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now()
-    )
+    enqueued_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
     started_at: Mapped[datetime | None] = mapped_column(nullable=True)
-    finished_at: Mapped[datetime | None] = mapped_column(
-        nullable=True, index=True
-    )
+    finished_at: Mapped[datetime | None] = mapped_column(nullable=True, index=True)
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    retry_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, server_default="0"
-    )
+    retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     args_json: Mapped[dict] = mapped_column(
         JSONB, nullable=False, default=dict, server_default="'{}'::jsonb"
     )
-    error_class: Mapped[str | None] = mapped_column(
-        String(80), nullable=True
-    )
+    error_class: Mapped[str | None] = mapped_column(String(80), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)

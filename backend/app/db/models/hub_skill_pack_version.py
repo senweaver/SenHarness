@@ -45,9 +45,7 @@ class HubSkillPackVersion(UuidPkMixin, TimestampMixin, Base):
         index=True,
     )
     version_no: Mapped[int] = mapped_column(Integer, nullable=False)
-    content_hash: Mapped[str] = mapped_column(
-        String(64), nullable=False, index=True
-    )
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     content_md: Mapped[str] = mapped_column(Text, nullable=False)
     files_json: Mapped[dict] = mapped_column(
         JSONB,

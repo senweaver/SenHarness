@@ -23,9 +23,7 @@ async def _bootstrap(async_client) -> tuple[dict, str]:
         json={"email": email, "name": "Artifacts Tester", "password": password},
     )
     assert r.status_code == 201, r.text
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -98,9 +96,7 @@ async def test_list_session_artifacts_returns_seeded_row(async_client):
         identity_id=_identity_id_from_token(headers),
     )
 
-    r = await async_client.get(
-        f"/api/v1/sessions/{sid}/artifacts", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/sessions/{sid}/artifacts", headers=headers)
     assert r.status_code == 200, r.text
     rows = r.json()
     assert len(rows) == 1
@@ -165,9 +161,7 @@ async def test_list_session_artifacts_other_workspace_404(async_client):
     sid_a = await _new_session(async_client, headers_a)
 
     headers_b, _ = await _bootstrap(async_client)
-    r = await async_client.get(
-        f"/api/v1/sessions/{sid_a}/artifacts", headers=headers_b
-    )
+    r = await async_client.get(f"/api/v1/sessions/{sid_a}/artifacts", headers=headers_b)
     assert r.status_code in (403, 404)
 
 

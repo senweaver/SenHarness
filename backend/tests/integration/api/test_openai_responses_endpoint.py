@@ -51,9 +51,7 @@ def _patch_one_shot(monkeypatch, result):
     async def fake(normalized, *, workspace_id, identity_id=None):
         return dict(result, model=normalized.model)
 
-    monkeypatch.setattr(
-        openai_compat.protocol_kernel, "run_kernel_one_shot", fake
-    )
+    monkeypatch.setattr(openai_compat.protocol_kernel, "run_kernel_one_shot", fake)
 
 
 def _patch_stream(monkeypatch, frames):
@@ -132,9 +130,7 @@ async def test_responses_streaming(async_client, monkeypatch) -> None:
 
 
 # ─── Function-call round trip ───────────────────────────────
-async def test_responses_function_call_round_trip(
-    async_client, monkeypatch
-) -> None:
+async def test_responses_function_call_round_trip(async_client, monkeypatch) -> None:
     headers, _ = await _bootstrap(async_client)
     captured: dict[str, Any] = {}
 
@@ -144,9 +140,7 @@ async def test_responses_function_call_round_trip(
         captured["messages"] = normalized.messages
         return {
             "output_text": "",
-            "tool_uses": [
-                {"id": "call_y", "name": "search", "input": {"q": "next"}}
-            ],
+            "tool_uses": [{"id": "call_y", "name": "search", "input": {"q": "next"}}],
             "usage": {"input_tokens": 6, "output_tokens": 4},
             "stop_reason": "tool_use",
             "model": normalized.model,
@@ -199,18 +193,12 @@ async def test_responses_function_call_round_trip(
 
     # Kernel saw the prior function_call + function_call_output
     msgs = captured["messages"]
-    assert any(
-        any(p.get("type") == "tool_use" for p in m["content"]) for m in msgs
-    )
-    assert any(
-        any(p.get("type") == "tool_result" for p in m["content"]) for m in msgs
-    )
+    assert any(any(p.get("type") == "tool_use" for p in m["content"]) for m in msgs)
+    assert any(any(p.get("type") == "tool_result" for p in m["content"]) for m in msgs)
 
 
 # ─── Vision (input_image data URL) ──────────────────────────
-async def test_responses_vision_input_image_data_url(
-    async_client, monkeypatch
-) -> None:
+async def test_responses_vision_input_image_data_url(async_client, monkeypatch) -> None:
     headers, _ = await _bootstrap(async_client)
     captured: dict[str, Any] = {}
 

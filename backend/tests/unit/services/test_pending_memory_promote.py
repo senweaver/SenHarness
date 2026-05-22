@@ -70,12 +70,14 @@ async def test_promote_three_pending_rows(db_session, workspace, identity):
         assert row.promoted_target_id is not None
 
     audit_actions = (
-        await db_session.execute(
-            select(AuditEvent.action).where(
-                AuditEvent.workspace_id == workspace.id
+        (
+            await db_session.execute(
+                select(AuditEvent.action).where(AuditEvent.workspace_id == workspace.id)
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert audit_actions.count("memory.promoted_from_pending") == 3
     _ = repo
 
@@ -98,9 +100,7 @@ async def test_promote_is_idempotent(db_session, workspace, identity):
     assert second == {"promoted": 0, "skipped": 0, "failed": 0}
 
 
-async def test_promote_skips_when_hard_cap_exceeded(
-    db_session, workspace, identity
-):
+async def test_promote_skips_when_hard_cap_exceeded(db_session, workspace, identity):
     sess = await session_svc.create_session(
         db_session,
         workspace_id=workspace.id,
@@ -135,12 +135,14 @@ async def test_promote_skips_when_hard_cap_exceeded(
     assert row.failure_reason == "hard_cap_exceeded"
 
     audit_actions = (
-        await db_session.execute(
-            select(AuditEvent.action).where(
-                AuditEvent.workspace_id == workspace.id
+        (
+            await db_session.execute(
+                select(AuditEvent.action).where(AuditEvent.workspace_id == workspace.id)
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert "memory.hard_cap_blocked" in audit_actions
 
 
@@ -210,9 +212,7 @@ async def test_failure_bumps_count_and_eventually_skips(
     assert call_state["calls"] >= 1
 
 
-async def test_promote_dispatch_unknown_target_skips(
-    db_session, workspace, identity
-):
+async def test_promote_dispatch_unknown_target_skips(db_session, workspace, identity):
     sess = await session_svc.create_session(
         db_session,
         workspace_id=workspace.id,

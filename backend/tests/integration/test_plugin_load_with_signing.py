@@ -12,7 +12,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-import uuid
 from pathlib import Path
 
 import pytest
@@ -35,7 +34,7 @@ def _reset_plugin_host():
     plugin_host.plugin_host.clear()
 
 
-def _signing_pair() -> tuple[str, "pynacl.SigningKey"]:
+def _signing_pair() -> tuple[str, pynacl.SigningKey]:
     sk = pynacl.SigningKey.generate()
     pubkey_b64 = base64.b64encode(bytes(sk.verify_key)).decode("ascii")
     return pubkey_b64, sk
@@ -58,14 +57,12 @@ def _write_plugin(
     root: Path,
     name: str = "alpha",
     *,
-    sign_with: "pynacl.SigningKey | None" = None,
+    sign_with: pynacl.SigningKey | None = None,
 ) -> tuple[Path, str]:
     """Lay down a plugin folder + optional signature; return (folder, sha)."""
     folder = root / name
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / "__init__.py").write_text(
-        "\"\"\"x\"\"\"\n", encoding="utf-8"
-    )
+    (folder / "__init__.py").write_text('"""x"""\n', encoding="utf-8")
     manifest = {
         "name": name,
         "version": "0.0.1",
@@ -87,9 +84,7 @@ def _write_plugin(
     if sign_with is not None:
         sig = sign_with.sign(sha.encode("utf-8")).signature
         sig_b64 = base64.b64encode(sig).decode("ascii")
-        (folder / f"{manifest_path.name}.sig").write_text(
-            sig_b64, encoding="utf-8"
-        )
+        (folder / f"{manifest_path.name}.sig").write_text(sig_b64, encoding="utf-8")
     return folder, sha
 
 
@@ -126,25 +121,19 @@ async def _audit_actions_for_plugin(db_session, plugin_name: str) -> list[str]:
     they're emitted before any per-plugin work happens.
     """
     rows = (
-        await db_session.execute(
-            select(AuditEvent).where(AuditEvent.resource_type == "plugin")
-        )
-    ).scalars().all()
+        (await db_session.execute(select(AuditEvent).where(AuditEvent.resource_type == "plugin")))
+        .scalars()
+        .all()
+    )
     return [r.action for r in rows]
 
 
 # ── Test: master switch off ─────────────────────────────────
-async def test_load_disabled_zero_loaded_plus_audit(
-    db_session, identity, tmp_path: Path
-) -> None:
-    await _set_plugins_settings(
-        db_session, identity, allow_user_plugins=False
-    )
+async def test_load_disabled_zero_loaded_plus_audit(db_session, identity, tmp_path: Path) -> None:
+    await _set_plugins_settings(db_session, identity, allow_user_plugins=False)
     _write_plugin(tmp_path)
 
-    loaded = await loader.load_and_register_plugins(
-        db_session, plugin_dir=tmp_path
-    )
+    loaded = await loader.load_and_register_plugins(db_session, plugin_dir=tmp_path)
     assert loaded == []
     actions = await _audit_actions_for_plugin(db_session, "alpha")
     # Production path: discovery still emits plugin.discovered for the
@@ -156,9 +145,7 @@ async def test_load_disabled_zero_loaded_plus_audit(
 
 
 # ── Test: trust root absent ─────────────────────────────────
-async def test_load_no_trust_root(
-    db_session, identity, tmp_path: Path
-) -> None:
+async def test_load_no_trust_root(db_session, identity, tmp_path: Path) -> None:
     await _set_plugins_settings(
         db_session,
         identity,
@@ -166,18 +153,14 @@ async def test_load_no_trust_root(
         signing_root_pubkey=None,
     )
     _write_plugin(tmp_path)
-    loaded = await loader.load_and_register_plugins(
-        db_session, plugin_dir=tmp_path
-    )
+    loaded = await loader.load_and_register_plugins(db_session, plugin_dir=tmp_path)
     assert loaded == []
     actions = await _audit_actions_for_plugin(db_session, "alpha")
     assert "plugin.no_trust_root" in actions
 
 
 # ── Test: signed + approved plugin loads ────────────────────
-async def test_load_signed_and_approved_succeeds(
-    db_session, identity, tmp_path: Path
-) -> None:
+async def test_load_signed_and_approved_succeeds(db_session, identity, tmp_path: Path) -> None:
     pubkey, sk = _signing_pair()
     await _set_plugins_settings(
         db_session,
@@ -202,9 +185,7 @@ async def test_load_signed_and_approved_succeeds(
     await db_session.flush()
     await db_session.commit()
 
-    loaded = await loader.load_and_register_plugins(
-        db_session, plugin_dir=tmp_path
-    )
+    loaded = await loader.load_and_register_plugins(db_session, plugin_dir=tmp_path)
     assert [p.manifest.name for p in loaded] == ["alpha"]
     assert plugin_host.plugin_host.registered("pre_tool_call") == 1
 
@@ -224,9 +205,7 @@ async def test_load_signed_and_approved_succeeds(
 
 
 # ── Test: signed but not approved → skip ────────────────────
-async def test_load_signed_but_unapproved_skipped(
-    db_session, identity, tmp_path: Path
-) -> None:
+async def test_load_signed_but_unapproved_skipped(db_session, identity, tmp_path: Path) -> None:
     pubkey, sk = _signing_pair()
     await _set_plugins_settings(
         db_session,
@@ -249,9 +228,7 @@ async def test_load_signed_but_unapproved_skipped(
     await db_session.flush()
     await db_session.commit()
 
-    loaded = await loader.load_and_register_plugins(
-        db_session, plugin_dir=tmp_path
-    )
+    loaded = await loader.load_and_register_plugins(db_session, plugin_dir=tmp_path)
     assert loaded == []
     assert plugin_host.plugin_host.registered("pre_tool_call") == 0
 
@@ -261,9 +238,7 @@ async def test_load_signed_but_unapproved_skipped(
 
 
 # ── Test: signature missing when pubkey present ─────────────
-async def test_load_signature_missing(
-    db_session, identity, tmp_path: Path
-) -> None:
+async def test_load_signature_missing(db_session, identity, tmp_path: Path) -> None:
     pubkey, _ = _signing_pair()
     await _set_plugins_settings(
         db_session,
@@ -273,18 +248,14 @@ async def test_load_signature_missing(
     )
     # Write the plugin without a signature file.
     _write_plugin(tmp_path, sign_with=None)
-    loaded = await loader.load_and_register_plugins(
-        db_session, plugin_dir=tmp_path
-    )
+    loaded = await loader.load_and_register_plugins(db_session, plugin_dir=tmp_path)
     assert loaded == []
     actions = await _audit_actions_for_plugin(db_session, "alpha")
     assert "plugin.signature_missing" in actions
 
 
 # ── Test: dev-mode escape ───────────────────────────────────
-async def test_load_dev_mode_skips_signature(
-    db_session, identity, tmp_path: Path
-) -> None:
+async def test_load_dev_mode_skips_signature(db_session, identity, tmp_path: Path) -> None:
     """``allow_unapproved_plugins=True`` lets unsigned plugins load
     without a registry row. Production must keep this off.
     """
@@ -296,8 +267,6 @@ async def test_load_dev_mode_skips_signature(
         signing_root_pubkey=None,
     )
     _write_plugin(tmp_path, sign_with=None)
-    loaded = await loader.load_and_register_plugins(
-        db_session, plugin_dir=tmp_path
-    )
+    loaded = await loader.load_and_register_plugins(db_session, plugin_dir=tmp_path)
     assert [p.manifest.name for p in loaded] == ["alpha"]
     assert plugin_host.plugin_host.registered("pre_tool_call") == 1

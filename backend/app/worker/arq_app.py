@@ -173,39 +173,21 @@ _RETENTION_TASKS: frozenset[str] = frozenset(
         retention_physical_purge.__name__,
     }
 )
-_PENDING_MEMORY_TASKS: frozenset[str] = frozenset(
-    {pending_memory_workspace_sweep.__name__}
-)
-_EVOLVER_TASKS: frozenset[str] = frozenset(
-    {evolver_workspace_sweep.__name__}
-)
-_SKILL_VERIFY_TASKS: frozenset[str] = frozenset(
-    {verify_proposed_versions_sweep.__name__}
-)
-_APPROVAL_TTL_TASKS: frozenset[str] = frozenset(
-    {process_expired_approvals.__name__}
-)
-_SUBAGENT_ZOMBIE_TASKS: frozenset[str] = frozenset(
-    {reap_zombies.__name__}
-)
+_PENDING_MEMORY_TASKS: frozenset[str] = frozenset({pending_memory_workspace_sweep.__name__})
+_EVOLVER_TASKS: frozenset[str] = frozenset({evolver_workspace_sweep.__name__})
+_SKILL_VERIFY_TASKS: frozenset[str] = frozenset({verify_proposed_versions_sweep.__name__})
+_APPROVAL_TTL_TASKS: frozenset[str] = frozenset({process_expired_approvals.__name__})
+_SUBAGENT_ZOMBIE_TASKS: frozenset[str] = frozenset({reap_zombies.__name__})
 _INFLIGHT_RECOVERY_TASKS: frozenset[str] = frozenset(
     {
         reap_stale_inflight_runs.__name__,
         gc_old_checkpoints.__name__,
     }
 )
-_AGENT_PROFILE_TASKS: frozenset[str] = frozenset(
-    {update_agent_profiles_sweep.__name__}
-)
-_USER_MODELING_TASKS: frozenset[str] = frozenset(
-    {extract_user_facts_sweep.__name__}
-)
-_HUB_AUTO_PULL_TASKS: frozenset[str] = frozenset(
-    {hub_auto_pull_sweep.__name__}
-)
-_INSIGHTS_TASKS: frozenset[str] = frozenset(
-    {generate_insights.__name__}
-)
+_AGENT_PROFILE_TASKS: frozenset[str] = frozenset({update_agent_profiles_sweep.__name__})
+_USER_MODELING_TASKS: frozenset[str] = frozenset({extract_user_facts_sweep.__name__})
+_HUB_AUTO_PULL_TASKS: frozenset[str] = frozenset({hub_auto_pull_sweep.__name__})
+_INSIGHTS_TASKS: frozenset[str] = frozenset({generate_insights.__name__})
 
 
 async def _legacy_failure_dispatch(ctx: dict[str, Any]) -> None:
@@ -273,9 +255,7 @@ async def on_job_end(ctx: dict[str, Any]) -> None:
         try:
             await job_run_middleware_end(ctx)
         except Exception as exc:  # pragma: no cover - svc swallows
-            log.warning(
-                "job_run.on_job_end_chain_failed err=%s", exc
-            )
+            log.warning("job_run.on_job_end_chain_failed err=%s", exc)
 
 
 async def on_job_start(ctx: dict[str, Any]) -> None:

@@ -32,15 +32,9 @@ class BackendAdapterHealth(StrEnum):
     DOWN = "down"
 
 
-class BackendAdapter(
-    UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base
-):
+class BackendAdapter(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "backend_adapters"
-    __table_args__ = (
-        Index(
-            "ix_backend_adapters_workspace_kind", "workspace_id", "kind"
-        ),
-    )
+    __table_args__ = (Index("ix_backend_adapters_workspace_kind", "workspace_id", "kind"),)
 
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     kind: Mapped[BackendAdapterKind] = mapped_column(
@@ -57,13 +51,9 @@ class BackendAdapter(
     # SHA-256 hex digest of the raw X-Api-Key. Unique across workspaces so a
     # collision (astronomically unlikely) fails loudly rather than silently
     # authenticating into the wrong workspace.
-    api_key_hash: Mapped[str] = mapped_column(
-        String(64), nullable=False, unique=True
-    )
+    api_key_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
 
-    capabilities_json: Mapped[dict] = mapped_column(
-        JSONB, default=dict, nullable=False
-    )
+    capabilities_json: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
     health_status: Mapped[BackendAdapterHealth] = mapped_column(
         String(16), default=BackendAdapterHealth.UNKNOWN, nullable=False
     )

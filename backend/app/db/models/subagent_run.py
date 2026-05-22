@@ -83,9 +83,7 @@ class SubAgentRun(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
         ),
     )
 
-    parent_run_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False, index=True
-    )
+    parent_run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     child_run_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), nullable=False, unique=True, index=True
     )
@@ -104,9 +102,7 @@ class SubAgentRun(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
     # 0 for a child spawned directly by a user-facing run, 1+ for
     # nested children. Used by the reaper sweep + the future
     # ``max_nesting_depth`` policy gate.
-    spawn_depth: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, server_default="0"
-    )
+    spawn_depth: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
     state: Mapped[SubAgentRunState] = mapped_column(
         Enum(
@@ -127,9 +123,7 @@ class SubAgentRun(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
         index=True,
     )
 
-    retry_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, server_default="0"
-    )
+    retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     retry_budget: Mapped[int] = mapped_column(
         Integer, nullable=False, default=3, server_default="3"
     )
@@ -137,9 +131,7 @@ class SubAgentRun(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
     # Aux-LLM hallucination gate score in 0..1 — null until evaluated.
     # Below the gate threshold (default 0.5) routes the row through
     # ``HALLUCINATION_REVIEW`` instead of completing directly.
-    hallucination_score: Mapped[float | None] = mapped_column(
-        Float, nullable=True
-    )
+    hallucination_score: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # Set by :func:`gate_hallucination_or_approve` when an Approval is
     # filed; SET NULL on approval delete keeps cascade clean even when

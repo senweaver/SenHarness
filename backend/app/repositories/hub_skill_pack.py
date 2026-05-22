@@ -160,9 +160,7 @@ class HubSkillPackRepository(AsyncRepository[HubSkillPack]):
         tenant_id: uuid.UUID | None = None,
         state: HubSkillPackState | None = None,
     ) -> int:
-        stmt = select(func.count(HubSkillPack.id)).where(
-            HubSkillPack.deleted_at.is_(None)
-        )
+        stmt = select(func.count(HubSkillPack.id)).where(HubSkillPack.deleted_at.is_(None))
         if scope is not None:
             stmt = stmt.where(HubSkillPack.scope == scope)
         if tenant_id is not None:
@@ -175,9 +173,7 @@ class HubSkillPackRepository(AsyncRepository[HubSkillPack]):
 class HubSkillPackVersionRepository(AsyncRepository[HubSkillPackVersion]):
     model = HubSkillPackVersion
 
-    async def get_active(
-        self, *, hub_pack_id: uuid.UUID
-    ) -> HubSkillPackVersion | None:
+    async def get_active(self, *, hub_pack_id: uuid.UUID) -> HubSkillPackVersion | None:
         stmt = select(HubSkillPackVersion).where(
             HubSkillPackVersion.hub_pack_id == hub_pack_id,
             HubSkillPackVersion.is_active.is_(True),
@@ -222,9 +218,7 @@ class HubSkillPackVersionRepository(AsyncRepository[HubSkillPackVersion]):
         return int(current or 0) + 1
 
 
-class WorkspaceHubSubscriptionRepository(
-    AsyncRepository[WorkspaceHubSubscription]
-):
+class WorkspaceHubSubscriptionRepository(AsyncRepository[WorkspaceHubSubscription]):
     model = WorkspaceHubSubscription
 
     async def list_for_workspace(

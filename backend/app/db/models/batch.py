@@ -42,9 +42,7 @@ class BatchCaseStatus(StrEnum):
 
 class BatchRun(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "batch_runs"
-    __table_args__ = (
-        Index("ix_batch_runs_workspace_status", "workspace_id", "status"),
-    )
+    __table_args__ = (Index("ix_batch_runs_workspace_status", "workspace_id", "status"),)
 
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     description: Mapped[str | None] = mapped_column(String(512), nullable=True)
@@ -60,12 +58,8 @@ class BatchRun(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
         default=BatchRunStatus.PENDING,
         nullable=False,
     )
-    config_json: Mapped[dict] = mapped_column(
-        JSONB, default=dict, nullable=False
-    )
-    stats_json: Mapped[dict] = mapped_column(
-        JSONB, default=dict, nullable=False
-    )
+    config_json: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    stats_json: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
     started_at: Mapped[datetime | None] = mapped_column(nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(nullable=True)
@@ -79,11 +73,7 @@ class BatchRun(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
 
 class BatchRunCase(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "batch_run_cases"
-    __table_args__ = (
-        Index(
-            "ix_batch_run_cases_batch_status", "batch_run_id", "status"
-        ),
-    )
+    __table_args__ = (Index("ix_batch_run_cases_batch_status", "batch_run_id", "status"),)
 
     batch_run_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

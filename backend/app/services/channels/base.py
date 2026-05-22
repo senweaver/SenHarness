@@ -232,9 +232,7 @@ class ChannelProvider:
         change. Override when you need to plumb through a held-open
         client/connection (Discord client, lark-oapi WebSocket, etc.).
         """
-        await self.post_reply(
-            channel_config=channel_config, thread_key=thread_key, text=text
-        )
+        await self.post_reply(channel_config=channel_config, thread_key=thread_key, text=text)
 
     async def send_processing_indicator(
         self,
@@ -270,6 +268,4 @@ class ChannelProvider:
             * Call ``await dispatch(inbound)`` for every real message;
               control frames / heartbeats should be silently consumed.
         """
-        raise NotImplementedError(
-            f"{type(self).__name__} does not implement run_stream"
-        )
+        raise NotImplementedError(f"{type(self).__name__} does not implement run_stream")

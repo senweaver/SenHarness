@@ -155,9 +155,7 @@ async def _find_existing(session: AsyncSession, slug: str) -> Agent | None:
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
-def _build_metadata(
-    parsed: dict, existing: dict | None = None
-) -> dict:
+def _build_metadata(parsed: dict, existing: dict | None = None) -> dict:
     """Merge template-owned keys onto whatever an admin may have added.
 
     Anything inside :data:`_TEMPLATE_KEYS` is overwritten; everything
@@ -221,9 +219,7 @@ async def load_all(
             existing.persona_md = parsed["persona_md"]
             if existing.visibility != AgentVisibility.PUBLIC:
                 existing.visibility = AgentVisibility.PUBLIC
-            existing.metadata_json = _build_metadata(
-                parsed, existing.metadata_json
-            )
+            existing.metadata_json = _build_metadata(parsed, existing.metadata_json)
             updated += 1
 
     await session.flush()

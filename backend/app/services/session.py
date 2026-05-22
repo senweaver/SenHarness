@@ -160,9 +160,7 @@ async def rewind_to_checkpoint(
     """
     # Step 1 — locate the anchor.
     sess = await get_session_or_404(db, session_id, workspace_id=workspace_id)
-    msgs = await MessageRepository(db).list_for_session(
-        session_id=session_id, limit=500
-    )
+    msgs = await MessageRepository(db).list_for_session(session_id=session_id, limit=500)
     anchor: Message | None = None
     for m in msgs:
         meta = m.metadata_json or {}

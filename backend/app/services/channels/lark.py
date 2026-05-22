@@ -148,9 +148,7 @@ class LarkProvider(ChannelProvider):
         # Event 1.0 ships ``token`` at top level; 2.0 moves it into ``header``.
         got = payload.get("token") or (payload.get("header") or {}).get("token")
         if not got or got != expected:
-            raise SignatureInvalid(
-                "lark.bad_token", "Lark verification_token mismatch"
-            )
+            raise SignatureInvalid("lark.bad_token", "Lark verification_token mismatch")
 
     def parse_inbound(
         self, payload: dict[str, Any], headers: dict[str, str]
@@ -167,9 +165,7 @@ class LarkProvider(ChannelProvider):
 
         content_raw = msg.get("content") or "{}"
         try:
-            content = (
-                json.loads(content_raw) if isinstance(content_raw, str) else content_raw
-            )
+            content = json.loads(content_raw) if isinstance(content_raw, str) else content_raw
         except json.JSONDecodeError:
             content = {}
 
@@ -215,7 +211,9 @@ class LarkProvider(ChannelProvider):
         try:
             async with httpx.AsyncClient(timeout=10.0) as c:
                 token = await _fetch_tenant_access_token(
-                    app_id=app_id, app_secret=app_secret, client=c,
+                    app_id=app_id,
+                    app_secret=app_secret,
+                    client=c,
                 )
                 if not token:
                     return

@@ -98,11 +98,7 @@ async def evolver_workspace_sweep(ctx: dict[str, Any]) -> dict[str, Any]:
 
     async with factory() as db:
         ws_rows = (
-            (
-                await db.execute(
-                    select(Workspace.id).where(Workspace.deleted_at.is_(None))
-                )
-            )
+            (await db.execute(select(Workspace.id).where(Workspace.deleted_at.is_(None))))
             .scalars()
             .all()
         )
@@ -110,7 +106,9 @@ async def evolver_workspace_sweep(ctx: dict[str, Any]) -> dict[str, Any]:
     for ws_id in ws_rows:
         summary["workspaces_seen"] += 1
         result = await _run_for_workspace(workspace_id=ws_id)
-        summary["results"].append(result.to_dict() if isinstance(result, WorkflowExecutionResult) else result)
+        summary["results"].append(
+            result.to_dict() if isinstance(result, WorkflowExecutionResult) else result
+        )
         if isinstance(result, WorkflowExecutionResult):
             if result.skipped:
                 summary["workspaces_skipped"] += 1
@@ -142,10 +140,8 @@ async def _run_for_workspace(
                 actor_identity_id=None,
                 bypass_min_artifacts=False,
             )
-    except Exception as exc:  # noqa: BLE001
-        log.exception(
-            "evolver_workspace_sweep failed for workspace=%s", workspace_id
-        )
+    except Exception as exc:
+        log.exception("evolver_workspace_sweep failed for workspace=%s", workspace_id)
         try:
             async with factory() as db:
                 await audit_svc.record(
@@ -164,9 +160,7 @@ async def _run_for_workspace(
                 )
                 await db.commit()
         except Exception:  # pragma: no cover
-            log.exception(
-                "evolver_workspace_sweep audit_fallback failed ws=%s", workspace_id
-            )
+            log.exception("evolver_workspace_sweep audit_fallback failed ws=%s", workspace_id)
         return {
             "workspace_id": str(workspace_id),
             "status": "failed",
@@ -175,9 +169,7 @@ async def _run_for_workspace(
 
 
 # ─── ARQ permanent-failure hook ─────────────────────────────
-async def on_evolver_job_failed_permanent(
-    ctx: dict[str, Any], exc: BaseException
-) -> None:
+async def on_evolver_job_failed_permanent(ctx: dict[str, Any], exc: BaseException) -> None:
     """ARQ hook for ``evolver_workspace_sweep`` exhausting its retries.
 
     Mirrors the curator / pending-memory hooks: writes one stable
@@ -194,9 +186,7 @@ async def on_evolver_job_failed_permanent(
                 workspace_id=None,
                 resource_type="job",
                 resource_id=None,
-                summary=(
-                    f"evolver_workspace_sweep failed permanently: {exc!r}"
-                ),
+                summary=(f"evolver_workspace_sweep failed permanently: {exc!r}"),
                 metadata={
                     "function": str(ctx.get("function") or EVOLVER_SWEEP_NAME),
                     "job_id": ctx.get("job_id"),

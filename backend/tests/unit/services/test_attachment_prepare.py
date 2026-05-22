@@ -65,9 +65,7 @@ class TestPromptPrefix:
     def test_empty_when_nothing_useful(self):
         assert _build_prompt_prefix([]) == ""
         assert (
-            _build_prompt_prefix(
-                [PreparedAttachment(ref={"filename": "x.png", "kind": "image"})]
-            )
+            _build_prompt_prefix([PreparedAttachment(ref={"filename": "x.png", "kind": "image"})])
             == ""
         )
 

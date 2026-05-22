@@ -79,9 +79,7 @@ async def run_agent_one_shot(
     await db.flush()
 
     # Build history from persisted rows (last ~40 including the new user row).
-    msg_rows = await MessageRepository(db).list_recent(
-        session_id=session_id, limit=40
-    )
+    msg_rows = await MessageRepository(db).list_recent(session_id=session_id, limit=40)
     history: list[dict] = []
     for m in msg_rows:
         if m.role == MessageRole.USER:
@@ -181,16 +179,14 @@ async def run_agent_one_shot(
     result.final_text = "".join(full_text_parts)
 
     # Persist assistant message so /sessions/{id}/messages reflects the turn.
-    tokens = (result.usage_payload.get("tokens") or {})
+    tokens = result.usage_payload.get("tokens") or {}
     assistant_msg = await sess_svc.append_message(
         db,
         session_obj=session_obj,
         role=MessageRole.ASSISTANT,
         content_json={"text": result.final_text},
         author_agent_id=agent.id,
-        tool_call_json=(
-            {"events": result.tool_events} if result.tool_events else None
-        ),
+        tool_call_json=({"events": result.tool_events} if result.tool_events else None),
         token_usage_json=_usage_blob(result.usage_payload, tokens),
     )
 
@@ -231,16 +227,11 @@ async def run_agent_one_shot(
     # M0.3 — enqueue async judge for non-cancelled runs. Failures here
     # are non-fatal: a downed Redis must not break the channel/flow
     # turn. The audit row provides the breadcrumb instead.
-    if (
-        artifact_row is not None
-        and getattr(artifact_row, "final_outcome", None) != "cancelled"
-    ):
+    if artifact_row is not None and getattr(artifact_row, "final_outcome", None) != "cancelled":
         try:
             from app.worker.queue import enqueue
 
-            await enqueue(
-                "judge_session_artifact", str(artifact_row.id), _defer_by=5
-            )
+            await enqueue("judge_session_artifact", str(artifact_row.id), _defer_by=5)
         except Exception:
             log.exception(
                 "judge enqueue failed for run %s artifact %s",
@@ -277,11 +268,7 @@ async def run_agent_one_shot(
             session_id=session_id,
             actor_identity_id=identity_id,
         )
-        if (
-            promote_result["promoted"]
-            or promote_result["failed"]
-            or promote_result["skipped"]
-        ):
+        if promote_result["promoted"] or promote_result["failed"] or promote_result["skipped"]:
             await audit_svc.record(
                 db,
                 action="memory.promotion_completed",
@@ -384,9 +371,7 @@ async def _record_skill_injection_usage(
             pack_ids=pack_ids,
         )
     except Exception as exc:
-        log.exception(
-            "skill usage record_usage_batch failed for run %s", run_id
-        )
+        log.exception("skill usage record_usage_batch failed for run %s", run_id)
         try:
             await audit_svc.record(
                 db,
@@ -404,9 +389,7 @@ async def _record_skill_injection_usage(
                 },
             )
         except Exception:  # pragma: no cover
-            log.exception(
-                "audit write for skill usage recording failure also failed"
-            )
+            log.exception("audit write for skill usage recording failure also failed")
 
 
 def _usage_blob(usage: dict, tokens: dict) -> dict:
@@ -487,15 +470,11 @@ async def _inflight_heartbeat_safe(*, run_id: uuid.UUID, seq: int) -> None:
     try:
         factory = get_session_factory()
         async with factory() as db:
-            updated = await inflight_svc.update_last_seen(
-                db, run_id=run_id, last_event_seq=seq
-            )
+            updated = await inflight_svc.update_last_seen(db, run_id=run_id, last_event_seq=seq)
             if updated:
                 await db.commit()
     except Exception:  # pragma: no cover - heartbeat is best-effort
-        log.debug(
-            "inflight heartbeat skipped run_id=%s", run_id, exc_info=True
-        )
+        log.debug("inflight heartbeat skipped run_id=%s", run_id, exc_info=True)
 
 
 async def _inflight_finish_safe(

@@ -22,6 +22,7 @@ def _empty_to_none(value: str | None) -> str | None:
     stripped = value.strip()
     return stripped or None
 
+
 # Agent runtime kinds are intentionally free-form strings (see
 # ``BackendKind`` docstring) so community-shipped adapters can register
 # without changing this schema. The regex just rejects empty / crazy
@@ -46,9 +47,7 @@ class AgentCreate(ORMModel):
     name: str = Field(min_length=1, max_length=128)
     description: str | None = None
     persona_md: str | None = None
-    backend_kind: str = Field(
-        default=BackendKind.NATIVE, pattern=_BACKEND_KIND_PATTERN
-    )
+    backend_kind: str = Field(default=BackendKind.NATIVE, pattern=_BACKEND_KIND_PATTERN)
     backend_adapter_id: uuid.UUID | None = None
     visibility: AgentVisibility = AgentVisibility.WORKSPACE
     autonomy_level: AutonomyLevel = AutonomyLevel.L2
@@ -58,9 +57,7 @@ class AgentCreate(ORMModel):
     quotas_json: dict = Field(default_factory=dict)
     metadata_json: dict = Field(default_factory=dict)
     served_model_name: str | None = Field(default=None, max_length=120)
-    default_model: str | None = Field(
-        default=None, max_length=160, pattern=_DEFAULT_MODEL_PATTERN
-    )
+    default_model: str | None = Field(default=None, max_length=160, pattern=_DEFAULT_MODEL_PATTERN)
     default_search_provider_kind: str | None = Field(
         default=None, max_length=32, pattern=_SEARCH_KIND_PATTERN
     )
@@ -84,9 +81,7 @@ class AgentUpdate(ORMModel):
     quotas_json: dict | None = None
     metadata_json: dict | None = None
     served_model_name: str | None = Field(default=None, max_length=120)
-    default_model: str | None = Field(
-        default=None, max_length=160, pattern=_DEFAULT_MODEL_PATTERN
-    )
+    default_model: str | None = Field(default=None, max_length=160, pattern=_DEFAULT_MODEL_PATTERN)
     default_search_provider_kind: str | None = Field(
         default=None, max_length=32, pattern=_SEARCH_KIND_PATTERN
     )

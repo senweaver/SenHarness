@@ -162,6 +162,4 @@ async def recall_memory(
         limit=body.limit,
         min_score=body.min_score,
     )
-    return [
-        RecallHit(memory=MemoryRead.model_validate(m), score=s) for m, s in rows
-    ]
+    return [RecallHit(memory=MemoryRead.model_validate(m), score=s) for m, s in rows]

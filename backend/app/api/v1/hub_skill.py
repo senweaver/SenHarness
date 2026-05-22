@@ -62,24 +62,12 @@ router = APIRouter(tags=["skills", "hub"])
 
 
 _HUB_READ = Depends(rate_limit("hub_catalog_read", limit=60, period_seconds=60))
-_HUB_ADMIN_TRANSITION = Depends(
-    rate_limit("hub_admin_transition", limit=10, period_seconds=60)
-)
-_HUB_PROMOTE_INITIATE = Depends(
-    rate_limit("hub_promote_initiate", limit=5, period_seconds=300)
-)
-_HUB_SUBSCRIBE = Depends(
-    rate_limit("hub_subscribe", limit=30, period_seconds=60)
-)
-_HUB_UNSUBSCRIBE = Depends(
-    rate_limit("hub_unsubscribe", limit=30, period_seconds=60)
-)
-_HUB_PULL_MANUAL = Depends(
-    rate_limit("hub_pull_manual", limit=10, period_seconds=300)
-)
-_HUB_SUB_STATUS = Depends(
-    rate_limit("hub_sub_status", limit=60, period_seconds=60)
-)
+_HUB_ADMIN_TRANSITION = Depends(rate_limit("hub_admin_transition", limit=10, period_seconds=60))
+_HUB_PROMOTE_INITIATE = Depends(rate_limit("hub_promote_initiate", limit=5, period_seconds=300))
+_HUB_SUBSCRIBE = Depends(rate_limit("hub_subscribe", limit=30, period_seconds=60))
+_HUB_UNSUBSCRIBE = Depends(rate_limit("hub_unsubscribe", limit=30, period_seconds=60))
+_HUB_PULL_MANUAL = Depends(rate_limit("hub_pull_manual", limit=10, period_seconds=300))
+_HUB_SUB_STATUS = Depends(rate_limit("hub_sub_status", limit=60, period_seconds=60))
 
 
 def _require_workspace(workspace_id: uuid.UUID | None) -> uuid.UUID:
@@ -105,9 +93,7 @@ async def list_hub_catalog_route(
     offset: int = Query(default=0, ge=0),
 ) -> HubSkillPackList:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     await hub_svc.require_hub_enabled(db)
     rows = await hub_svc.list_hub_catalog(
         db,
@@ -118,9 +104,7 @@ async def list_hub_catalog_route(
         limit=limit,
         offset=offset,
     )
-    return HubSkillPackList(
-        items=[HubSkillPackRead.model_validate(r) for r in rows]
-    )
+    return HubSkillPackList(items=[HubSkillPackRead.model_validate(r) for r in rows])
 
 
 @router.get(
@@ -135,13 +119,9 @@ async def get_hub_pack_route(
     workspace_id: CurrentWorkspaceId,
 ) -> HubSkillPackRead:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     await hub_svc.require_hub_enabled(db)
-    pack = await hub_svc.get_hub_pack_visible(
-        db, hub_pack_id=hub_pack_id, workspace_id=ws_id
-    )
+    pack = await hub_svc.get_hub_pack_visible(db, hub_pack_id=hub_pack_id, workspace_id=ws_id)
     return HubSkillPackRead.model_validate(pack)
 
 
@@ -159,9 +139,7 @@ async def list_hub_pack_versions_route(
     offset: int = Query(default=0, ge=0),
 ) -> HubSkillPackVersionList:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     await hub_svc.require_hub_enabled(db)
     rows = await hub_svc.list_hub_versions(
         db,
@@ -188,13 +166,9 @@ async def get_hub_pack_active_version_route(
     workspace_id: CurrentWorkspaceId,
 ) -> HubSkillPackVersionWithContent:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     await hub_svc.require_hub_enabled(db)
-    row = await hub_svc.get_active_version(
-        db, hub_pack_id=hub_pack_id, workspace_id=ws_id
-    )
+    row = await hub_svc.get_active_version(db, hub_pack_id=hub_pack_id, workspace_id=ws_id)
     return HubSkillPackVersionWithContent.model_validate(row)
 
 
@@ -232,11 +206,9 @@ async def transition_hub_pack_route(
 
     # Load the pack first so we know whether to require platform
     # admin (PLATFORM scope) or tenant admin (TENANT scope).
-    from app.repositories.hub_skill_pack import HubSkillPackRepository  # noqa: PLC0415
+    from app.repositories.hub_skill_pack import HubSkillPackRepository
 
-    pack = await HubSkillPackRepository(db).get(
-        hub_pack_id, include_deleted=True
-    )
+    pack = await HubSkillPackRepository(db).get(hub_pack_id, include_deleted=True)
     if pack is None:
         raise NotFound("hub_skill_pack_not_found", code="hub.pack_not_found")
 
@@ -254,24 +226,16 @@ async def transition_hub_pack_route(
         # we fall back to platform_admin (cross-tenant inspector).
         if actor.platform_role != PlatformRole.PLATFORM_ADMIN:
             ws_id = _require_workspace(workspace_id)
-            await ws_svc.ensure_admin(
-                db, workspace_id=ws_id, identity_id=actor.id
-            )
-            tenant_id = await hub_svc.resolve_caller_tenant(
-                db, workspace_id=ws_id
-            )
+            await ws_svc.ensure_admin(db, workspace_id=ws_id, identity_id=actor.id)
+            tenant_id = await hub_svc.resolve_caller_tenant(db, workspace_id=ws_id)
             if tenant_id != pack.tenant_id:
                 raise HubScopePermissionDenied(
                     "cross_tenant_transition_denied",
                     code="hub.scope_permission_denied",
                     extras={
                         "scope": pack.scope.value,
-                        "pack_tenant_id": (
-                            str(pack.tenant_id) if pack.tenant_id else None
-                        ),
-                        "caller_tenant_id": (
-                            str(tenant_id) if tenant_id else None
-                        ),
+                        "pack_tenant_id": (str(pack.tenant_id) if pack.tenant_id else None),
+                        "caller_tenant_id": (str(tenant_id) if tenant_id else None),
                     },
                 )
 
@@ -463,23 +427,17 @@ async def get_subscription_status_route(
     workspace_id: CurrentWorkspaceId,
 ) -> HubSubscriptionStatus:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     await hub_svc.require_hub_enabled(db)
     # Visibility check (404 when the hub pack isn't visible to the
     # caller's tenant) — keeps subscription status from being a
     # hub-pack existence oracle for cross-tenant snoops.
-    await hub_svc.get_hub_pack_visible(
-        db, hub_pack_id=hub_pack_id, workspace_id=ws_id
-    )
+    await hub_svc.get_hub_pack_visible(db, hub_pack_id=hub_pack_id, workspace_id=ws_id)
 
     sub = await WorkspaceHubSubscriptionRepository(db).get_by_pack(
         workspace_id=ws_id, hub_pack_id=hub_pack_id
     )
-    active = await HubSkillPackVersionRepository(db).get_active(
-        hub_pack_id=hub_pack_id
-    )
+    active = await HubSkillPackVersionRepository(db).get_active(hub_pack_id=hub_pack_id)
     active_no = active.version_no if active is not None else None
 
     has_update = False

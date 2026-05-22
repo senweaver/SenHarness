@@ -136,19 +136,19 @@ async def test_summarize_e2e_returns_only_real_evidence_ids(
     monkeypatch.setattr(tool, "_summarise_hits", _stub_summarise)
 
     # Avoid hitting Redis from CI — make the breaker / rate gates pass.
-    async def _open(*, bucket, workspace_id, trip_at):  # noqa: ARG001
+    async def _open(*, bucket, workspace_id, trip_at):
         return False
 
-    async def _consume(*, bucket, workspace_id, limit, period_seconds=60):  # noqa: ARG001
+    async def _consume(*, bucket, workspace_id, limit, period_seconds=60):
         return True
 
-    async def _bump(*, bucket, workspace_id, window_seconds, recover_seconds=None):  # noqa: ARG001
+    async def _bump(*, bucket, workspace_id, window_seconds, recover_seconds=None):
         return 0
 
-    async def _reset(*, bucket, workspace_id):  # noqa: ARG001
+    async def _reset(*, bucket, workspace_id):
         return None
 
-    async def _settings(db, *, workspace_id):  # noqa: ARG001
+    async def _settings(db, *, workspace_id):
         return {
             "summarize_rate_per_minute": 30,
             "summarize_fail_strikes": 3,
@@ -164,9 +164,7 @@ async def test_summarize_e2e_returns_only_real_evidence_ids(
 
     _set_context(workspace_id=workspace.id, identity_id=identity.id)
 
-    out = await run_session_search(
-        SessionSearchArgs(query=_QUERY_SEED, summarize=True, limit=8)
-    )
+    out = await run_session_search(SessionSearchArgs(query=_QUERY_SEED, summarize=True, limit=8))
 
     assert out["summarized"] is True
     assert "deployment runbook" in (out["summary"] or "").lower()
@@ -192,13 +190,17 @@ async def test_summarize_e2e_returns_only_real_evidence_ids(
 
     # Audit rows must include both ``invoked`` and ``evidence_filtered``.
     rows = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.workspace_id == workspace.id,
-                AuditEvent.resource_type == "session_search",
+        (
+            await db_session.execute(
+                select(AuditEvent).where(
+                    AuditEvent.workspace_id == workspace.id,
+                    AuditEvent.resource_type == "session_search",
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     actions = [r.action for r in rows]
     assert AUDIT_INVOKED in actions
     assert AUDIT_EVIDENCE_FILTERED in actions
@@ -230,11 +232,9 @@ async def test_summarize_with_session_filter_scopes_results(
 
     captured: dict = {}
 
-    async def _stub(*, workspace_id, query, hits, summary_max_chars):  # noqa: ARG001
+    async def _stub(*, workspace_id, query, hits, summary_max_chars):
         captured["session_ids"] = {h["session_id"] for h in hits}
-        return SessionSearchSummary(
-            summary="ok", bullet_points=[], evidence_message_ids=[]
-        )
+        return SessionSearchSummary(summary="ok", bullet_points=[], evidence_message_ids=[])
 
     async def _open(*_, **__):
         return False
@@ -242,7 +242,7 @@ async def test_summarize_with_session_filter_scopes_results(
     async def _consume(*_, **__):
         return True
 
-    async def _settings(db, *, workspace_id):  # noqa: ARG001
+    async def _settings(db, *, workspace_id):
         return {
             "summarize_rate_per_minute": 30,
             "summarize_fail_strikes": 3,

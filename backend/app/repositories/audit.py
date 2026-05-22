@@ -122,9 +122,7 @@ class ReportRepository:
 
     async def get(self, report_id: uuid.UUID) -> AgentReport | None:
         return (
-            await self.session.execute(
-                select(AgentReport).where(AgentReport.id == report_id)
-            )
+            await self.session.execute(select(AgentReport).where(AgentReport.id == report_id))
         ).scalar_one_or_none()
 
     async def list_for_triage(

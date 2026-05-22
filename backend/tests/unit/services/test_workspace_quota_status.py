@@ -105,10 +105,7 @@ async def test_soft_deleted_workspace_frees_slot(db_session, identity):
     assert snapshot.used == 1
 
     await db_session.execute(
-        text(
-            "UPDATE workspaces SET deleted_at = now(), slug_tombstoned = TRUE "
-            "WHERE id = :id"
-        ),
+        text("UPDATE workspaces SET deleted_at = now(), slug_tombstoned = TRUE WHERE id = :id"),
         {"id": ws.id},
     )
     await db_session.flush()

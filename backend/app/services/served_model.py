@@ -114,9 +114,7 @@ def _write_alias_map(workspace: Workspace, alias_map: dict[str, str]) -> None:
     workspace.home_config_json = home
 
 
-async def get_alias_map(
-    db: AsyncSession, *, workspace_id: uuid.UUID
-) -> dict[str, str]:
+async def get_alias_map(db: AsyncSession, *, workspace_id: uuid.UUID) -> dict[str, str]:
     """Read-only accessor used by tests and the REST list route."""
     workspace = await db.get(Workspace, workspace_id)
     return _read_alias_map(workspace)
@@ -178,9 +176,7 @@ async def resolve_served_model(
       string and ``matched_via='fallback'`` — the caller (runner)
       treats this as "use the resolver's chosen upstream as both".
     """
-    served_field = (
-        getattr(agent, "served_model_name", None) if agent is not None else None
-    )
+    served_field = getattr(agent, "served_model_name", None) if agent is not None else None
     served_field = served_field.strip() if isinstance(served_field, str) else None
     fallback = fallback_upstream.strip() if isinstance(fallback_upstream, str) else None
 
@@ -253,9 +249,7 @@ async def list_served_models_for_workspace(
     """
     workspace = await db.get(Workspace, workspace_id)
     alias_map = _read_alias_map(workspace)
-    agent_pairs = await _list_distinct_agent_served_names(
-        db, workspace_id=workspace_id
-    )
+    agent_pairs = await _list_distinct_agent_served_names(db, workspace_id=workspace_id)
 
     by_name: dict[str, ServedModelEntry] = {}
     for served_name, upstream in alias_map.items():

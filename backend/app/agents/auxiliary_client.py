@@ -126,9 +126,7 @@ async def get_aux_model(
     cue (judge / scorer paths).
     """
     aux_settings = await _read_workspace_aux_settings(db, workspace_id=workspace_id)
-    chain = _TASK_FALLBACK_CHAIN.get(
-        task, (f"aux_model_{task.value}", "aux_model_default")
-    )
+    chain = _TASK_FALLBACK_CHAIN.get(task, (f"aux_model_{task.value}", "aux_model_default"))
     task_override: Any = None
     for key in chain:
         candidate = aux_settings.get(key)
@@ -201,9 +199,7 @@ async def get_workspace_aux_settings(
     return merged
 
 
-async def _try_fill_api_key(
-    *, workspace_id: uuid.UUID, prefer_kind: str
-) -> ResolvedModel | None:
+async def _try_fill_api_key(*, workspace_id: uuid.UUID, prefer_kind: str) -> ResolvedModel | None:
     try:
         return await resolve_for_workspace(workspace_id=workspace_id, kind=prefer_kind)
     except Exception:  # pragma: no cover - defensive
@@ -276,9 +272,7 @@ async def call_aux_chat(
 
 
 # ─── M0.3 — judge helper ─────────────────────────────────────
-def _serialise_artifact_turns(
-    turns: list[dict[str, Any]] | None, *, max_chars: int
-) -> str:
+def _serialise_artifact_turns(turns: list[dict[str, Any]] | None, *, max_chars: int) -> str:
     """Compact JSON-ish dump of artifact turns, hard-trimmed to ``max_chars``.
 
     Strips internal-only fields (``thinking``, raw tool args/results) so
@@ -301,9 +295,7 @@ def _serialise_artifact_turns(
             if names_clean:
                 line += f" | tools: {', '.join(names_clean)}"
         if tool_results:
-            ok_count = sum(
-                1 for tr in tool_results if isinstance(tr, dict) and tr.get("ok")
-            )
+            ok_count = sum(1 for tr in tool_results if isinstance(tr, dict) and tr.get("ok"))
             err_count = len(tool_results) - ok_count
             line += f" | tool_results ok={ok_count} err={err_count}"
         parts.append(line)
@@ -377,9 +369,7 @@ async def call_aux_judge(
     which model was attempted (degrades to ``None`` only when no model
     resolves at all).
     """
-    config = await get_aux_model(
-        db, workspace_id=workspace_id, task=AuxiliaryTask.JUDGE
-    )
+    config = await get_aux_model(db, workspace_id=workspace_id, task=AuxiliaryTask.JUDGE)
     if config is None:
         return None, None
 

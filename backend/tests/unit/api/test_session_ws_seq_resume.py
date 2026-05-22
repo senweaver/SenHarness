@@ -84,9 +84,7 @@ async def test_replay_cached_events_replays_after_last_seen() -> None:
     # Wipe the live send log; replay should land here.
     ws.sent.clear()
 
-    replayed = await _replay_cached_events(
-        ws, ws_state=state, last_seen_seq=2, run_id=None
-    )
+    replayed = await _replay_cached_events(ws, ws_state=state, last_seen_seq=2, run_id=None)
     assert replayed == 2
     seqs = [frame["data"]["seq"] for frame in ws.sent]
     assert seqs == [3, 4]
@@ -110,9 +108,7 @@ async def test_replay_filters_by_run_id() -> None:
     await _emit(ws, state, {"type": "delta", "data": {"text": "b1"}})
 
     ws.sent.clear()
-    replayed = await _replay_cached_events(
-        ws, ws_state=state, last_seen_seq=0, run_id=run_b
-    )
+    replayed = await _replay_cached_events(ws, ws_state=state, last_seen_seq=0, run_id=run_b)
     assert replayed == 1
     assert ws.sent[0]["data"]["text"] == "b1"
 
@@ -125,9 +121,7 @@ async def test_replay_missing_seq_treated_as_zero() -> None:
     await _emit(ws, state, {"type": "delta", "data": {"text": "x"}})
     ws.sent.clear()
 
-    replayed = await _replay_cached_events(
-        ws, ws_state=state, last_seen_seq=None, run_id=None
-    )
+    replayed = await _replay_cached_events(ws, ws_state=state, last_seen_seq=None, run_id=None)
     assert replayed == 1
 
 

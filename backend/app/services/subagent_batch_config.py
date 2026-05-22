@@ -56,7 +56,7 @@ class ResolvedSubagentBatchConfig:
     max_nesting_depth: int
 
     @classmethod
-    def from_defaults(cls, defaults: SubagentBatchDefaults) -> "ResolvedSubagentBatchConfig":
+    def from_defaults(cls, defaults: SubagentBatchDefaults) -> ResolvedSubagentBatchConfig:
         return cls(
             batch_enabled=bool(defaults.batch_enabled_default),
             max_batch_size=int(defaults.max_batch_size_default),
@@ -66,9 +66,7 @@ class ResolvedSubagentBatchConfig:
 
 
 async def _read_platform_defaults(db: AsyncSession) -> SubagentBatchDefaults:
-    raw = await get_system_setting(
-        db, SystemSettingKey.SUBAGENT_BATCH_DEFAULTS, default=None
-    )
+    raw = await get_system_setting(db, SystemSettingKey.SUBAGENT_BATCH_DEFAULTS, default=None)
     if not isinstance(raw, dict):
         return SubagentBatchDefaults()
     try:

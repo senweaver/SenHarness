@@ -29,7 +29,6 @@ from app.agents.tools.skill_propose import (
 )
 from app.db.models.approval import (
     Approval,
-    ApprovalResourceType,
     ApprovalStatus,
 )
 from app.db.models.audit import AuditEvent
@@ -99,7 +98,7 @@ async def test_evolver_propose_then_admin_approve_full_loop(
         assert approval.status == ApprovalStatus.PENDING
 
     # 3) Build an admin auth header.
-    from app.core.security import create_access_token  # noqa: PLC0415
+    from app.core.security import create_access_token
 
     token, _exp, _jti = create_access_token(
         identity_id=str(identity.id),

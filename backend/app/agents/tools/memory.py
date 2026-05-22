@@ -36,9 +36,7 @@ from app.services import memory as mem_svc
 from app.services import pending_memory as pending_memory_svc
 
 
-def _resolve_scope(
-    scope: str, ctx
-) -> tuple[MemoryScope, uuid.UUID | None]:
+def _resolve_scope(scope: str, ctx) -> tuple[MemoryScope, uuid.UUID | None]:
     s = scope.lower()
     if s == "user":
         return MemoryScope.USER, ctx.identity_id
@@ -168,8 +166,7 @@ async def run_memorize(args: MemorizeArgs) -> dict:
             "kind": kind_value,
             "key": args.key,
             "note": (
-                "Memory will be applied at the end of the current run for "
-                "prompt-cache safety."
+                "Memory will be applied at the end of the current run for prompt-cache safety."
             ),
         }
     applied_record = applied or {}
@@ -293,7 +290,9 @@ class ListMemoriesArgs(BaseModel):
         default="user",
         description="'user', 'assistant', or 'workspace'.",
     )
-    kind: str | None = Field(default=None, description="Optional filter: 'kv'|'episodic'|'semantic'.")
+    kind: str | None = Field(
+        default=None, description="Optional filter: 'kv'|'episodic'|'semantic'."
+    )
     limit: int = Field(default=30, ge=1, le=200)
 
 

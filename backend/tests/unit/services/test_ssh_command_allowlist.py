@@ -32,9 +32,7 @@ def test_partial_substring_match_does_not_pass():
 
 
 def test_quoted_arguments_supported():
-    assert (
-        _command_in_allowlist('grep -R "needle" /etc', ["grep", "ls"]) is True
-    )
+    assert _command_in_allowlist('grep -R "needle" /etc', ["grep", "ls"]) is True
 
 
 def test_unbalanced_quotes_rejected_safely():

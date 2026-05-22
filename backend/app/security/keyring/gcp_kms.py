@@ -49,12 +49,8 @@ class GcpKmsKeyring(Keyring):
                 "`pip install senharness-backend[kms-gcp]`."
             )
         if not settings.GCP_KMS_KEY_NAME:
-            raise KeyringError(
-                "GCP_KMS_KEY_NAME is empty; set it to the CryptoKey resource name."
-            )
-        self._client: KeyManagementServiceClient = (
-            _gcp_kms.KeyManagementServiceClient()
-        )
+            raise KeyringError("GCP_KMS_KEY_NAME is empty; set it to the CryptoKey resource name.")
+        self._client: KeyManagementServiceClient = _gcp_kms.KeyManagementServiceClient()
         self._key_name = settings.GCP_KMS_KEY_NAME
         self._version = self._derive_version(self._key_name)
         audit_keyring_open("gcp_kms", self._key_name)
@@ -69,22 +65,16 @@ class GcpKmsKeyring(Keyring):
 
     def wrap(self, dek: bytes) -> tuple[bytes, str]:
         try:
-            resp = self._client.encrypt(
-                request={"name": self._key_name, "plaintext": dek}
-            )
+            resp = self._client.encrypt(request={"name": self._key_name, "plaintext": dek})
         except GoogleAPIError as e:
             raise KeyringError(f"GCP KMS encrypt failed: {e}") from e
         return bytes(resp.ciphertext), self._version
 
     def unwrap(self, wrapped_dek: bytes, kek_version: str) -> bytes:
         if not kek_version.startswith("gcp-"):
-            raise KeyringError(
-                f"KEK version {kek_version!r} was not sealed by GcpKmsKeyring."
-            )
+            raise KeyringError(f"KEK version {kek_version!r} was not sealed by GcpKmsKeyring.")
         try:
-            resp = self._client.decrypt(
-                request={"name": self._key_name, "ciphertext": wrapped_dek}
-            )
+            resp = self._client.decrypt(request={"name": self._key_name, "ciphertext": wrapped_dek})
         except GoogleAPIError as e:
             log.warning("gcp kms unwrap failed: %s", e)
             raise KeyringAccessError("GCP KMS decrypt failed") from e
@@ -98,9 +88,7 @@ class GcpKmsKeyring(Keyring):
                 request={"parent": self._key_name, "crypto_key_version": {}}
             )
         except GoogleAPIError as e:
-            raise KeyringError(
-                f"GCP KMS create_crypto_key_version failed: {e}"
-            ) from e
+            raise KeyringError(f"GCP KMS create_crypto_key_version failed: {e}") from e
         self._version = self._derive_version(self._key_name, rotated=True)
         return self._version
 

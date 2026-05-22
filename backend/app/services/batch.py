@@ -63,16 +63,10 @@ async def capture_checkpoint(
     snapshot = {
         "title": session_obj.title,
         "kind": (
-            session_obj.kind.value
-            if hasattr(session_obj.kind, "value")
-            else str(session_obj.kind)
+            session_obj.kind.value if hasattr(session_obj.kind, "value") else str(session_obj.kind)
         ),
-        "subject_id": str(session_obj.subject_id)
-        if session_obj.subject_id
-        else None,
-        "channel_id": str(session_obj.channel_id)
-        if session_obj.channel_id
-        else None,
+        "subject_id": str(session_obj.subject_id) if session_obj.subject_id else None,
+        "channel_id": str(session_obj.channel_id) if session_obj.channel_id else None,
         "metadata_json": dict(session_obj.metadata_json or {}),
     }
     return await SessionCheckpointRepository(db).create(
@@ -100,9 +94,7 @@ async def fork_at_checkpoint(
 
     checkpoint = await SessionCheckpointRepository(db).get(checkpoint_id)
     if checkpoint is None or checkpoint.workspace_id != workspace_id:
-        raise NotFound(
-            "checkpoint_not_found", code="checkpoint.not_found"
-        )
+        raise NotFound("checkpoint_not_found", code="checkpoint.not_found")
 
     original = await sess_svc.get_session_or_404(
         db, checkpoint.session_id, workspace_id=workspace_id
@@ -219,9 +211,7 @@ async def _materialize_case(
     if checkpoint_id is not None:
         checkpoint = await SessionCheckpointRepository(db).get(checkpoint_id)
         if checkpoint is None or checkpoint.workspace_id != workspace_id:
-            raise NotFound(
-                "checkpoint_not_found", code="checkpoint.not_found"
-            )
+            raise NotFound("checkpoint_not_found", code="checkpoint.not_found")
         source_sid = checkpoint.session_id
         limit = max(1, checkpoint.message_count)
     elif source_sid is not None:
@@ -236,12 +226,8 @@ async def _materialize_case(
             extras={"needed": "text | source_session_id | checkpoint_id"},
         )
 
-    messages = await MessageRepository(db).list_for_session(
-        session_id=source_sid, limit=limit
-    )
-    first_user = next(
-        (m for m in messages if m.role == MessageRole.USER), None
-    )
+    messages = await MessageRepository(db).list_for_session(session_id=source_sid, limit=limit)
+    first_user = next((m for m in messages if m.role == MessageRole.USER), None)
     last_assistant = next(
         (m for m in reversed(list(messages)) if m.role == MessageRole.ASSISTANT),
         None,
@@ -288,11 +274,7 @@ async def execute_batch(batch_run_id: uuid.UUID) -> None:
 
     cases = []
     async with factory() as db:
-        cases = list(
-            await BatchRunCaseRepository(db).list_for_run(
-                batch_run_id=batch_run_id
-            )
-        )
+        cases = list(await BatchRunCaseRepository(db).list_for_run(batch_run_id=batch_run_id))
 
     total = len(cases)
     passed = 0
@@ -310,9 +292,7 @@ async def execute_batch(batch_run_id: uuid.UUID) -> None:
 
     # Aggregate.
     async with factory() as db:
-        rerun_cases = await BatchRunCaseRepository(db).list_for_run(
-            batch_run_id=batch_run_id
-        )
+        rerun_cases = await BatchRunCaseRepository(db).list_for_run(batch_run_id=batch_run_id)
         for c in rerun_cases:
             if c.status == BatchCaseStatus.SUCCEEDED:
                 passed += 1
@@ -325,13 +305,9 @@ async def execute_batch(batch_run_id: uuid.UUID) -> None:
             "passed": passed,
             "failed": failed,
             "skipped": skipped,
-            "duration_ms": int(
-                (datetime.utcnow() - start).total_seconds() * 1000
-            ),
+            "duration_ms": int((datetime.utcnow() - start).total_seconds() * 1000),
         }
-        final_status = (
-            BatchRunStatus.SUCCEEDED if failed == 0 else BatchRunStatus.FAILED
-        )
+        final_status = BatchRunStatus.SUCCEEDED if failed == 0 else BatchRunStatus.FAILED
         batch = await BatchRunRepository(db).get(batch_run_id)
         if batch is not None:
             await BatchRunRepository(db).update(
@@ -359,9 +335,7 @@ async def _execute_case(
         case = await BatchRunCaseRepository(db).get(case_id)
         if case is None:
             return
-        await BatchRunCaseRepository(db).update(
-            case, status=BatchCaseStatus.RUNNING
-        )
+        await BatchRunCaseRepository(db).update(case, status=BatchCaseStatus.RUNNING)
         if agent_id is None:
             await BatchRunCaseRepository(db).update(
                 case,
@@ -411,9 +385,7 @@ async def _execute_case(
                     status=BatchCaseStatus.FAILED,
                     error=str(e),
                     replay_session_id=replay_session_id,
-                    duration_ms=int(
-                        (datetime.utcnow() - started).total_seconds() * 1000
-                    ),
+                    duration_ms=int((datetime.utcnow() - started).total_seconds() * 1000),
                 )
                 await db.commit()
         return

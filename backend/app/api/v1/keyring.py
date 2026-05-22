@@ -47,11 +47,10 @@ class KeyringRotateOut(BaseModel):
 # ─── Helpers ─────────────────────────────────────────────
 async def _vault_counts(db) -> tuple[int, dict[str, int]]:
     rows = (
-        await db.execute(
-            select(VaultItem.kek_version)
-            .where(VaultItem.deleted_at.is_(None))
-        )
-    ).scalars().all()
+        (await db.execute(select(VaultItem.kek_version).where(VaultItem.deleted_at.is_(None))))
+        .scalars()
+        .all()
+    )
     buckets: dict[str, int] = {}
     total = 0
     for v in rows:
@@ -127,14 +126,18 @@ async def rotate_kek(
     batch_size = 200
     while True:
         rows = (
-            await db.execute(
-                select(VaultItem)
-                .where(VaultItem.deleted_at.is_(None))
-                .order_by(VaultItem.created_at.asc())
-                .offset(offset)
-                .limit(batch_size)
+            (
+                await db.execute(
+                    select(VaultItem)
+                    .where(VaultItem.deleted_at.is_(None))
+                    .order_by(VaultItem.created_at.asc())
+                    .offset(offset)
+                    .limit(batch_size)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         if not rows:
             break
         for row in rows:
@@ -189,5 +192,3 @@ async def rotate_kek(
         skipped_count=skipped,
         duration_ms=duration_ms,
     )
-
-

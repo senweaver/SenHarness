@@ -229,9 +229,7 @@ DANGEROUS_FIELDS: dict[PlatformSettingsSection, frozenset[str]] = {
         {"allow_local_execute_in_prod", "allow_ssh_backend"}
     ),
     PlatformSettingsSection.AUTH_REGISTRATION: frozenset({"mode"}),
-    PlatformSettingsSection.PLUGINS: frozenset(
-        {"allow_user_plugins", "allow_unapproved_plugins"}
-    ),
+    PlatformSettingsSection.PLUGINS: frozenset({"allow_user_plugins", "allow_unapproved_plugins"}),
 }
 
 
@@ -253,17 +251,14 @@ EMAIL_NOTIFY_SECTIONS: frozenset[PlatformSettingsSection] = frozenset(
 # Field names whose values must NEVER appear in audit metadata. The
 # diff serializer replaces them with ``"***"``.
 SECRET_FIELD_NAMES: frozenset[str] = frozenset(
-    {"client_secret", "client_secret_ref", "password", "password_ref",
-     "signing_root_pubkey"}
+    {"client_secret", "client_secret_ref", "password", "password_ref", "signing_root_pubkey"}
 )
 
 
 # Maps a section field → the ``Settings`` attribute that seeds it on
 # first boot. Composite keys (``auth.oauth`` providers) are handled
 # imperatively below; the table only covers flat 1:1 mappings.
-ENV_FIELD_MAPPING: dict[
-    PlatformSettingsSection, dict[str, str]
-] = {
+ENV_FIELD_MAPPING: dict[PlatformSettingsSection, dict[str, str]] = {
     PlatformSettingsSection.AUTH_REGISTRATION: {
         "rate_limit_per_minute": "AUTH_REGISTER_RATE_LIMIT",
     },
@@ -294,7 +289,7 @@ ENV_FIELD_MAPPING: dict[
 # Mirrors the project-wide ``app.core.errors`` naming: the AppError
 # subclasses don't carry an ``Error`` suffix because the frontend
 # matches on the stable ``code`` rather than the class name.
-class DangerousChangeRequiresConfirmation(AppError):  # noqa: N818
+class DangerousChangeRequiresConfirmation(AppError):
     """Raised when an admin tries to change a flagged field without
     ``confirmed_dangerous=True``. The frontend handles this code by
     rendering an extra confirmation dialog.
@@ -304,7 +299,7 @@ class DangerousChangeRequiresConfirmation(AppError):  # noqa: N818
     default_status = 400
 
 
-class UnknownPlatformSection(AppError):  # noqa: N818
+class UnknownPlatformSection(AppError):
     code = "platform_settings.unknown_section"
     default_status = 404
 
@@ -400,9 +395,7 @@ async def _load_auth_registration(db: AsyncSession) -> tuple[dict[str, Any], boo
             )
         ),
         "invitation_expiry_days": int(
-            await get_system_setting(
-                db, SystemSettingKey.INVITATION_EXPIRY_DAYS, default=30
-            )
+            await get_system_setting(db, SystemSettingKey.INVITATION_EXPIRY_DAYS, default=30)
         ),
     }
     db_present = any([mode_row, verify_row, rate_row, invite_row])
@@ -442,9 +435,7 @@ async def _load_section(
     return raw if isinstance(raw, dict) else {"items": raw}, True
 
 
-def _detect_env_overrides(
-    section: PlatformSettingsSection, value: BaseModel
-) -> list[str]:
+def _detect_env_overrides(section: PlatformSettingsSection, value: BaseModel) -> list[str]:
     """Return field names whose current value matches an active env var.
 
     Used purely for the admin UI badge — it tells the operator "the
@@ -500,8 +491,8 @@ async def _last_modified_at(
     else:
         keys = [SECTION_TO_KEY[section].value]
     rows = (
-        await db.execute(select(SystemSetting).where(SystemSetting.key.in_(keys)))
-    ).scalars().all()
+        (await db.execute(select(SystemSetting).where(SystemSetting.key.in_(keys)))).scalars().all()
+    )
     timestamps = [getattr(r, "updated_at", None) for r in rows if r is not None]
     timestamps = [t for t in timestamps if t is not None]
     if not timestamps:
@@ -509,9 +500,7 @@ async def _last_modified_at(
     return max(timestamps)
 
 
-async def get_section(
-    db: AsyncSession, *, section: PlatformSettingsSection | str
-) -> BaseModel:
+async def get_section(db: AsyncSession, *, section: PlatformSettingsSection | str) -> BaseModel:
     """Cache > DB > env-bootstrap > schema defaults."""
     sec = _section_or_raise(section)
     cached = _cache_get(sec)
@@ -523,8 +512,7 @@ async def get_section(
         value = schema.model_validate(raw)
     except ValidationError as exc:
         log.warning(
-            "platform_settings: stored row for %s failed validation (%s); "
-            "falling back to defaults",
+            "platform_settings: stored row for %s failed validation (%s); falling back to defaults",
             sec.value,
             exc,
         )
@@ -563,18 +551,13 @@ def _redact_for_audit(payload: dict[str, Any]) -> dict[str, Any]:
         elif isinstance(v, dict):
             out[k] = _redact_for_audit(v)
         elif isinstance(v, list):
-            out[k] = [
-                _redact_for_audit(item) if isinstance(item, dict) else item
-                for item in v
-            ]
+            out[k] = [_redact_for_audit(item) if isinstance(item, dict) else item for item in v]
         else:
             out[k] = v
     return out
 
 
-def _diff_payloads(
-    old: dict[str, Any], new: dict[str, Any]
-) -> dict[str, Any]:
+def _diff_payloads(old: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
     """Return ``{field: {"old": ..., "new": ...}}`` for changed leaves only.
 
     Used for audit metadata — secret values are pre-redacted by the
@@ -588,9 +571,7 @@ def _diff_payloads(
     return changed
 
 
-async def _persist_auth_registration(
-    db: AsyncSession, *, value: AuthRegistrationSettings
-) -> None:
+async def _persist_auth_registration(db: AsyncSession, *, value: AuthRegistrationSettings) -> None:
     await set_system_setting(db, SystemSettingKey.REGISTRATION_MODE, value.mode)
     await set_system_setting(
         db,
@@ -624,9 +605,7 @@ async def _persist_section(
     await set_system_setting(db, key, value.model_dump(mode="json"))
 
 
-async def _delete_section_rows(
-    db: AsyncSession, *, section: PlatformSettingsSection
-) -> None:
+async def _delete_section_rows(db: AsyncSession, *, section: PlatformSettingsSection) -> None:
     if section == PlatformSettingsSection.AUTH_REGISTRATION:
         for key in (
             SystemSettingKey.REGISTRATION_MODE,
@@ -737,9 +716,7 @@ async def update_section(
     return new_value
 
 
-def _schedule_side_effects(
-    section: PlatformSettingsSection, actor_identity_id: uuid.UUID
-) -> None:
+def _schedule_side_effects(section: PlatformSettingsSection, actor_identity_id: uuid.UUID) -> None:
     """Fire-and-forget the post-update fan-out.
 
     Wrapped in ``try/except`` so a missing event loop (e.g. inside a
@@ -1016,9 +993,7 @@ async def bootstrap_from_env_if_empty(db: AsyncSession) -> dict[str, int]:
             field_info = schema.model_fields.get(field)
             target_type = field_info.annotation if field_info else str
             coerced = (
-                _coerce_env(env_value, target_type)
-                if isinstance(env_value, str)
-                else env_value
+                _coerce_env(env_value, target_type) if isinstance(env_value, str) else env_value
             )
             if coerced is None:
                 continue
@@ -1044,13 +1019,10 @@ async def bootstrap_from_env_if_empty(db: AsyncSession) -> dict[str, int]:
         if not db_present:
             try:
                 value = EmailSmtpSettings.model_validate(smtp_payload)
-                await _persist_section(
-                    db, section=PlatformSettingsSection.EMAIL_SMTP, value=value
-                )
-                seeded[PlatformSettingsSection.EMAIL_SMTP.value] = (
-                    seeded.get(PlatformSettingsSection.EMAIL_SMTP.value, 0)
-                    + len([k for k, v in smtp_payload.items() if v is not None])
-                )
+                await _persist_section(db, section=PlatformSettingsSection.EMAIL_SMTP, value=value)
+                seeded[PlatformSettingsSection.EMAIL_SMTP.value] = seeded.get(
+                    PlatformSettingsSection.EMAIL_SMTP.value, 0
+                ) + len([k for k, v in smtp_payload.items() if v is not None])
             except ValidationError as exc:
                 log.warning("bootstrap: SMTP env invalid (%s); skipping", exc)
 
@@ -1060,12 +1032,8 @@ async def bootstrap_from_env_if_empty(db: AsyncSession) -> dict[str, int]:
         if not db_present:
             try:
                 value = AuthOAuthSettings.model_validate(oauth_payload)
-                await _persist_section(
-                    db, section=PlatformSettingsSection.AUTH_OAUTH, value=value
-                )
-                seeded[PlatformSettingsSection.AUTH_OAUTH.value] = len(
-                    oauth_payload["providers"]
-                )
+                await _persist_section(db, section=PlatformSettingsSection.AUTH_OAUTH, value=value)
+                seeded[PlatformSettingsSection.AUTH_OAUTH.value] = len(oauth_payload["providers"])
             except ValidationError as exc:
                 log.warning("bootstrap: OAuth env invalid (%s); skipping", exc)
 
@@ -1078,8 +1046,7 @@ async def bootstrap_from_env_if_empty(db: AsyncSession) -> dict[str, int]:
             resource_type="platform_settings",
             resource_id=None,
             summary=(
-                f"seeded {sum(seeded.values())} fields across "
-                f"{len(seeded)} sections from env"
+                f"seeded {sum(seeded.values())} fields across {len(seeded)} sections from env"
             ),
             metadata={"sections": seeded},
         )
@@ -1101,8 +1068,7 @@ async def publish_invalidation(section: PlatformSettingsSection) -> None:
         await r.publish(PLATFORM_SETTINGS_CHANNEL, section.value)
     except Exception as exc:  # pragma: no cover - fail-open
         log.info(
-            "platform_settings: redis publish failed (%s); "
-            "other workers will refresh after TTL",
+            "platform_settings: redis publish failed (%s); other workers will refresh after TTL",
             exc,
         )
 
@@ -1119,9 +1085,7 @@ async def _consume_invalidations(channel: Any) -> None:
         try:
             sec = PlatformSettingsSection(raw)
         except ValueError:
-            log.warning(
-                "platform_settings: ignored invalidation for unknown section %r", raw
-            )
+            log.warning("platform_settings: ignored invalidation for unknown section %r", raw)
             continue
         invalidate_local(sec)
         if sec == PlatformSettingsSection.EMAIL_SMTP:
@@ -1160,9 +1124,7 @@ async def start_invalidation_listener() -> asyncio.Task[None] | None:
             r = get_redis()
             pubsub = r.pubsub()
             await pubsub.subscribe(PLATFORM_SETTINGS_CHANNEL)
-            log.info(
-                "platform_settings: subscribed to %s", PLATFORM_SETTINGS_CHANNEL
-            )
+            log.info("platform_settings: subscribed to %s", PLATFORM_SETTINGS_CHANNEL)
             try:
                 await _consume_invalidations(pubsub)
             finally:

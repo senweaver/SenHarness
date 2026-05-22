@@ -97,7 +97,7 @@ class _StubAsyncClient:
         self._responses = list(responses)
         self.calls: list[dict] = []
 
-    async def __aenter__(self) -> "_StubAsyncClient":
+    async def __aenter__(self) -> _StubAsyncClient:
         return self
 
     async def __aexit__(self, exc_type, exc, tb) -> None:
@@ -251,9 +251,7 @@ async def test_get_valid_token_refreshes_when_expired(stub_vault, http_stub):
     assert posted["data"]["refresh_token"] == "rtk-old"
 
 
-async def test_get_valid_token_falls_back_to_dance_when_refresh_fails(
-    stub_vault, http_stub
-):
+async def test_get_valid_token_falls_back_to_dance_when_refresh_fails(stub_vault, http_stub):
     server_id = uuid.uuid4()
     workspace_id = uuid.uuid4()
     config = _config()

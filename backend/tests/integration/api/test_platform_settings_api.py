@@ -15,9 +15,7 @@ async def _make_admin_token(db_session, identity):
     from app.core.security import create_access_token
 
     repo = IdentityRepository(db_session)
-    promoted = await repo.update(
-        identity, platform_role=PlatformRole.PLATFORM_ADMIN
-    )
+    promoted = await repo.update(identity, platform_role=PlatformRole.PLATFORM_ADMIN)
     await db_session.commit()
     token, _, _ = create_access_token(
         identity_id=str(promoted.id),
@@ -27,13 +25,9 @@ async def _make_admin_token(db_session, identity):
     return f"Bearer {token}"
 
 
-async def test_list_endpoint_returns_14_sections(
-    async_client, db_session, identity
-):
+async def test_list_endpoint_returns_14_sections(async_client, db_session, identity):
     auth = await _make_admin_token(db_session, identity)
-    res = await async_client.get(
-        "/api/v1/admin/platform-settings", headers={"Authorization": auth}
-    )
+    res = await async_client.get("/api/v1/admin/platform-settings", headers={"Authorization": auth})
     assert res.status_code == 200, res.text
     body = res.json()
     assert len(body["sections"]) == 14
@@ -107,9 +101,7 @@ async def test_put_section_dangerous_rejected_without_confirmation(
     assert body["code"].startswith("platform_settings.")
 
 
-async def test_put_section_dangerous_passes_with_confirmation(
-    async_client, db_session, identity
-):
+async def test_put_section_dangerous_passes_with_confirmation(async_client, db_session, identity):
     auth = await _make_admin_token(db_session, identity)
     res = await async_client.put(
         "/api/v1/admin/platform-settings/security.sandbox",
@@ -126,9 +118,7 @@ async def test_put_section_dangerous_passes_with_confirmation(
     assert res.status_code == 200, res.text
 
 
-async def test_reset_endpoint_restores_defaults(
-    async_client, db_session, identity
-):
+async def test_reset_endpoint_restores_defaults(async_client, db_session, identity):
     auth = await _make_admin_token(db_session, identity)
     await async_client.put(
         "/api/v1/admin/platform-settings/general",

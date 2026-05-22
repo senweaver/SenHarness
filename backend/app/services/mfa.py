@@ -57,16 +57,12 @@ async def setup(session: AsyncSession, *, identity: Identity) -> MfaSetup:
         raise RuntimeError("pyotp not installed") from e
 
     secret = pyotp.random_base32()
-    await IdentityRepository(session).update(
-        identity, mfa_secret_ref=f"{_PENDING_PREFIX}{secret}"
-    )
+    await IdentityRepository(session).update(identity, mfa_secret_ref=f"{_PENDING_PREFIX}{secret}")
     uri = _provisioning_uri(secret, identity.email)
     return MfaSetup(secret=secret, otpauth_uri=uri)
 
 
-async def activate(
-    session: AsyncSession, *, identity: Identity, code: str
-) -> bool:
+async def activate(session: AsyncSession, *, identity: Identity, code: str) -> bool:
     """Confirm the pending secret by verifying one TOTP code. On success the
     ``pending:`` prefix is dropped and MFA is live for the next login.
     """

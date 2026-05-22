@@ -59,18 +59,24 @@ class TestResolveSafeUrlRejectsSame:
         assert exc.value.code == "ssrf.blocked_hostname"
 
     def test_metadata_pinned(self):
-        with patch(
-            "app.core.url_safety._resolve_all",
-            return_value=["169.254.169.254"],
-        ), pytest.raises(UnsafeURLError) as exc:
+        with (
+            patch(
+                "app.core.url_safety._resolve_all",
+                return_value=["169.254.169.254"],
+            ),
+            pytest.raises(UnsafeURLError) as exc,
+        ):
             resolve_safe_url("http://anything/")
         assert exc.value.code == "ssrf.metadata_endpoint"
 
     def test_private_pinned_rejects_by_default(self):
-        with patch(
-            "app.core.url_safety._resolve_all",
-            return_value=["10.0.0.1"],
-        ), pytest.raises(UnsafeURLError) as exc:
+        with (
+            patch(
+                "app.core.url_safety._resolve_all",
+                return_value=["10.0.0.1"],
+            ),
+            pytest.raises(UnsafeURLError) as exc,
+        ):
             resolve_safe_url("http://corp.local/")
         assert exc.value.code == "ssrf.private_address"
 
@@ -79,16 +85,17 @@ class TestResolveSafeUrlRejectsSame:
             "app.core.url_safety._resolve_all",
             return_value=["10.0.0.1"],
         ):
-            url, pinned = resolve_safe_url(
-                "http://corp.local/", allow_private=True
-            )
+            url, pinned = resolve_safe_url("http://corp.local/", allow_private=True)
         assert url == "http://corp.local/"
         assert pinned == "10.0.0.1"
 
     def test_dns_rebind_caught_pin_path(self):
-        with patch(
-            "app.core.url_safety._resolve_all",
-            return_value=["93.184.216.34", "127.0.0.1"],
-        ), pytest.raises(UnsafeURLError) as exc:
+        with (
+            patch(
+                "app.core.url_safety._resolve_all",
+                return_value=["93.184.216.34", "127.0.0.1"],
+            ),
+            pytest.raises(UnsafeURLError) as exc,
+        ):
             resolve_safe_url("http://dns-rebind.example/")
         assert exc.value.code == "ssrf.private_address"

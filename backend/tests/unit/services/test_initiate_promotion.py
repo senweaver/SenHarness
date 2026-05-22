@@ -28,8 +28,8 @@ from app.db.models.hub_skill_pack import HubScope
 from app.db.models.identity import PlatformRole
 from app.db.models.skills import SkillPackState
 from app.repositories.skills import SkillPackRepository
-from app.services import hub_pull_push as hub_pp_svc
 from app.services import hub_promote_pipeline as preview_svc
+from app.services import hub_pull_push as hub_pp_svc
 from app.services import skill_version as skill_version_svc
 
 pytestmark = pytest.mark.asyncio
@@ -73,9 +73,7 @@ async def _make_pack_and_version(db, *, identity, slug_prefix: str = "ws"):
 
 
 async def test_blocker_raises_and_no_approval_row(db_session, identity):
-    workspace, pack, version = await _make_pack_and_version(
-        db_session, identity=identity
-    )
+    workspace, pack, version = await _make_pack_and_version(db_session, identity=identity)
 
     # Force a sanitizer-required failure — should raise + leave no
     # approval row.
@@ -91,37 +89,30 @@ async def test_blocker_raises_and_no_approval_row(db_session, identity):
             stats=SanitizationStats(failure_reason="boom"),
         )
 
-    with patch(
-        "app.services.hub_promote_pipeline.sanitize_for_hub",
-        side_effect=_failing_sanitize,
+    with (
+        patch(
+            "app.services.hub_promote_pipeline.sanitize_for_hub",
+            side_effect=_failing_sanitize,
+        ),
+        pytest.raises(hub_pp_svc.HubPromotionBlocked) as exc_info,
     ):
-        with pytest.raises(hub_pp_svc.HubPromotionBlocked) as exc_info:
-            await hub_pp_svc.initiate_promotion(
-                db_session,
-                workspace_id=workspace.id,
-                pack_id=pack.id,
-                target_scope=HubScope.TENANT,
-                actor=identity,
-                version_id=version.id,
-            )
+        await hub_pp_svc.initiate_promotion(
+            db_session,
+            workspace_id=workspace.id,
+            pack_id=pack.id,
+            target_scope=HubScope.TENANT,
+            actor=identity,
+            version_id=version.id,
+        )
 
-    assert (
-        preview_svc.BLOCKER_SANITIZER_REQUIRED_FAILED
-        in exc_info.value.extras["blockers"]
-    )
+    assert preview_svc.BLOCKER_SANITIZER_REQUIRED_FAILED in exc_info.value.extras["blockers"]
 
     rows = (
-        (
-            await db_session.execute(
-                select(Approval).where(Approval.workspace_id == workspace.id)
-            )
-        )
+        (await db_session.execute(select(Approval).where(Approval.workspace_id == workspace.id)))
         .scalars()
         .all()
     )
-    assert all(
-        r.resource_type != hub_pp_svc.HUB_PROMOTION_RESOURCE_TYPE for r in rows
-    )
+    assert all(r.resource_type != hub_pp_svc.HUB_PROMOTION_RESOURCE_TYPE for r in rows)
 
 
 async def test_platform_scope_requires_platform_admin(db_session, identity):
@@ -143,17 +134,11 @@ async def test_platform_scope_requires_platform_admin(db_session, identity):
     assert exc_info.value.code == "hub.scope_permission_denied"
 
     rows = (
-        (
-            await db_session.execute(
-                select(Approval).where(Approval.workspace_id == workspace.id)
-            )
-        )
+        (await db_session.execute(select(Approval).where(Approval.workspace_id == workspace.id)))
         .scalars()
         .all()
     )
-    assert all(
-        r.resource_type != hub_pp_svc.HUB_PROMOTION_RESOURCE_TYPE for r in rows
-    )
+    assert all(r.resource_type != hub_pp_svc.HUB_PROMOTION_RESOURCE_TYPE for r in rows)
 
 
 async def test_happy_creates_approval_and_audit(db_session, identity):
@@ -189,9 +174,7 @@ async def test_happy_creates_approval_and_audit(db_session, identity):
     actions = (
         (
             await db_session.execute(
-                select(AuditEvent.action).where(
-                    AuditEvent.workspace_id == workspace.id
-                )
+                select(AuditEvent.action).where(AuditEvent.workspace_id == workspace.id)
             )
         )
         .scalars()

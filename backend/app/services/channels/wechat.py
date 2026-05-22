@@ -133,10 +133,7 @@ class WeChatProvider(ChannelProvider):
         #   {"from_user_id": "...", "text": "...", "context_token"?: "..."}
         text = str(payload.get("text") or "").strip()
         from_user = (
-            payload.get("from_user_id")
-            or payload.get("from_user")
-            or payload.get("from")
-            or ""
+            payload.get("from_user_id") or payload.get("from_user") or payload.get("from") or ""
         )
         if not text or not from_user:
             return None

@@ -141,9 +141,7 @@ async def _load_platform_defaults(
     except Exception:  # pragma: no cover — defensive
         return {}
     try:
-        value = await get_section(
-            db, section=PlatformSettingsSection.PROVIDER_FAILOVER
-        )
+        value = await get_section(db, section=PlatformSettingsSection.PROVIDER_FAILOVER)
     except Exception:  # pragma: no cover — defensive
         return {}
     return value.model_dump(mode="json")
@@ -235,9 +233,7 @@ async def get_provider_chain(
     be stale; the runner will record fresh failures and re-trip the
     cooldown on the next attempt if the provider is still down.
     """
-    cfg = config or await get_workspace_failover_config(
-        db, workspace_id=workspace_id
-    )
+    cfg = config or await get_workspace_failover_config(db, workspace_id=workspace_id)
 
     parsed: list[ProviderChainEntry] = []
     for raw in cfg.chain_raw:

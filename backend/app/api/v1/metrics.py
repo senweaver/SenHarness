@@ -89,9 +89,7 @@ def _require_workspace(workspace_id: uuid.UUID | None) -> uuid.UUID:
     return workspace_id
 
 
-def _parse_window(
-    since: date | None, until: date | None
-) -> tuple[datetime, datetime, date, date]:
+def _parse_window(since: date | None, until: date | None) -> tuple[datetime, datetime, date, date]:
     """Resolve the date window, defaulting to last 30 days.
 
     Returned datetimes are UTC-naive (Postgres stores naive timestamps).
@@ -105,9 +103,7 @@ def _parse_window(
     return start, end, since_d, until_d
 
 
-async def _can_see_workspace(
-    db, workspace_id: uuid.UUID, identity_id: uuid.UUID
-) -> bool:
+async def _can_see_workspace(db, workspace_id: uuid.UUID, identity_id: uuid.UUID) -> bool:
     """Admin/owner may view everyone's usage; members see only their own."""
     mem: Membership = await ws_svc.ensure_member_access(
         db, workspace_id=workspace_id, identity_id=identity_id

@@ -123,9 +123,7 @@ async def get_thread(
     thread = await logical_thread_svc.get_thread(
         db, workspace_id=ws_id, identity_id=identity_id, thread_id=thread_id
     )
-    bindings = await _bindings_with_channel(
-        db, workspace_id=ws_id, thread_id=thread.id
-    )
+    bindings = await _bindings_with_channel(db, workspace_id=ws_id, thread_id=thread.id)
     return LogicalThreadDetail(
         **LogicalThreadRead.model_validate(thread).model_dump(),
         bindings=bindings,
@@ -258,9 +256,7 @@ async def list_thread_bindings(
     await logical_thread_svc.get_thread(
         db, workspace_id=ws_id, identity_id=identity_id, thread_id=thread_id
     )
-    return await _bindings_with_channel(
-        db, workspace_id=ws_id, thread_id=thread_id
-    )
+    return await _bindings_with_channel(db, workspace_id=ws_id, thread_id=thread_id)
 
 
 @router.delete(

@@ -74,9 +74,7 @@ def _b64decode(value: str, *, expected_bytes: int, code: str) -> bytes:
     try:
         decoded = base64.b64decode(value, validate=True)
     except (ValueError, TypeError) as exc:
-        raise PluginSigningError(
-            f"base64 decode failed: {exc}", code=code
-        ) from exc
+        raise PluginSigningError(f"base64 decode failed: {exc}", code=code) from exc
     if len(decoded) != expected_bytes:
         raise PluginSigningError(
             f"expected {expected_bytes} bytes after b64 decode, got {len(decoded)}",
@@ -105,7 +103,7 @@ def verify_signature(
     except ImportError as exc:
         raise PluginSigningError(
             "pynacl is required for plugin signature verification; "
-            "install ``pip install \".[plugin-signing]\"`` or set "
+            'install ``pip install ".[plugin-signing]"`` or set '
             "platform_settings.plugins.allow_unapproved_plugins=True for dev",
             code="pynacl_unavailable",
         ) from exc
@@ -148,9 +146,7 @@ async def get_trust_root(db: AsyncSession) -> str | None:
     """
     from app.services import platform_settings as ps_svc
 
-    section = await ps_svc.get_section(
-        db, section=ps_svc.PlatformSettingsSection.PLUGINS
-    )
+    section = await ps_svc.get_section(db, section=ps_svc.PlatformSettingsSection.PLUGINS)
     pubkey = getattr(section, "signing_root_pubkey", None)
     if pubkey is None:
         return None
@@ -188,9 +184,7 @@ async def evaluate_plugin_for_load(
     """
     from app.services import platform_settings as ps_svc
 
-    section = await ps_svc.get_section(
-        db, section=ps_svc.PlatformSettingsSection.PLUGINS
-    )
+    section = await ps_svc.get_section(db, section=ps_svc.PlatformSettingsSection.PLUGINS)
     allow_user_plugins = bool(getattr(section, "allow_user_plugins", False))
     if not allow_user_plugins:
         return (False, "disabled")
@@ -226,9 +220,7 @@ async def evaluate_plugin_for_load(
     from app.repositories.plugin_registry import PluginRegistryRepository
 
     repo = PluginRegistryRepository(db)
-    row = await repo.get_by(
-        name=manifest.name, version=manifest.version, sha256=sha256
-    )
+    row = await repo.get_by(name=manifest.name, version=manifest.version, sha256=sha256)
     if row is None:
         return (False, "not_in_registry")
     if not row.approved_by_platform_admin:

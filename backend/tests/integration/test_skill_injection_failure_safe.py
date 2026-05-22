@@ -39,9 +39,7 @@ pytestmark = pytest.mark.asyncio
 class _BackendWithInjection:
     backend_kind = "native"
 
-    def __init__(
-        self, events: list[RunEvent], injected: list[uuid.UUID]
-    ) -> None:
+    def __init__(self, events: list[RunEvent], injected: list[uuid.UUID]) -> None:
         self._events = events
         self._injected = injected
         self._captured_run_id: uuid.UUID | None = None
@@ -96,9 +94,7 @@ async def test_record_usage_failure_does_not_break_capture(
     )
     await db_session.flush()
 
-    pending, _ = await _queue_pending_memory(
-        db_session, workspace, identity, agent, sess
-    )
+    pending, _ = await _queue_pending_memory(db_session, workspace, identity, agent, sess)
     await db_session.flush()
     assert pending.status == PendingMemoryStatus.PENDING
 
@@ -108,16 +104,12 @@ async def test_record_usage_failure_does_not_break_capture(
         enqueue_calls.append((args, kwargs))
         return None
 
-    monkeypatch.setattr(
-        "app.worker.queue.enqueue", _fake_enqueue, raising=False
-    )
+    monkeypatch.setattr("app.worker.queue.enqueue", _fake_enqueue, raising=False)
 
     async def _exploding_record_usage_batch(*_args, **_kwargs):
         raise RuntimeError("simulated telemetry outage")
 
-    monkeypatch.setattr(
-        skill_usage_svc, "record_usage_batch", _exploding_record_usage_batch
-    )
+    monkeypatch.setattr(skill_usage_svc, "record_usage_batch", _exploding_record_usage_batch)
 
     events = [
         RunEvent(RunEventKind.DELTA, {"text": "Got it."}),
@@ -151,22 +143,25 @@ async def test_record_usage_failure_does_not_break_capture(
     assert artifact.injected_skill_pack_ids == [str(pack.id)]
 
     audits = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.workspace_id == workspace.id,
-                AuditEvent.action == "skill.usage_recording_failed",
-                AuditEvent.resource_id == captured_run_id,
+        (
+            await db_session.execute(
+                select(AuditEvent).where(
+                    AuditEvent.workspace_id == workspace.id,
+                    AuditEvent.action == "skill.usage_recording_failed",
+                    AuditEvent.resource_id == captured_run_id,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(audits) == 1
     assert audits[0].metadata_json["pack_count"] == 1
     assert audits[0].metadata_json["error_class"] == "RuntimeError"
 
     judge_args = [c[0] for c in enqueue_calls]
     assert any(
-        a and a[0] == "judge_session_artifact" and a[1] == str(artifact.id)
-        for a in judge_args
+        a and a[0] == "judge_session_artifact" and a[1] == str(artifact.id) for a in judge_args
     ), f"M0.3 judge path must still enqueue (got {judge_args!r})"
 
     repo = PendingMemoryRepository(db_session)

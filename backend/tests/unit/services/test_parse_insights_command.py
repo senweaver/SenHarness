@@ -24,9 +24,7 @@ async def test_bare_insights_returns_default_window():
 async def test_explicit_days_window():
     assert await parse_insights_command("/insights --days 7") == {"days": 7}
     assert await parse_insights_command("/insights --days=14") == {"days": 14}
-    assert await parse_insights_command("  /insights  --days  90  ") == {
-        "days": 90
-    }
+    assert await parse_insights_command("  /insights  --days  90  ") == {"days": 90}
 
 
 @pytest.mark.asyncio
@@ -54,9 +52,5 @@ async def test_garbled_insights_still_recognised_as_insights_attempt():
     is returned as an insights command (with default window) so the
     caller writes one audit row instead of silently passing the meta
     text to the LLM."""
-    assert await parse_insights_command("/insights last 30 days") == {
-        "days": None
-    }
-    assert await parse_insights_command("/insights --days abc") == {
-        "days": None
-    }
+    assert await parse_insights_command("/insights last 30 days") == {"days": None}
+    assert await parse_insights_command("/insights --days abc") == {"days": None}

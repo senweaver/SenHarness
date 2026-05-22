@@ -28,9 +28,7 @@ from app.services import session as session_svc
 pytestmark = pytest.mark.asyncio
 
 
-async def test_sweep_promotes_quiet_session_row(
-    db_session, workspace, identity
-):
+async def test_sweep_promotes_quiet_session_row(db_session, workspace, identity):
     sess = await session_svc.create_session(
         db_session,
         workspace_id=workspace.id,
@@ -92,9 +90,7 @@ async def test_sweep_skips_active_session(db_session, workspace, identity):
     assert pending.status == PendingMemoryStatus.PENDING
 
 
-async def test_sweep_promotes_when_session_soft_deleted(
-    db_session, workspace, identity
-):
+async def test_sweep_promotes_when_session_soft_deleted(db_session, workspace, identity):
     sess = await session_svc.create_session(
         db_session,
         workspace_id=workspace.id,

@@ -69,20 +69,22 @@ async def test_record_usage_happy_path(db_session, workspace, identity):
     assert len(rows) == 1
 
     audits = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.action == "skill.usage_recorded",
-                AuditEvent.resource_id == pack.id,
+        (
+            await db_session.execute(
+                select(AuditEvent).where(
+                    AuditEvent.action == "skill.usage_recorded",
+                    AuditEvent.resource_id == pack.id,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(audits) == 1
     assert audits[0].metadata_json["event_kind"] == "read_full"
 
 
-async def test_record_usage_silent_when_pack_missing(
-    db_session, workspace, identity
-):
+async def test_record_usage_silent_when_pack_missing(db_session, workspace, identity):
     """Defensive path: a pack id from another workspace is not raised on."""
     bogus_id = uuid.uuid4()
     session_id = uuid.uuid4()
@@ -110,15 +112,11 @@ async def test_record_usage_silent_when_pack_missing(
     )
     assert row is None
 
-    count = (
-        await db_session.execute(select(SkillUsage))
-    ).scalars().all()
+    count = (await db_session.execute(select(SkillUsage))).scalars().all()
     assert len(count) == 0
 
 
-async def test_record_usage_batch_writes_n_rows_one_audit(
-    db_session, workspace, identity
-):
+async def test_record_usage_batch_writes_n_rows_one_audit(db_session, workspace, identity):
     p1 = await _make_pack(db_session, workspace)
     p2 = await _make_pack(db_session, workspace)
     bogus = uuid.uuid4()  # cross-workspace skip path
@@ -149,13 +147,17 @@ async def test_record_usage_batch_writes_n_rows_one_audit(
     assert len(rows) == 2
 
     audits = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.action == "skill.usage_batch_recorded",
-                AuditEvent.resource_id == run_id,
+        (
+            await db_session.execute(
+                select(AuditEvent).where(
+                    AuditEvent.action == "skill.usage_batch_recorded",
+                    AuditEvent.resource_id == run_id,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(audits) == 1
     assert audits[0].metadata_json["batch_size"] == 2
     assert audits[0].metadata_json["skipped_count"] == 1

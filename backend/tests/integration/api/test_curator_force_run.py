@@ -69,15 +69,18 @@ async def test_trigger_curator_now_returns_workspace_summary(async_client):
 
     async with factory() as db:
         approvals = (
-            await db.execute(
-                select(Approval).where(
-                    Approval.workspace_id == uuid.UUID(ws_id),
-                    Approval.resource_type
-                    == ApprovalResourceType.SKILL_PACK_ARCHIVE.value,
-                    Approval.resource_id == pid,
+            (
+                await db.execute(
+                    select(Approval).where(
+                        Approval.workspace_id == uuid.UUID(ws_id),
+                        Approval.resource_type == ApprovalResourceType.SKILL_PACK_ARCHIVE.value,
+                        Approval.resource_id == pid,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(approvals) == 1
 
 

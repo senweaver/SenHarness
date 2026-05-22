@@ -181,9 +181,7 @@ async def test_process_expired_approvals_routes_each_resource_type(async_client)
             "approval.expiring_reminder_sent",
         ):
             audit = (
-                await db.execute(
-                    select(AuditEvent).where(AuditEvent.action == action).limit(1)
-                )
+                await db.execute(select(AuditEvent).where(AuditEvent.action == action).limit(1))
             ).scalar_one_or_none()
             assert audit is not None, f"missing audit row for {action}"
 

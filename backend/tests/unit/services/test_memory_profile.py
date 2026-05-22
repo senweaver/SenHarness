@@ -45,10 +45,7 @@ class TestTruncate:
         assert out.endswith("…")
 
     def test_prefers_paragraph_boundary(self):
-        body = (
-            "Para one with enough text to fill.\n\n"
-            "Para two has extra content we will drop."
-        )
+        body = "Para one with enough text to fill.\n\nPara two has extra content we will drop."
         cap = len("Para one with enough text to fill.\n\n") + 5
         out, _ = _truncate(body, cap)
         # Should cut at the paragraph break, leaving para one intact.
@@ -86,14 +83,18 @@ class TestSanitizeSoulDims:
 
 class TestRenderProfileFragment:
     def test_none_when_all_empty(self):
-        assert render_profile_fragment(
-            workspace_memory=None, user_profile=None, user_soul=None
-        ) is None
-        assert render_profile_fragment(
-            workspace_memory=_FakeProfile(content_md=""),
-            user_profile=_FakeProfile(content_md="   "),
-            user_soul=_FakeProfile(content_md="", soul_dims_json={}),
-        ) is None
+        assert (
+            render_profile_fragment(workspace_memory=None, user_profile=None, user_soul=None)
+            is None
+        )
+        assert (
+            render_profile_fragment(
+                workspace_memory=_FakeProfile(content_md=""),
+                user_profile=_FakeProfile(content_md="   "),
+                user_soul=_FakeProfile(content_md="", soul_dims_json={}),
+            )
+            is None
+        )
 
     def test_renders_present_profiles_with_headings(self):
         frag = render_profile_fragment(
@@ -156,9 +157,7 @@ class TestSessionSearchArgsSchema:
         the runner)."""
         from app.agents.tools.session_search import SessionSearchArgs
 
-        args = SessionSearchArgs.model_validate(
-            {"query": "hello", "session_id": "not-a-uuid"}
-        )
+        args = SessionSearchArgs.model_validate({"query": "hello", "session_id": "not-a-uuid"})
         assert args.session_id == "not-a-uuid"
 
     def test_valid_uuid_accepted(self):

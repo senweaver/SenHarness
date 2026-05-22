@@ -26,9 +26,7 @@ async def _bootstrap(async_client) -> tuple[dict, str, str]:
     )
     assert r.status_code == 201, r.text
     identity_id = r.json()["id"]
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     headers = {"Authorization": f"Bearer {r.json()['access_token']}"}
 
     r = await async_client.post(

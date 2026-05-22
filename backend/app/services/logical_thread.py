@@ -52,27 +52,27 @@ log = logging.getLogger(__name__)
 
 
 # ── Errors ──────────────────────────────────────────────
-class CrossPlatformDisabled(AppError):  # noqa: N818
+class CrossPlatformDisabled(AppError):
     code = "thread.cross_platform_disabled"
     default_status = 400
 
 
-class PairingCodeInvalid(AppError):  # noqa: N818
+class PairingCodeInvalid(AppError):
     code = "thread.pairing_code_invalid"
     default_status = 400
 
 
-class PairingCodeExpired(AppError):  # noqa: N818
+class PairingCodeExpired(AppError):
     code = "thread.pairing_code_expired"
     default_status = 400
 
 
-class PairingTargetMismatch(AppError):  # noqa: N818
+class PairingTargetMismatch(AppError):
     code = "thread.pairing_target_mismatch"
     default_status = 400
 
 
-class PairingSourceMissing(AppError):  # noqa: N818
+class PairingSourceMissing(AppError):
     code = "thread.pairing_source_missing"
     default_status = 400
 
@@ -89,18 +89,14 @@ class RoutingConfig:
 _DEFAULT_TTL_SECONDS = 600
 
 
-async def get_routing_config(
-    db: AsyncSession, *, workspace_id: uuid.UUID
-) -> RoutingConfig:
+async def get_routing_config(db: AsyncSession, *, workspace_id: uuid.UUID) -> RoutingConfig:
     """Merge platform default + workspace override.
 
     Workspace ``home_config_json["session_routing"]`` overrides each
     field independently. Missing fields back-fill from the platform
     layer; the dispatcher always sees a fully-populated dataclass.
     """
-    platform = await get_system_setting(
-        db, SystemSettingKey.SESSION_ROUTING_DEFAULTS, default={}
-    )
+    platform = await get_system_setting(db, SystemSettingKey.SESSION_ROUTING_DEFAULTS, default={})
     if not isinstance(platform, dict):
         platform = {}
 
@@ -116,12 +112,8 @@ async def get_routing_config(
     merged: dict[str, Any] = {**platform, **workspace_routing}
     return RoutingConfig(
         cross_platform_enabled=bool(merged.get("cross_platform_enabled", False)),
-        pairing_required=bool(
-            merged.get("pairing_required_for_cross_platform", True)
-        ),
-        pairing_code_ttl_seconds=int(
-            merged.get("pairing_code_ttl_seconds", _DEFAULT_TTL_SECONDS)
-        ),
+        pairing_required=bool(merged.get("pairing_required_for_cross_platform", True)),
+        pairing_code_ttl_seconds=int(merged.get("pairing_code_ttl_seconds", _DEFAULT_TTL_SECONDS)),
         default_strategy=str(merged.get("default_strategy", "per_channel")),
     )
 
@@ -300,9 +292,7 @@ async def initiate_pairing(
         r = get_redis()
         await r.set(_pairing_key(workspace_id, code), json.dumps(payload), ex=ttl)
     except Exception:  # pragma: no cover - fail-loud only
-        log.exception(
-            "thread.pairing: redis unreachable (workspace=%s)", workspace_id
-        )
+        log.exception("thread.pairing: redis unreachable (workspace=%s)", workspace_id)
         raise
 
     await audit_svc.record(
@@ -364,9 +354,7 @@ async def consume_pairing_code(
         r = get_redis()
         raw = await r.get(_pairing_key(workspace_id, code))
     except Exception:
-        log.exception(
-            "thread.pairing.consume: redis unreachable (workspace=%s)", workspace_id
-        )
+        log.exception("thread.pairing.consume: redis unreachable (workspace=%s)", workspace_id)
         raise
 
     if raw is None:
@@ -395,9 +383,10 @@ async def consume_pairing_code(
     target = payload.get("target") or {}
     target_channel_id = target.get("channel_id")
     target_external_user_id = target.get("external_user_id")
-    if target_channel_id is not None and (
-        str(channel_id) if channel_id else None
-    ) != target_channel_id:
+    if (
+        target_channel_id is not None
+        and (str(channel_id) if channel_id else None) != target_channel_id
+    ):
         raise PairingTargetMismatch("pairing_target_mismatch")
     if target_external_user_id is not None and target_external_user_id != external_user_id:
         raise PairingTargetMismatch("pairing_target_mismatch")
@@ -406,12 +395,8 @@ async def consume_pairing_code(
     thread_repo = LogicalThreadRepository(db)
 
     source = payload.get("source") or {}
-    source_channel_uuid = (
-        uuid.UUID(source["channel_id"]) if source.get("channel_id") else None
-    )
-    target_channel_uuid = (
-        uuid.UUID(target_channel_id) if target_channel_id else None
-    )
+    source_channel_uuid = uuid.UUID(source["channel_id"]) if source.get("channel_id") else None
+    target_channel_uuid = uuid.UUID(target_channel_id) if target_channel_id else None
 
     source_binding = await binding_repo.get_by_channel_user(
         workspace_id=workspace_id,
@@ -467,9 +452,7 @@ async def consume_pairing_code(
     primary_thread = await thread_repo.get(primary_thread_id)
     if primary_thread is not None:
         primary_thread.last_activity_at = _utcnow()
-    primary_session_id = (
-        primary_thread.primary_session_id if primary_thread else None
-    )
+    primary_session_id = primary_thread.primary_session_id if primary_thread else None
 
     try:
         from app.core.rate_limit import get_redis as _get_redis

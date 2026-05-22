@@ -22,7 +22,6 @@ from app.agents.tools.session_search import (
     run_session_search,
 )
 
-
 pytestmark = pytest.mark.asyncio
 
 
@@ -58,9 +57,7 @@ class _StubAux:
     async def is_breaker_open(self, *, bucket, workspace_id, trip_at) -> bool:
         return self.breaker_state.get(workspace_id, 0) >= trip_at
 
-    async def consume_rate(
-        self, *, bucket, workspace_id, limit, period_seconds=60
-    ) -> bool:
+    async def consume_rate(self, *, bucket, workspace_id, limit, period_seconds=60) -> bool:
         return self.rate_allow
 
     async def bump_failure(
@@ -81,7 +78,7 @@ def _install_stubs(monkeypatch: pytest.MonkeyPatch, aux: _StubAux) -> None:
     monkeypatch.setattr(tool, "bump_failure", aux.bump_failure)
     monkeypatch.setattr(tool, "reset_failure", aux.reset_failure)
 
-    async def _stub_settings(db, *, workspace_id):  # noqa: ARG001
+    async def _stub_settings(db, *, workspace_id):
         return {
             "summarize_rate_per_minute": 30,
             "summarize_fail_strikes": 3,
@@ -128,15 +125,13 @@ async def test_summarize_false_returns_raw_hits_only(monkeypatch):
 
     raw = _hits(3)
 
-    async def _stub_search(args, *, workspace_id):  # noqa: ARG001
+    async def _stub_search(args, *, workspace_id):
         return raw
 
     monkeypatch.setattr(tool, "_run_raw_search", _stub_search)
 
     _make_context()
-    out = await run_session_search(
-        SessionSearchArgs(query="deploy", summarize=False)
-    )
+    out = await run_session_search(SessionSearchArgs(query="deploy", summarize=False))
     assert out["summarized"] is False
     assert out["hits"] == raw
     # No aux call → no audit rows.
@@ -147,7 +142,7 @@ async def test_summarize_true_with_zero_hits_skips_aux(monkeypatch):
     aux = _StubAux()
     _install_stubs(monkeypatch, aux)
 
-    async def _stub_search(args, *, workspace_id):  # noqa: ARG001
+    async def _stub_search(args, *, workspace_id):
         return []
 
     monkeypatch.setattr(tool, "_run_raw_search", _stub_search)
@@ -177,10 +172,10 @@ async def test_summarize_happy_path_returns_summary_and_filters_evidence(
     real_id = uuid.UUID(raw[1]["message_id"])
     fake_id = uuid.uuid4()  # not in raw → must be filtered out
 
-    async def _stub_search(args, *, workspace_id):  # noqa: ARG001
+    async def _stub_search(args, *, workspace_id):
         return raw
 
-    async def _stub_aux(**kwargs):  # noqa: ARG001
+    async def _stub_aux(**kwargs):
         return SessionSearchSummary(
             summary="The team agreed on Tuesday deployments.",
             bullet_points=["Use blue-green", "Notify #ops"],
@@ -191,9 +186,7 @@ async def test_summarize_happy_path_returns_summary_and_filters_evidence(
     monkeypatch.setattr(tool, "_summarise_hits", _stub_aux)
 
     ctx = _make_context()
-    out = await run_session_search(
-        SessionSearchArgs(query="deployment", summarize=True)
-    )
+    out = await run_session_search(SessionSearchArgs(query="deployment", summarize=True))
     assert out["summarized"] is True
     assert out["summary"].startswith("The team agreed")
     assert out["bullet_points"] == ["Use blue-green", "Notify #ops"]
@@ -219,10 +212,10 @@ async def test_summary_truncated_to_caller_max_chars(monkeypatch):
     _install_stubs(monkeypatch, aux)
     raw = _hits(2)
 
-    async def _stub_search(args, *, workspace_id):  # noqa: ARG001
+    async def _stub_search(args, *, workspace_id):
         return raw
 
-    async def _stub_aux(**kwargs):  # noqa: ARG001
+    async def _stub_aux(**kwargs):
         return SessionSearchSummary(
             summary="x" * 1500,
             bullet_points=[],
@@ -245,7 +238,7 @@ async def test_aux_failure_falls_back_to_raw_and_audits(monkeypatch):
     _install_stubs(monkeypatch, aux)
     raw = _hits(4)
 
-    async def _stub_search(args, *, workspace_id):  # noqa: ARG001
+    async def _stub_search(args, *, workspace_id):
         return raw
 
     async def _stub_aux_fail(**_):
@@ -255,18 +248,14 @@ async def test_aux_failure_falls_back_to_raw_and_audits(monkeypatch):
     monkeypatch.setattr(tool, "_summarise_hits", _stub_aux_fail)
 
     ctx = _make_context()
-    out = await run_session_search(
-        SessionSearchArgs(query="q", summarize=True)
-    )
+    out = await run_session_search(SessionSearchArgs(query="q", summarize=True))
     assert out["summarized"] is False
     assert out["fallback_reason"] == "aux_failure"
     assert out["hits"] == raw
 
     actions = [row["action"] for row in aux.audit_rows]
     assert AUDIT_FALLBACK in actions
-    fallback_meta = next(
-        r for r in aux.audit_rows if r["action"] == AUDIT_FALLBACK
-    )["metadata"]
+    fallback_meta = next(r for r in aux.audit_rows if r["action"] == AUDIT_FALLBACK)["metadata"]
     assert fallback_meta["reason"] == "aux_failure"
     assert fallback_meta["hit_count"] == 4
     # One strike now on the breaker, no reset.

@@ -41,9 +41,7 @@ class FlowRepository(AsyncRepository[Flow]):
 class FlowRunRepository(AsyncRepository[FlowRun]):
     model = FlowRun
 
-    async def list_for_flow(
-        self, *, flow_id: uuid.UUID, limit: int = 50
-    ) -> Sequence[FlowRun]:
+    async def list_for_flow(self, *, flow_id: uuid.UUID, limit: int = 50) -> Sequence[FlowRun]:
         stmt = (
             select(FlowRun)
             .where(FlowRun.flow_id == flow_id)

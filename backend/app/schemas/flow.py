@@ -34,9 +34,7 @@ class ScriptModeConfig(BaseModel):
 
     script_command: str = Field(min_length=1, max_length=8192)
     script_cwd: str | None = Field(default=None, max_length=512)
-    script_timeout_s: int = Field(
-        default=SCRIPT_TIMEOUT_DEFAULT_S, ge=1, le=SCRIPT_TIMEOUT_MAX_S
-    )
+    script_timeout_s: int = Field(default=SCRIPT_TIMEOUT_DEFAULT_S, ge=1, le=SCRIPT_TIMEOUT_MAX_S)
     script_env: dict[str, str] | None = None
     escalate_on_nonempty_output: bool = True
 
@@ -70,9 +68,7 @@ class HttpModeConfig(BaseModel):
     http_method: HttpMethod = "GET"
     http_headers: dict[str, str] = Field(default_factory=dict)
     http_body: str | None = Field(default=None, max_length=HTTP_BODY_MAX_BYTES)
-    http_timeout_s: int = Field(
-        default=HTTP_TIMEOUT_DEFAULT_S, ge=1, le=HTTP_TIMEOUT_MAX_S
-    )
+    http_timeout_s: int = Field(default=HTTP_TIMEOUT_DEFAULT_S, ge=1, le=HTTP_TIMEOUT_MAX_S)
     http_expected_status: list[int] | None = None
     escalate_on_http_failure: bool = True
 
@@ -88,9 +84,7 @@ class HttpModeConfig(BaseModel):
         if self.http_expected_status is not None:
             for code in self.http_expected_status:
                 if not (100 <= code <= 599):
-                    raise ValueError(
-                        f"http_expected_status entry {code} out of range"
-                    )
+                    raise ValueError(f"http_expected_status entry {code} out of range")
         return self
 
 

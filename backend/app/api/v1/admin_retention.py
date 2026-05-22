@@ -100,14 +100,12 @@ class AuditRunRow(BaseModel):
     response_model=SweepStatus,
     dependencies=[Depends(rate_limit("admin_retention_read", limit=30, period_seconds=60))],
 )
-async def get_watermarks(
-    db: DBSession, _admin: Identity = AdminGate
-) -> SweepStatus:
+async def get_watermarks(db: DBSession, _admin: Identity = AdminGate) -> SweepStatus:
     rows = (
-        await db.execute(
-            select(RetentionWatermark).order_by(RetentionWatermark.scope_kind)
-        )
-    ).scalars().all()
+        (await db.execute(select(RetentionWatermark).order_by(RetentionWatermark.scope_kind)))
+        .scalars()
+        .all()
+    )
     settings = await retention_svc.get_retention_settings(db)
     out: list[WatermarkRead] = []
     for row in rows:
@@ -168,9 +166,7 @@ async def get_last_runs(
 @router.post(
     "/sweep/run",
     response_model=SweepTriggerResult,
-    dependencies=[
-        Depends(rate_limit("admin_retention_trigger", limit=5, period_seconds=300))
-    ],
+    dependencies=[Depends(rate_limit("admin_retention_trigger", limit=5, period_seconds=300))],
 )
 async def trigger_sweep(
     request: Request,
@@ -202,9 +198,7 @@ async def trigger_sweep(
 @router.post(
     "/purge/dry-run",
     response_model=PurgeReportResponse,
-    dependencies=[
-        Depends(rate_limit("admin_retention_trigger", limit=5, period_seconds=300))
-    ],
+    dependencies=[Depends(rate_limit("admin_retention_trigger", limit=5, period_seconds=300))],
 )
 async def purge_dry_run(
     request: Request,
@@ -250,6 +244,4 @@ async def purge_dry_run(
         request=request,
     )
     await db.commit()
-    return PurgeReportResponse(
-        dry_run=True, rows=rows, total_candidates=total
-    )
+    return PurgeReportResponse(dry_run=True, rows=rows, total_candidates=total)

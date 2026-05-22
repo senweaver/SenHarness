@@ -80,12 +80,8 @@ async def _seed_hub_pack_with_version(
 async def test_up_to_date_returns_noop(db_session, identity):
     workspace = await _seed_workspace(db_session, identity=identity, slug_prefix="up")
     await db_session.flush()
-    tenant_id = await hub_svc.resolve_caller_tenant(
-        db_session, workspace_id=workspace.id
-    )
-    hub_pack, hub_version = await _seed_hub_pack_with_version(
-        db_session, tenant_id=tenant_id
-    )
+    tenant_id = await hub_svc.resolve_caller_tenant(db_session, workspace_id=workspace.id)
+    hub_pack, hub_version = await _seed_hub_pack_with_version(db_session, tenant_id=tenant_id)
 
     sub = await WorkspaceHubSubscriptionRepository(db_session).create(
         workspace_id=workspace.id,
@@ -117,9 +113,7 @@ async def test_up_to_date_returns_noop(db_session, identity):
 async def test_pull_drafts_local_proposed_version(db_session, identity):
     workspace = await _seed_workspace(db_session, identity=identity, slug_prefix="dn")
     await db_session.flush()
-    tenant_id = await hub_svc.resolve_caller_tenant(
-        db_session, workspace_id=workspace.id
-    )
+    tenant_id = await hub_svc.resolve_caller_tenant(db_session, workspace_id=workspace.id)
     hub_pack, hub_version = await _seed_hub_pack_with_version(
         db_session, tenant_id=tenant_id, body="# new candidate from hub"
     )
@@ -154,9 +148,7 @@ async def test_pull_drafts_local_proposed_version(db_session, identity):
     # until M2.4 verifier + admin activation.
     assert local_pack.enabled is False
 
-    local_version = await SkillPackVersionRepository(db_session).get(
-        result.local_version_id
-    )
+    local_version = await SkillPackVersionRepository(db_session).get(result.local_version_id)
     assert local_version is not None
     assert local_version.state == SkillPackVersionState.PROPOSED
     assert local_version.created_by == "hub_pull"
@@ -174,21 +166,13 @@ async def test_cross_tenant_pull_blocked(db_session, identity):
     """Even with a stale subscription row, the visibility cut on the
     hub pack stops a tenant from pulling a sibling-tenant pack.
     """
-    workspace_a = await _seed_workspace(
-        db_session, identity=identity, slug_prefix="a"
-    )
-    workspace_b = await _seed_workspace(
-        db_session, identity=identity, slug_prefix="b"
-    )
+    workspace_a = await _seed_workspace(db_session, identity=identity, slug_prefix="a")
+    workspace_b = await _seed_workspace(db_session, identity=identity, slug_prefix="b")
     await db_session.flush()
-    tenant_a = await hub_svc.resolve_caller_tenant(
-        db_session, workspace_id=workspace_a.id
-    )
+    tenant_a = await hub_svc.resolve_caller_tenant(db_session, workspace_id=workspace_a.id)
 
     # Hub pack belongs to tenant A only.
-    hub_pack, _v = await _seed_hub_pack_with_version(
-        db_session, tenant_id=tenant_a
-    )
+    hub_pack, _v = await _seed_hub_pack_with_version(db_session, tenant_id=tenant_a)
 
     # Forge a subscription from tenant B.
     sub = await WorkspaceHubSubscriptionRepository(db_session).create(

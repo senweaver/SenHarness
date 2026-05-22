@@ -45,7 +45,7 @@ class TestDocx:
         doc.add_heading("登革热媒介伊蚊孳生地清理指引", level=1)
         doc.add_paragraph("本指引覆盖白纹伊蚊与埃及伊蚊的孳生环境识别与清理。")
         doc.add_paragraph("")  # blank paragraph (should be skipped)
-        doc.add_paragraph("第一节：常见孳生地。")  # noqa: RUF001 - intentional Chinese punctuation
+        doc.add_paragraph("第一节：常见孳生地。")
         # Add a table with two rows.
         table = doc.add_table(rows=2, cols=2)
         table.rows[0].cells[0].text = "类型"
@@ -60,10 +60,7 @@ class TestDocx:
         data = self._build_docx_bytes()
         att = _make_att(
             filename="guide.docx",
-            mime_type=(
-                "application/vnd.openxmlformats-officedocument."
-                "wordprocessingml.document"
-            ),
+            mime_type=("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
             size=len(data),
         )
         out = extract_text_from_attachment(att, data)
@@ -95,10 +92,7 @@ class TestDocx:
         data = buf.getvalue()
         att = _make_att(
             filename="empty.docx",
-            mime_type=(
-                "application/vnd.openxmlformats-officedocument."
-                "wordprocessingml.document"
-            ),
+            mime_type=("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
             size=len(data),
         )
         with pytest.raises(AttachmentExtractError) as exc:
@@ -130,10 +124,7 @@ class TestXlsx:
         data = self._build_xlsx_bytes()
         att = _make_att(
             filename="data.xlsx",
-            mime_type=(
-                "application/vnd.openxmlformats-officedocument."
-                "spreadsheetml.sheet"
-            ),
+            mime_type=("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
             size=len(data),
         )
         out = extract_text_from_attachment(att, data)

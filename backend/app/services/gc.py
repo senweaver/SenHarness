@@ -57,9 +57,7 @@ async def run_full_sweep(*, dry_run: bool = False) -> dict[str, Any]:
 
 
 # ─── Individual sweeps ─────────────────────────────────────
-async def sweep_attachments(
-    session: AsyncSession, *, dry_run: bool
-) -> dict[str, Any]:
+async def sweep_attachments(session: AsyncSession, *, dry_run: bool) -> dict[str, Any]:
     """Hard-delete attachments soft-deleted past the retention window.
 
     Removes the on-disk blob too — but only for the local backend. S3/OSS
@@ -96,9 +94,7 @@ async def sweep_attachments(
     }
 
 
-async def sweep_knowledge_docs(
-    session: AsyncSession, *, dry_run: bool
-) -> dict[str, Any]:
+async def sweep_knowledge_docs(session: AsyncSession, *, dry_run: bool) -> dict[str, Any]:
     days = settings.KNOWLEDGE_DOC_GC_DAYS
     if days <= 0:
         return {"skipped": True, "reason": "disabled"}
@@ -112,9 +108,7 @@ async def sweep_knowledge_docs(
     if not dry_run and ids:
         # Belt-and-suspenders: chunks are deleted by the user-facing endpoint
         # but we re-issue here in case a code path forgot.
-        await session.execute(
-            delete(KnowledgeChunk).where(KnowledgeChunk.doc_id.in_(ids))
-        )
+        await session.execute(delete(KnowledgeChunk).where(KnowledgeChunk.doc_id.in_(ids)))
         await session.execute(delete(KnowledgeDoc).where(KnowledgeDoc.id.in_(ids)))
     return {
         "candidates": len(ids),
@@ -123,9 +117,7 @@ async def sweep_knowledge_docs(
     }
 
 
-async def sweep_approvals(
-    session: AsyncSession, *, dry_run: bool
-) -> dict[str, Any]:
+async def sweep_approvals(session: AsyncSession, *, dry_run: bool) -> dict[str, Any]:
     """Drop decided approvals beyond the retention window.
 
     Only touches non-pending rows — pending approvals stay until they're
@@ -150,9 +142,7 @@ async def sweep_approvals(
     }
 
 
-async def sweep_audit_events(
-    session: AsyncSession, *, dry_run: bool
-) -> dict[str, Any]:
+async def sweep_audit_events(session: AsyncSession, *, dry_run: bool) -> dict[str, Any]:
     days = settings.AUDIT_RETENTION_DAYS
     if days <= 0:
         return {"skipped": True, "reason": "disabled"}

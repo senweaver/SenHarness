@@ -39,9 +39,7 @@ async def _seed_artifact(db_session, workspace, identity):
     return sess, artifact
 
 
-async def test_persist_verdict_writes_row_and_mirrors_score(
-    db_session, workspace, identity
-):
+async def test_persist_verdict_writes_row_and_mirrors_score(db_session, workspace, identity):
     _sess, artifact = await _seed_artifact(db_session, workspace, identity)
 
     verdict = await judge_svc.persist_verdict(
@@ -65,9 +63,7 @@ async def test_persist_verdict_writes_row_and_mirrors_score(
     assert refreshed.judge_score == pytest.approx(1.0)
 
 
-async def test_persist_verdict_is_idempotent_on_artifact(
-    db_session, workspace, identity
-):
+async def test_persist_verdict_is_idempotent_on_artifact(db_session, workspace, identity):
     _sess, artifact = await _seed_artifact(db_session, workspace, identity)
 
     await judge_svc.persist_verdict(
@@ -96,9 +92,7 @@ async def test_persist_verdict_is_idempotent_on_artifact(
     assert refreshed.judge_score == pytest.approx(-1.0)
 
 
-async def test_persist_verdict_rejects_out_of_range(
-    db_session, workspace, identity
-):
+async def test_persist_verdict_rejects_out_of_range(db_session, workspace, identity):
     _sess, artifact = await _seed_artifact(db_session, workspace, identity)
     with pytest.raises(ValueError):
         await judge_svc.persist_verdict(
@@ -111,9 +105,7 @@ async def test_persist_verdict_rejects_out_of_range(
         )
 
 
-async def test_clear_verdict_resets_score_and_drops_row(
-    db_session, workspace, identity
-):
+async def test_clear_verdict_resets_score_and_drops_row(db_session, workspace, identity):
     _sess, artifact = await _seed_artifact(db_session, workspace, identity)
     await judge_svc.persist_verdict(
         db_session,
@@ -138,9 +130,7 @@ async def test_clear_verdict_resets_score_and_drops_row(
     )
     assert refreshed.judge_score is None
     assert (
-        await judge_svc.get_verdict(
-            db_session, workspace_id=workspace.id, artifact_id=artifact.id
-        )
+        await judge_svc.get_verdict(db_session, workspace_id=workspace.id, artifact_id=artifact.id)
         is None
     )
 

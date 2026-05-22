@@ -52,9 +52,7 @@ def _require_workspace(workspace_id: uuid.UUID | None) -> uuid.UUID:
     "/sessions/{session_id}/messages/{message_id}/lineage",
     response_model=LineageReplay,
     status_code=status.HTTP_200_OK,
-    dependencies=[
-        Depends(rate_limit("lineage_read", limit=60, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("lineage_read", limit=60, period_seconds=60))],
     tags=["sessions"],
 )
 async def get_message_lineage(
@@ -66,9 +64,7 @@ async def get_message_lineage(
     workspace_id: CurrentWorkspaceId,
 ) -> LineageReplay:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     replay = await lineage_svc.get_lineage_replay(
         db,
         workspace_id=ws_id,
@@ -124,9 +120,7 @@ async def get_message_lineage(
     "/sessions/{session_id}/lineage-summaries",
     response_model=list[LineageSummary],
     status_code=status.HTTP_200_OK,
-    dependencies=[
-        Depends(rate_limit("lineage_summaries_read", limit=30, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("lineage_summaries_read", limit=30, period_seconds=60))],
     tags=["sessions"],
 )
 async def list_session_lineage_summaries(
@@ -137,9 +131,7 @@ async def list_session_lineage_summaries(
     limit: int = Query(50, ge=1, le=200),
 ) -> list[LineageSummary]:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     rows = await lineage_svc.list_compressed_summaries_in_session(
         db,
         workspace_id=ws_id,

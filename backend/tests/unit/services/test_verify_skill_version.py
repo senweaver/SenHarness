@@ -69,9 +69,7 @@ async def _propose_v2(db, *, workspace_id, pack, identity, body="V2"):
     )
 
 
-async def _seed_artifacts(
-    db, *, workspace, identity, pack, count: int
-) -> list[uuid.UUID]:
+async def _seed_artifacts(db, *, workspace, identity, pack, count: int) -> list[uuid.UUID]:
     sess = await session_svc.create_session(
         db,
         workspace_id=workspace.id,
@@ -80,9 +78,7 @@ async def _seed_artifacts(
     repo = SessionArtifactRepository(db)
     ids: list[uuid.UUID] = []
     for i in range(count):
-        finished = datetime.now(UTC).replace(tzinfo=None) - timedelta(
-            minutes=i * 5 + 1
-        )
+        finished = datetime.now(UTC).replace(tzinfo=None) - timedelta(minutes=i * 5 + 1)
         row = await repo.create(
             workspace_id=workspace.id,
             run_id=uuid.uuid4(),
@@ -118,19 +114,11 @@ def _replay_returning(*, old: int, new: int, failed: bool = False):
     return _stub
 
 
-async def test_verify_accepts_when_delta_meets_threshold(
-    db_session, workspace, identity
-):
+async def test_verify_accepts_when_delta_meets_threshold(db_session, workspace, identity):
     pack = await _make_pack(db_session, workspace_id=workspace.id)
-    await _seed_active_v1(
-        db_session, workspace_id=workspace.id, pack=pack, identity=identity
-    )
-    v2 = await _propose_v2(
-        db_session, workspace_id=workspace.id, pack=pack, identity=identity
-    )
-    await _seed_artifacts(
-        db_session, workspace=workspace, identity=identity, pack=pack, count=4
-    )
+    await _seed_active_v1(db_session, workspace_id=workspace.id, pack=pack, identity=identity)
+    v2 = await _propose_v2(db_session, workspace_id=workspace.id, pack=pack, identity=identity)
+    await _seed_artifacts(db_session, workspace=workspace, identity=identity, pack=pack, count=4)
 
     with patch.object(
         verifier_svc,
@@ -154,19 +142,11 @@ async def test_verify_accepts_when_delta_meets_threshold(
     assert refreshed.judge_score == pytest.approx(1.0)
 
 
-async def test_verify_rejects_when_delta_below_threshold(
-    db_session, workspace, identity
-):
+async def test_verify_rejects_when_delta_below_threshold(db_session, workspace, identity):
     pack = await _make_pack(db_session, workspace_id=workspace.id)
-    await _seed_active_v1(
-        db_session, workspace_id=workspace.id, pack=pack, identity=identity
-    )
-    v2 = await _propose_v2(
-        db_session, workspace_id=workspace.id, pack=pack, identity=identity
-    )
-    await _seed_artifacts(
-        db_session, workspace=workspace, identity=identity, pack=pack, count=3
-    )
+    await _seed_active_v1(db_session, workspace_id=workspace.id, pack=pack, identity=identity)
+    v2 = await _propose_v2(db_session, workspace_id=workspace.id, pack=pack, identity=identity)
+    await _seed_artifacts(db_session, workspace=workspace, identity=identity, pack=pack, count=3)
 
     with patch.object(
         verifier_svc,
@@ -187,29 +167,19 @@ async def test_verify_rejects_when_delta_below_threshold(
     assert refreshed.validation_results.get("status") == "rejected"
 
 
-async def test_verify_skipped_when_artifacts_below_min(
-    db_session, workspace, identity
-):
+async def test_verify_skipped_when_artifacts_below_min(db_session, workspace, identity):
     pack = await _make_pack(db_session, workspace_id=workspace.id)
-    await _seed_active_v1(
-        db_session, workspace_id=workspace.id, pack=pack, identity=identity
-    )
-    v2 = await _propose_v2(
-        db_session, workspace_id=workspace.id, pack=pack, identity=identity
-    )
+    await _seed_active_v1(db_session, workspace_id=workspace.id, pack=pack, identity=identity)
+    v2 = await _propose_v2(db_session, workspace_id=workspace.id, pack=pack, identity=identity)
     # Only 1 artifact — default min_replay_artifacts is 3.
-    await _seed_artifacts(
-        db_session, workspace=workspace, identity=identity, pack=pack, count=1
-    )
+    await _seed_artifacts(db_session, workspace=workspace, identity=identity, pack=pack, count=1)
 
     # No replay should be invoked when the threshold gate fails — make the
     # stub blow up so we'd notice if the gate didn't fire.
     async def _explode(*args, **kwargs):
         raise AssertionError("replay should not be called when below min")
 
-    with patch.object(
-        verifier_svc, "replay_judge_with_skill_swap", _explode
-    ):
+    with patch.object(verifier_svc, "replay_judge_with_skill_swap", _explode):
         result = await verifier_svc.verify_skill_version(
             db_session,
             workspace_id=workspace.id,
@@ -224,26 +194,16 @@ async def test_verify_skipped_when_artifacts_below_min(
     assert refreshed.validation_results.get("skipped") is True
 
 
-async def test_verify_errors_become_rejected_with_status_errored(
-    db_session, workspace, identity
-):
+async def test_verify_errors_become_rejected_with_status_errored(db_session, workspace, identity):
     pack = await _make_pack(db_session, workspace_id=workspace.id)
-    await _seed_active_v1(
-        db_session, workspace_id=workspace.id, pack=pack, identity=identity
-    )
-    v2 = await _propose_v2(
-        db_session, workspace_id=workspace.id, pack=pack, identity=identity
-    )
-    await _seed_artifacts(
-        db_session, workspace=workspace, identity=identity, pack=pack, count=3
-    )
+    await _seed_active_v1(db_session, workspace_id=workspace.id, pack=pack, identity=identity)
+    v2 = await _propose_v2(db_session, workspace_id=workspace.id, pack=pack, identity=identity)
+    await _seed_artifacts(db_session, workspace=workspace, identity=identity, pack=pack, count=3)
 
     async def _crash(*args, **kwargs):
         raise RuntimeError("aux tier blew up")
 
-    with patch.object(
-        verifier_svc, "replay_judge_with_skill_swap", _crash
-    ):
+    with patch.object(verifier_svc, "replay_judge_with_skill_swap", _crash):
         result = await verifier_svc.verify_skill_version(
             db_session,
             workspace_id=workspace.id,
@@ -258,13 +218,9 @@ async def test_verify_errors_become_rejected_with_status_errored(
     assert "aux tier blew up" in (refreshed.validation_results.get("error") or "")
 
 
-async def test_verify_refuses_already_active_version(
-    db_session, workspace, identity
-):
+async def test_verify_refuses_already_active_version(db_session, workspace, identity):
     pack = await _make_pack(db_session, workspace_id=workspace.id)
-    v1 = await _seed_active_v1(
-        db_session, workspace_id=workspace.id, pack=pack, identity=identity
-    )
+    v1 = await _seed_active_v1(db_session, workspace_id=workspace.id, pack=pack, identity=identity)
     with pytest.raises(verifier_svc.VerifierAlreadyTerminal):
         await verifier_svc.verify_skill_version(
             db_session,

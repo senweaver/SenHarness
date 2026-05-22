@@ -102,9 +102,7 @@ def _patched_repo(monkeypatch: pytest.MonkeyPatch):
 
     import app.repositories.search_provider as sp_mod
 
-    monkeypatch.setattr(
-        sp_mod, "SearchProviderRepository", lambda _s: _FakeRepo(rows)
-    )
+    monkeypatch.setattr(sp_mod, "SearchProviderRepository", lambda _s: _FakeRepo(rows))
     yield rows
 
 

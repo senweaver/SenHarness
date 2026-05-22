@@ -35,11 +35,7 @@ class SessionRepository(AsyncRepository[SessionModel]):
                 SessionModel.owner_identity_id == identity_id,
                 SessionModel.deleted_at.is_(None),
             )
-            .order_by(
-                func.coalesce(
-                    SessionModel.last_message_at, SessionModel.created_at
-                ).desc()
-            )
+            .order_by(func.coalesce(SessionModel.last_message_at, SessionModel.created_at).desc())
             .offset(offset)
             .limit(limit)
         )
@@ -82,9 +78,7 @@ class MessageRepository(AsyncRepository[Message]):
         )
         return (await self.session.execute(stmt)).scalars().all()
 
-    async def list_recent(
-        self, *, session_id: uuid.UUID, limit: int = 40
-    ) -> list[Message]:
+    async def list_recent(self, *, session_id: uuid.UUID, limit: int = 40) -> list[Message]:
         """Newest-N messages in chronological order (for history rehydrate)."""
         stmt = (
             select(Message)
@@ -100,7 +94,5 @@ class MessageRepository(AsyncRepository[Message]):
 class SessionStarRepository(AsyncRepository[SessionStar]):
     model = SessionStar
 
-    async def get_for(
-        self, identity_id: uuid.UUID, session_id: uuid.UUID
-    ) -> SessionStar | None:
+    async def get_for(self, identity_id: uuid.UUID, session_id: uuid.UUID) -> SessionStar | None:
         return await self.get_by(identity_id=identity_id, session_id=session_id)

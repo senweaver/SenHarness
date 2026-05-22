@@ -31,15 +31,12 @@ async def run_stream_client(
         import dingtalk_stream
     except ImportError as e:  # pragma: no cover
         raise RuntimeError(
-            "dingtalk-stream extra missing; install with "
-            "'pip install \".[channels-stream]\"'"
+            "dingtalk-stream extra missing; install with 'pip install \".[channels-stream]\"'"
         ) from e
 
     plain = getattr(channel, "_plain_config", None) or (channel.config_json or {})
     client_id = str(plain.get("client_id") or plain.get("app_key") or "").strip()
-    client_secret = str(
-        plain.get("client_secret") or plain.get("app_secret") or ""
-    ).strip()
+    client_secret = str(plain.get("client_secret") or plain.get("app_secret") or "").strip()
     if not (client_id and client_secret):
         log.info("dingtalk channel %s missing client_id/secret — idle", channel.id)
         await stop.wait()
@@ -110,9 +107,7 @@ async def run_stream_client(
                 log.exception("dingtalk stream handler crashed")
             return dingtalk_stream.AckMessage.STATUS_OK, "OK"
 
-    client.register_callback_handler(
-        dingtalk_stream.ChatbotMessage.TOPIC, _Handler()
-    )
+    client.register_callback_handler(dingtalk_stream.ChatbotMessage.TOPIC, _Handler())
 
     import contextlib
 

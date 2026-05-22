@@ -86,9 +86,7 @@ async def test_proposed_to_validating_to_accepted_to_active_chain(
     assert after_active.state == SkillPackVersionState.ACTIVE
 
 
-async def test_proposed_to_rejected_terminal(
-    db_session, workspace, identity
-) -> None:
+async def test_proposed_to_rejected_terminal(db_session, workspace, identity) -> None:
     pack = await _make_pack(db_session, workspace_id=workspace.id)
     v = await _new_version(
         db_session, workspace_id=workspace.id, pack_id=pack.id, identity=identity
@@ -113,9 +111,7 @@ async def test_proposed_to_rejected_terminal(
         )
 
 
-async def test_active_to_retired_after_supersede(
-    db_session, workspace, identity
-) -> None:
+async def test_active_to_retired_after_supersede(db_session, workspace, identity) -> None:
     pack = await _make_pack(db_session, workspace_id=workspace.id)
     v1 = await _new_version(
         db_session, workspace_id=workspace.id, pack_id=pack.id, identity=identity
@@ -156,9 +152,7 @@ async def test_invalid_edge_raises(db_session, workspace, identity) -> None:
     assert "validating" in exc.value.extras["allowed"]
 
 
-async def test_transition_writes_audit_row(
-    db_session, workspace, identity
-) -> None:
+async def test_transition_writes_audit_row(db_session, workspace, identity) -> None:
     pack = await _make_pack(db_session, workspace_id=workspace.id)
     v = await _new_version(
         db_session, workspace_id=workspace.id, pack_id=pack.id, identity=identity
@@ -193,9 +187,7 @@ async def test_transition_writes_audit_row(
     assert meta["reason"] == "audit smoke"
 
 
-async def test_create_version_writes_audit_row(
-    db_session, workspace, identity
-) -> None:
+async def test_create_version_writes_audit_row(db_session, workspace, identity) -> None:
     pack = await _make_pack(db_session, workspace_id=workspace.id)
     v = await _new_version(
         db_session, workspace_id=workspace.id, pack_id=pack.id, identity=identity
@@ -203,8 +195,7 @@ async def test_create_version_writes_audit_row(
     row = (
         (
             await db_session.execute(
-                select(AuditEvent)
-                .where(
+                select(AuditEvent).where(
                     AuditEvent.workspace_id == workspace.id,
                     AuditEvent.action == "skill_version.created",
                     AuditEvent.resource_id == v.id,

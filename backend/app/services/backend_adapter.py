@@ -79,23 +79,15 @@ async def rotate_api_key(
     digest = hash_api_key(raw_key)
 
     if adapter.api_key_vault_id is not None:
-        vault_item = await session.get(
-            _VaultItemProxy().model, adapter.api_key_vault_id
-        )
+        vault_item = await session.get(_VaultItemProxy().model, adapter.api_key_vault_id)
         if vault_item is not None:
-            await vault_svc.replace_secret(
-                session, item=vault_item, plaintext=raw_key
-            )
+            await vault_svc.replace_secret(session, item=vault_item, plaintext=raw_key)
 
-    updated = await BackendAdapterRepository(session).update(
-        adapter, api_key_hash=digest
-    )
+    updated = await BackendAdapterRepository(session).update(adapter, api_key_hash=digest)
     return updated, raw_key
 
 
-async def delete_adapter(
-    session: AsyncSession, *, adapter: BackendAdapter
-) -> None:
+async def delete_adapter(session: AsyncSession, *, adapter: BackendAdapter) -> None:
     """Soft-delete the adapter. We also break the api_key_hash index so a
     rotated key from a deleted adapter can never authenticate."""
 
@@ -115,11 +107,7 @@ async def get_or_404(
     workspace_id: uuid.UUID,
 ) -> BackendAdapter:
     adapter = await BackendAdapterRepository(session).get(adapter_id)
-    if (
-        adapter is None
-        or adapter.workspace_id != workspace_id
-        or adapter.deleted_at is not None
-    ):
+    if adapter is None or adapter.workspace_id != workspace_id or adapter.deleted_at is not None:
         raise NotFound("adapter_not_found", code="backend.not_found")
     return adapter
 

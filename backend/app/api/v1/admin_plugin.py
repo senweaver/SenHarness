@@ -137,9 +137,7 @@ def _plugin_dir() -> Path:
 @router.get(
     "",
     response_model=list[PluginRegistryRead],
-    dependencies=[
-        Depends(rate_limit("plugin_admin_read", limit=30, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("plugin_admin_read", limit=30, period_seconds=60))],
 )
 async def list_plugins(
     db: DBSession,
@@ -161,9 +159,7 @@ async def list_plugins(
 @router.get(
     "/{registry_id}",
     response_model=PluginRegistryRead,
-    dependencies=[
-        Depends(rate_limit("plugin_admin_read", limit=30, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("plugin_admin_read", limit=30, period_seconds=60))],
 )
 async def get_plugin(
     registry_id: uuid.UUID,
@@ -171,9 +167,7 @@ async def get_plugin(
     _admin: Identity = AdminGate,
 ) -> PluginRegistryRead:
     row = (
-        await db.execute(
-            select(PluginRegistry).where(PluginRegistry.id == registry_id)
-        )
+        await db.execute(select(PluginRegistry).where(PluginRegistry.id == registry_id))
     ).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="plugin_not_found")
@@ -183,9 +177,7 @@ async def get_plugin(
 @router.post(
     "/{registry_id}/approve",
     response_model=PluginRegistryRead,
-    dependencies=[
-        Depends(rate_limit("plugin_admin_action", limit=10, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("plugin_admin_action", limit=10, period_seconds=60))],
 )
 async def approve_plugin(
     registry_id: uuid.UUID,
@@ -203,16 +195,12 @@ async def approve_plugin(
     the approval row itself flipping status.
     """
     row = (
-        await db.execute(
-            select(PluginRegistry).where(PluginRegistry.id == registry_id)
-        )
+        await db.execute(select(PluginRegistry).where(PluginRegistry.id == registry_id))
     ).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="plugin_not_found")
     if row.status == PluginRegistryStatus.REJECTED:
-        raise HTTPException(
-            status_code=400, detail="plugin_rejected_cannot_approve"
-        )
+        raise HTTPException(status_code=400, detail="plugin_rejected_cannot_approve")
     row.approved_by_platform_admin = True
     row.approved_at = datetime.now(UTC).replace(tzinfo=None)
     row.approved_by_identity_id = admin.id
@@ -249,9 +237,7 @@ async def approve_plugin(
                 pass
 
     refreshed = (
-        await db.execute(
-            select(PluginRegistry).where(PluginRegistry.id == registry_id)
-        )
+        await db.execute(select(PluginRegistry).where(PluginRegistry.id == registry_id))
     ).scalar_one_or_none()
     if refreshed is None:  # pragma: no cover - row was just upserted
         raise HTTPException(status_code=500, detail="plugin_disappeared")
@@ -261,9 +247,7 @@ async def approve_plugin(
 @router.post(
     "/{registry_id}/reject",
     response_model=PluginRegistryRead,
-    dependencies=[
-        Depends(rate_limit("plugin_admin_action", limit=10, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("plugin_admin_action", limit=10, period_seconds=60))],
 )
 async def reject_plugin(
     registry_id: uuid.UUID,
@@ -273,9 +257,7 @@ async def reject_plugin(
     admin: Identity = AdminGate,
 ) -> PluginRegistryRead:
     row = (
-        await db.execute(
-            select(PluginRegistry).where(PluginRegistry.id == registry_id)
-        )
+        await db.execute(select(PluginRegistry).where(PluginRegistry.id == registry_id))
     ).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="plugin_not_found")
@@ -310,9 +292,7 @@ async def reject_plugin(
 @router.post(
     "/scan",
     response_model=ScanResult,
-    dependencies=[
-        Depends(rate_limit("plugin_admin_scan", limit=5, period_seconds=300))
-    ],
+    dependencies=[Depends(rate_limit("plugin_admin_scan", limit=5, period_seconds=300))],
 )
 async def scan_plugins(
     request: Request,
@@ -352,9 +332,7 @@ async def scan_plugins(
             folder_name=plugin.folder.name,
         )
 
-    rows_total = (
-        await db.execute(select(PluginRegistry))
-    ).scalars().all()
+    rows_total = (await db.execute(select(PluginRegistry))).scalars().all()
     await audit_svc.record(
         db,
         action="plugin.scanned",
@@ -362,9 +340,7 @@ async def scan_plugins(
         workspace_id=None,
         resource_type="plugin",
         resource_id=None,
-        summary=(
-            f"plugin scan: {len(discovered)} folder(s), {new_rows} new row(s)"
-        ),
+        summary=(f"plugin scan: {len(discovered)} folder(s), {new_rows} new row(s)"),
         metadata={
             "plugin_dir": str(plugin_dir),
             "discovered": len(discovered),
@@ -383,9 +359,7 @@ async def scan_plugins(
 @router.post(
     "/reload",
     response_model=ReloadResult,
-    dependencies=[
-        Depends(rate_limit("plugin_admin_reload", limit=3, period_seconds=300))
-    ],
+    dependencies=[Depends(rate_limit("plugin_admin_reload", limit=3, period_seconds=300))],
 )
 async def reload_plugins(
     request: Request,
@@ -400,14 +374,10 @@ async def reload_plugins(
     plugins start firing on the next runner event.
     """
     plugin_dir = _plugin_dir()
-    plugins_settings = await ps_svc.get_section(
-        db, section=ps_svc.PlatformSettingsSection.PLUGINS
-    )
+    plugins_settings = await ps_svc.get_section(db, section=ps_svc.PlatformSettingsSection.PLUGINS)
     allow = bool(getattr(plugins_settings, "allow_user_plugins", False))
     if not allow:
-        await load_and_register_plugins(
-            db, plugin_dir=plugin_dir, allow_user_plugins=False
-        )
+        await load_and_register_plugins(db, plugin_dir=plugin_dir, allow_user_plugins=False)
         loaded_count = 0
     else:
         loaded = await load_and_register_plugins(db, plugin_dir=plugin_dir)

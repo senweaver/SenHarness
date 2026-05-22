@@ -176,9 +176,7 @@ class DispatchResult:
             "approval_id": str(self.approval_id),
             "resource_type": self.resource_type,
             "resource_id": str(self.resource_id) if self.resource_id else None,
-            "applied_object_id": (
-                str(self.applied_object_id) if self.applied_object_id else None
-            ),
+            "applied_object_id": (str(self.applied_object_id) if self.applied_object_id else None),
             "audit_action": self.audit_action,
         }
 
@@ -237,9 +235,7 @@ async def dispatch_approved_approval(
             workspace_id=approval.workspace_id,
             resource_type="approval",
             resource_id=approval.id,
-            summary=(
-                f"approval {approval.id} apply skipped: pack {exc.pack_id} pinned"
-            ),
+            summary=(f"approval {approval.id} apply skipped: pack {exc.pack_id} pinned"),
             metadata={
                 "approval_id": str(approval.id),
                 "resource_type": rt,
@@ -259,7 +255,7 @@ async def dispatch_approved_approval(
         # ``approval.dispatch_failed`` audit is written on a fresh
         # session by the API layer after the rollback completes.
         raise
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         log.exception(
             "approval.dispatch failed approval=%s resource_type=%s",
             approval.id,
@@ -279,11 +275,9 @@ async def dispatch_approved_approval(
     # never lets a Redis blip break the apply.
     if rt in _EVOLVER_SOURCED:
         try:
-            from app.jobs._breaker import reset_failure  # noqa: PLC0415
+            from app.jobs._breaker import reset_failure
 
-            await reset_failure(
-                bucket="evolver", workspace_id=str(approval.workspace_id)
-            )
+            await reset_failure(bucket="evolver", workspace_id=str(approval.workspace_id))
         except Exception:  # pragma: no cover - best-effort
             log.warning(
                 "approval.dispatch breaker reset failed (workspace=%s)",
@@ -337,9 +331,7 @@ async def _apply_skill_pack_version(
     # Create proposals: flip DRAFT → ACTIVE so build_skills_capability
     # picks up the pack. patch / edit operate on already-ACTIVE packs.
     if rt == ApprovalResourceType.SKILL_PACK_CREATE.value:
-        pack = await SkillPackRepository(db).get(
-            activated.pack_id, include_deleted=True
-        )
+        pack = await SkillPackRepository(db).get(activated.pack_id, include_deleted=True)
         if pack is not None and pack.state == SkillPackState.DRAFT:
             await lifecycle_svc.transition(
                 db,
@@ -372,9 +364,7 @@ async def _apply_skill_pack_version(
         workspace_id=approval.workspace_id,
         resource_type="skill_pack_version",
         resource_id=activated.id,
-        summary=(
-            f"applied {rt} → activated v{activated.version_no} for pack {activated.pack_id}"
-        ),
+        summary=(f"applied {rt} → activated v{activated.version_no} for pack {activated.pack_id}"),
         metadata={
             "approval_id": str(approval.id),
             "pack_id": str(activated.pack_id),
@@ -414,13 +404,9 @@ async def _apply_skill_pack_archive(
         )
 
     actor_kind: lifecycle_svc.ActorKind = (
-        "curator"
-        if rt == ApprovalResourceType.SKILL_PACK_ARCHIVE.value
-        else "evolver"
+        "curator" if rt == ApprovalResourceType.SKILL_PACK_ARCHIVE.value else "evolver"
     )
-    pack = await SkillPackRepository(db).get(
-        approval.resource_id, include_deleted=True
-    )
+    pack = await SkillPackRepository(db).get(approval.resource_id, include_deleted=True)
     if pack is None or pack.workspace_id != approval.workspace_id:
         raise DispatchError(
             f"pack {approval.resource_id} not found",
@@ -523,9 +509,7 @@ async def _apply_skill_pack_write_file(
 
     pack = await SkillPackRepository(db).get(pack_id, include_deleted=True)
     if pack is None or pack.workspace_id != approval.workspace_id:
-        raise DispatchError(
-            f"pack {pack_id} not found", code="approval.dispatch_pack_missing"
-        )
+        raise DispatchError(f"pack {pack_id} not found", code="approval.dispatch_pack_missing")
     if pack.state == SkillPackState.TOMBSTONE:
         raise DispatchError(
             "cannot write file on tombstoned pack",
@@ -533,9 +517,7 @@ async def _apply_skill_pack_write_file(
         )
 
     file_repo = SkillFileRepository(db)
-    files = await file_repo.list_for_pack(
-        workspace_id=approval.workspace_id, skill_pack_id=pack.id
-    )
+    files = await file_repo.list_for_pack(workspace_id=approval.workspace_id, skill_pack_id=pack.id)
     existing = next((f for f in files if f.path == relative_path), None)
     if existing is None:
         target = await file_repo.create(
@@ -557,9 +539,7 @@ async def _apply_skill_pack_write_file(
         workspace_id=approval.workspace_id,
         resource_type="skill_file",
         resource_id=target.id,
-        summary=(
-            f"applied {rt} → wrote {relative_path!r} on pack {pack.slug!r}"
-        ),
+        summary=(f"applied {rt} → wrote {relative_path!r} on pack {pack.slug!r}"),
         metadata={
             "approval_id": str(approval.id),
             "pack_id": str(pack.id),
@@ -614,9 +594,7 @@ async def _apply_skill_pack_remove_file(
         )
 
     file_repo = SkillFileRepository(db)
-    files = await file_repo.list_for_pack(
-        workspace_id=approval.workspace_id, skill_pack_id=pack.id
-    )
+    files = await file_repo.list_for_pack(workspace_id=approval.workspace_id, skill_pack_id=pack.id)
     target = next((f for f in files if f.path == relative_path), None)
     file_id: uuid.UUID | None = None
     if target is not None:
@@ -632,9 +610,7 @@ async def _apply_skill_pack_remove_file(
         workspace_id=approval.workspace_id,
         resource_type="skill_pack",
         resource_id=pack.id,
-        summary=(
-            f"applied {rt} → removed {relative_path!r} from pack {pack.slug!r}"
-        ),
+        summary=(f"applied {rt} → removed {relative_path!r} from pack {pack.slug!r}"),
         metadata={
             "approval_id": str(approval.id),
             "pack_id": str(pack.id),
@@ -683,9 +659,7 @@ async def _apply_flow_create(
         )
 
     try:
-        target_agent_id = (
-            uuid.UUID(str(target_agent_raw)) if target_agent_raw else None
-        )
+        target_agent_id = uuid.UUID(str(target_agent_raw)) if target_agent_raw else None
     except (TypeError, ValueError) as exc:
         raise DispatchError(
             f"invalid target_agent_id: {target_agent_raw!r}",
@@ -731,9 +705,7 @@ async def _apply_flow_create(
         workspace_id=approval.workspace_id,
         resource_type="flow",
         resource_id=flow.id,
-        summary=(
-            f"applied {rt} → created Flow {name!r} (enabled=False, await admin toggle)"
-        ),
+        summary=(f"applied {rt} → created Flow {name!r} (enabled=False, await admin toggle)"),
         metadata={
             "approval_id": str(approval.id),
             "flow_id": str(flow.id),
@@ -849,7 +821,7 @@ async def _apply_subagent_hallucination_review(
     "approved but child already gone" rather than a 409.
     """
     rt = ApprovalResourceType_subagent_hallucination_review
-    from app.services import subagent_run as subagent_svc  # noqa: PLC0415
+    from app.services import subagent_run as subagent_svc
 
     updated = await subagent_svc.apply_hallucination_decision(
         db,
@@ -898,9 +870,7 @@ async def _apply_subagent_hallucination_review(
 # but referencing the enum here keeps the dispatch table spelling
 # uniform. Kept as a module-level binding so reading the dispatch
 # table stays a one-line scan.
-ApprovalResourceType_subagent_hallucination_review = (
-    "subagent_hallucination_review"
-)
+ApprovalResourceType_subagent_hallucination_review = "subagent_hallucination_review"
 
 
 async def _apply_hub_promotion(
@@ -917,7 +887,7 @@ async def _apply_hub_promotion(
     single ``hub.promotion_applied`` audit row carrying the dedup
     flag + new hub version metadata.
     """
-    from app.services import hub_pull_push as hub_pp_svc  # noqa: PLC0415
+    from app.services import hub_pull_push as hub_pp_svc
 
     result = await hub_pp_svc.apply_promotion(
         db,

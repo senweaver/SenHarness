@@ -35,9 +35,7 @@ class ChannelRepository(AsyncRepository[Channel]):
         )
         return (await self.session.execute(stmt)).scalar_one_or_none()
 
-    async def list_all_enabled_streams(
-        self, *, limit: int = 5000
-    ) -> Sequence[Channel]:
+    async def list_all_enabled_streams(self, *, limit: int = 5000) -> Sequence[Channel]:
         """Return every enabled, soft-not-deleted channel across the whole
         deployment — used by the IM stream supervisor on startup / reconcile.
 

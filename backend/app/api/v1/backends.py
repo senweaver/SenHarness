@@ -182,9 +182,7 @@ async def ping_adapter(
     adapter = await svc.get_or_404(db, adapter_id=adapter_id, workspace_id=ws_id)
 
     status_enum, detail = await svc.ping_endpoint(adapter)
-    adapter = await BackendAdapterRepository(db).update(
-        adapter, health_status=status_enum
-    )
+    adapter = await BackendAdapterRepository(db).update(adapter, health_status=status_enum)
     await db.commit()
     _ = BackendAdapterHealth  # keep import
     return BackendAdapterHealthReport(status=status_enum, detail=detail)

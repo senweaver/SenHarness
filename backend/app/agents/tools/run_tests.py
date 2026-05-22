@@ -23,13 +23,10 @@ class RunTestsArgs(BaseModel):
     command: str | None = Field(
         default=None,
         description=(
-            "Optional override for the test command; defaults to "
-            "`policy.coding.test_command`."
+            "Optional override for the test command; defaults to `policy.coding.test_command`."
         ),
     )
-    timeout_s: int = Field(
-        default=120, ge=5, le=600, description="Hard timeout in seconds."
-    )
+    timeout_s: int = Field(default=120, ge=5, le=600, description="Hard timeout in seconds.")
 
 
 async def run_run_tests(args: RunTestsArgs) -> dict[str, Any]:
@@ -49,9 +46,7 @@ async def run_run_tests(args: RunTestsArgs) -> dict[str, Any]:
     command = args.command or coding_block.get("test_command") or "pytest -x -q"
 
     try:
-        result = await asyncio.wait_for(
-            backend.execute(command), timeout=args.timeout_s
-        )
+        result = await asyncio.wait_for(backend.execute(command), timeout=args.timeout_s)
     except TimeoutError:
         return {"ok": False, "reason": "timeout", "command": command}
     except Exception as e:

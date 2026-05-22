@@ -50,9 +50,7 @@ async def _read_platform_defaults(db: AsyncSession) -> dict[str, Any]:
     return raw
 
 
-def _deep_merge(
-    base: Mapping[str, Any], override: Mapping[str, Any]
-) -> dict[str, Any]:
+def _deep_merge(base: Mapping[str, Any], override: Mapping[str, Any]) -> dict[str, Any]:
     """Override-wins merge that walks one nested level for sub-models.
 
     ``approval_ttl_days`` and ``auto_verifier`` are dict-shaped sub-

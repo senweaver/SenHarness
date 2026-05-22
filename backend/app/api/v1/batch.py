@@ -66,13 +66,9 @@ async def list_session_checkpoints(
     workspace_id: CurrentWorkspaceId,
 ) -> list[SessionCheckpointRead]:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     await sess_svc.get_session_or_404(db, session_id, workspace_id=ws_id)
-    rows = await SessionCheckpointRepository(db).list_for_session(
-        session_id=session_id
-    )
+    rows = await SessionCheckpointRepository(db).list_for_session(session_id=session_id)
     return [SessionCheckpointRead.model_validate(r) for r in rows]
 
 
@@ -90,12 +86,8 @@ async def create_session_checkpoint(
     request: Request,
 ) -> SessionCheckpointRead:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
-    session_obj = await sess_svc.get_session_or_404(
-        db, session_id, workspace_id=ws_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
+    session_obj = await sess_svc.get_session_or_404(db, session_id, workspace_id=ws_id)
     row = await batch_svc.capture_checkpoint(
         db,
         workspace_id=ws_id,
@@ -130,9 +122,7 @@ async def delete_session_checkpoint(
     workspace_id: CurrentWorkspaceId,
 ) -> None:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     await sess_svc.get_session_or_404(db, session_id, workspace_id=ws_id)
     repo = SessionCheckpointRepository(db)
     row = await repo.get(checkpoint_id)
@@ -155,9 +145,7 @@ async def fork_session(
     request: Request,
 ) -> SessionForkOut:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     await sess_svc.get_session_or_404(db, session_id, workspace_id=ws_id)
     original, fork, copied = await batch_svc.fork_at_checkpoint(
         db,
@@ -204,9 +192,7 @@ async def list_batch_runs(
     workspace_id: CurrentWorkspaceId,
 ) -> list[BatchRunRead]:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     rows = await BatchRunRepository(db).list_for_workspace(workspace_id=ws_id)
     return [BatchRunRead.model_validate(r) for r in rows]
 
@@ -224,9 +210,7 @@ async def create_batch_run(
     request: Request,
 ) -> BatchRunRead:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     batch = await batch_svc.create_batch_run(
         db,
         workspace_id=ws_id,
@@ -268,17 +252,11 @@ async def get_batch_run(
     workspace_id: CurrentWorkspaceId,
 ) -> BatchRunDetail:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     batch = await BatchRunRepository(db).get(batch_run_id)
     if batch is None or batch.workspace_id != ws_id:
-        raise Unauthorized(
-            "batch_run_not_found", code="batch.not_found"
-        )
-    cases = await BatchRunCaseRepository(db).list_for_run(
-        batch_run_id=batch_run_id
-    )
+        raise Unauthorized("batch_run_not_found", code="batch.not_found")
+    cases = await BatchRunCaseRepository(db).list_for_run(batch_run_id=batch_run_id)
     detail = BatchRunDetail.model_validate(batch)
     detail.cases = [BatchRunCaseRead.model_validate(c) for c in cases]
     return detail
@@ -295,15 +273,9 @@ async def list_batch_cases(
     workspace_id: CurrentWorkspaceId,
 ) -> list[BatchRunCaseRead]:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     batch = await BatchRunRepository(db).get(batch_run_id)
     if batch is None or batch.workspace_id != ws_id:
-        raise Unauthorized(
-            "batch_run_not_found", code="batch.not_found"
-        )
-    cases = await BatchRunCaseRepository(db).list_for_run(
-        batch_run_id=batch_run_id
-    )
+        raise Unauthorized("batch_run_not_found", code="batch.not_found")
+    cases = await BatchRunCaseRepository(db).list_for_run(batch_run_id=batch_run_id)
     return [BatchRunCaseRead.model_validate(c) for c in cases]

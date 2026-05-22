@@ -132,9 +132,7 @@ async def _inflight_heartbeat(*, run_id: uuid.UUID, seq: int) -> None:
     try:
         factory = get_session_factory()
         async with factory() as db:
-            updated = await inflight_svc.update_last_seen(
-                db, run_id=run_id, last_event_seq=seq
-            )
+            updated = await inflight_svc.update_last_seen(db, run_id=run_id, last_event_seq=seq)
             if updated:
                 await db.commit()
     except Exception:  # pragma: no cover - heartbeat is best-effort
@@ -186,9 +184,7 @@ def _build_inflight_snapshot(req: RunRequest, *, mode: str | None) -> dict[str, 
                 "kind": str(a.get("kind") or ""),
                 "mime_type": str(a.get("mime_type") or ""),
                 "size_bytes": (
-                    len(a["data"])
-                    if isinstance(a.get("data"), (bytes, bytearray))
-                    else None
+                    len(a["data"]) if isinstance(a.get("data"), (bytes, bytearray)) else None
                 ),
             }
             for a in (req.attachments or [])
@@ -209,10 +205,10 @@ class _WsState(TypedDict):
     """Per-connection state shared between the receive loop, the turn task,
     the approval pump, and any background broadcast (e.g. AI title)."""
 
-    seq: int                                 # monotonic counter; next emitted frame gets seq+1
-    cache: deque[dict[str, Any]]             # ring buffer of the last N emitted frames
-    current_run_id: uuid.UUID | None         # active run for cache lookup / cancel filtering
-    send_lock: asyncio.Lock                  # serialise concurrent senders (turn task + pump)
+    seq: int  # monotonic counter; next emitted frame gets seq+1
+    cache: deque[dict[str, Any]]  # ring buffer of the last N emitted frames
+    current_run_id: uuid.UUID | None  # active run for cache lookup / cancel filtering
+    send_lock: asyncio.Lock  # serialise concurrent senders (turn task + pump)
 
 
 def _new_ws_state() -> _WsState:
@@ -562,9 +558,7 @@ async def star_session(
         pinned=pinned,
     )
     await db.commit()
-    return StarSessionOut(
-        session_id=session_id, starred=starred, pinned=pinned_state
-    )
+    return StarSessionOut(session_id=session_id, starred=starred, pinned=pinned_state)
 
 
 @router.delete("/{session_id}/star", status_code=status.HTTP_204_NO_CONTENT)
@@ -704,9 +698,7 @@ async def list_session_ratings(
     ws_id = _require_workspace(workspace_id)
     await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     await svc.get_session_or_404(db, session_id, workspace_id=ws_id)
-    msgs = await MessageRepository(db).list_for_session(
-        session_id=session_id, limit=500
-    )
+    msgs = await MessageRepository(db).list_for_session(session_id=session_id, limit=500)
     # Only assistant messages can be rated — keep the projection tight.
     assistant_ids = [m.id for m in msgs if str(m.role) == MessageRole.ASSISTANT.value]
     summary = await rating_svc.summary_for_messages(
@@ -728,9 +720,7 @@ async def list_session_ratings(
     "/{session_id}/goals",
     response_model=SessionGoalRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[
-        Depends(rate_limit("session_goal_write", limit=20, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("session_goal_write", limit=20, period_seconds=60))],
 )
 async def lock_session_goal(
     session_id: uuid.UUID,
@@ -758,9 +748,7 @@ async def lock_session_goal(
 @router.patch(
     "/{session_id}/goals/{goal_id}",
     response_model=SessionGoalRead,
-    dependencies=[
-        Depends(rate_limit("session_goal_write", limit=20, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("session_goal_write", limit=20, period_seconds=60))],
 )
 async def update_session_goal(
     session_id: uuid.UUID,
@@ -796,9 +784,7 @@ async def update_session_goal(
 @router.post(
     "/{session_id}/goals/{goal_id}/unlock",
     response_model=SessionGoalRead,
-    dependencies=[
-        Depends(rate_limit("session_goal_write", limit=20, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("session_goal_write", limit=20, period_seconds=60))],
 )
 async def unlock_session_goal(
     session_id: uuid.UUID,
@@ -828,9 +814,7 @@ async def unlock_session_goal(
 @router.get(
     "/{session_id}/goals",
     response_model=list[SessionGoalRead],
-    dependencies=[
-        Depends(rate_limit("session_goal_read", limit=120, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("session_goal_read", limit=120, period_seconds=60))],
 )
 async def list_session_goals(
     session_id: uuid.UUID,
@@ -858,9 +842,7 @@ async def list_session_goals(
 @router.get(
     "/{session_id}/alignment",
     response_model=list[GoalAlignmentScoreRead],
-    dependencies=[
-        Depends(rate_limit("session_goal_read", limit=120, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("session_goal_read", limit=120, period_seconds=60))],
 )
 async def list_session_alignment(
     session_id: uuid.UUID,
@@ -886,9 +868,7 @@ async def list_session_alignment(
 @router.post(
     "/{session_id}/messages/{message_id}/realign",
     response_model=GoalAlignmentScoreRead | None,
-    dependencies=[
-        Depends(rate_limit("session_goal_realign", limit=10, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("session_goal_realign", limit=10, period_seconds=60))],
 )
 async def realign_message(
     session_id: uuid.UUID,
@@ -906,9 +886,7 @@ async def realign_message(
     ws_id = _require_workspace(workspace_id)
     await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     await svc.get_session_or_404(db, session_id, workspace_id=ws_id)
-    active = await goal_svc.get_active_goal(
-        db, session_id=session_id, workspace_id=ws_id
-    )
+    active = await goal_svc.get_active_goal(db, session_id=session_id, workspace_id=ws_id)
     if active is None:
         return None
     msg = await MessageRepository(db).get(message_id)
@@ -1218,11 +1196,14 @@ async def session_ws(websocket: WebSocket, session_id: uuid.UUID) -> None:
                     await _emit(
                         websocket,
                         ws_state,
-                        {"type": "error", "data": {
-                            "code": "session.turn_busy",
-                            "message": "Previous turn still running; wait for it to finish.",
-                            "retryable": True,
-                        }},
+                        {
+                            "type": "error",
+                            "data": {
+                                "code": "session.turn_busy",
+                                "message": "Previous turn still running; wait for it to finish.",
+                                "retryable": True,
+                            },
+                        },
                     )
                     continue
                 turn_task = asyncio.create_task(
@@ -1480,11 +1461,14 @@ async def _apply_approval_decision(
         await _emit(
             websocket,
             ws_state,
-            {"type": "error", "data": {
-                "code": "approval.invalid_id",
-                "message": "approval_decision frame missing approval_id.",
-                "retryable": False,
-            }},
+            {
+                "type": "error",
+                "data": {
+                    "code": "approval.invalid_id",
+                    "message": "approval_decision frame missing approval_id.",
+                    "retryable": False,
+                },
+            },
         )
         return
 
@@ -1508,9 +1492,14 @@ async def _apply_approval_decision(
             await _emit(
                 websocket,
                 ws_state,
-                {"type": "error", "data": {
-                    "code": e.code, "message": str(e), "retryable": False,
-                }},
+                {
+                    "type": "error",
+                    "data": {
+                        "code": e.code,
+                        "message": str(e),
+                        "retryable": False,
+                    },
+                },
             )
             return
 
@@ -1520,25 +1509,31 @@ async def _apply_approval_decision(
             await _emit(
                 websocket,
                 ws_state,
-                {"type": "error", "data": {
-                    "code": "approval.not_found",
-                    "message": "Approval not found or already decided.",
-                    "retryable": False,
-                }},
+                {
+                    "type": "error",
+                    "data": {
+                        "code": "approval.not_found",
+                        "message": "Approval not found or already decided.",
+                        "retryable": False,
+                    },
+                },
             )
             return
 
         try:
-            await perm.require_decide_approval(
-                db, approval=row, actor_membership=membership
-            )
+            await perm.require_decide_approval(db, approval=row, actor_membership=membership)
         except PermissionDenied as e:
             await _emit(
                 websocket,
                 ws_state,
-                {"type": "error", "data": {
-                    "code": e.code, "message": str(e), "retryable": False,
-                }},
+                {
+                    "type": "error",
+                    "data": {
+                        "code": e.code,
+                        "message": str(e),
+                        "retryable": False,
+                    },
+                },
             )
             return
 
@@ -1556,11 +1551,14 @@ async def _apply_approval_decision(
         await _emit(
             websocket,
             ws_state,
-            {"type": "error", "data": {
-                "code": "approval.not_found",
-                "message": "Approval not found or already decided.",
-                "retryable": False,
-            }},
+            {
+                "type": "error",
+                "data": {
+                    "code": "approval.not_found",
+                    "message": "Approval not found or already decided.",
+                    "retryable": False,
+                },
+            },
         )
         return
 
@@ -1576,10 +1574,13 @@ async def _apply_approval_decision(
     await _emit(
         websocket,
         ws_state,
-        {"type": "approval_update", "data": {
-            "id": str(approval_id),
-            "status": row.status if isinstance(row.status, str) else row.status.value,
-        }},
+        {
+            "type": "approval_update",
+            "data": {
+                "id": str(approval_id),
+                "status": row.status if isinstance(row.status, str) else row.status.value,
+            },
+        },
     )
 
 
@@ -1714,9 +1715,7 @@ async def _handle_insights_slash_command(
             await db.commit()
     except Exception as exc:
         code = getattr(exc, "code", "insights.command_failed")
-        message = (
-            getattr(exc, "detail", None) or str(exc) or "Insights command failed"
-        )
+        message = getattr(exc, "detail", None) or str(exc) or "Insights command failed"
         await _emit(
             websocket,
             ws_state,
@@ -1739,9 +1738,7 @@ async def _handle_insights_slash_command(
             "data": {
                 "kind": "insights_queued",
                 "days": int(result["days"]),
-                "expected_completion_seconds": int(
-                    result.get("expected_completion_seconds", 30)
-                ),
+                "expected_completion_seconds": int(result.get("expected_completion_seconds", 30)),
                 "message": (
                     f"Generating cross-session insights over the last "
                     f"{int(result['days'])} day(s). The summary will appear "
@@ -1863,9 +1860,7 @@ async def _handle_user_turn(
 
     # 1) Persist user message + resolve Agent for this session.
     async with factory() as db:
-        session_obj = await svc.get_session_or_404(
-            db, session_id, workspace_id=workspace_id
-        )
+        session_obj = await svc.get_session_or_404(db, session_id, workspace_id=workspace_id)
         await svc.append_message(
             db,
             session_obj=session_obj,
@@ -1879,17 +1874,24 @@ async def _handle_user_turn(
         squad_subagents_spec: dict | None = None
 
         if is_squad:
-            squad = await SquadRepository(db).get(session_obj.subject_id) if session_obj.subject_id else None
+            squad = (
+                await SquadRepository(db).get(session_obj.subject_id)
+                if session_obj.subject_id
+                else None
+            )
             if squad is None or squad.workspace_id != workspace_id:
                 await db.commit()
                 await _emit(
                     websocket,
                     ws_state,
-                    {"type": "error", "data": {
-                        "code": "session.squad_not_found",
-                        "message": "Squad not found for this session.",
-                        "retryable": False,
-                    }},
+                    {
+                        "type": "error",
+                        "data": {
+                            "code": "session.squad_not_found",
+                            "message": "Squad not found for this session.",
+                            "retryable": False,
+                        },
+                    },
                 )
                 return
             members = await SquadMemberRepository(db).list_for_squad(squad.id)
@@ -1898,11 +1900,14 @@ async def _handle_user_turn(
                 await _emit(
                     websocket,
                     ws_state,
-                    {"type": "error", "data": {
-                        "code": "session.squad_empty",
-                        "message": "Squad has no members yet.",
-                        "retryable": False,
-                    }},
+                    {
+                        "type": "error",
+                        "data": {
+                            "code": "session.squad_empty",
+                            "message": "Squad has no members yet.",
+                            "retryable": False,
+                        },
+                    },
                 )
                 return
 
@@ -1918,11 +1923,7 @@ async def _handle_user_turn(
             specs = []
             used_names: set[str] = set()
             for a, role in member_agents:
-                base = (
-                    _slugify(a.name)
-                    or _slugify(role)
-                    or f"agent_{str(a.id)[:8]}"
-                )
+                base = _slugify(a.name) or _slugify(role) or f"agent_{str(a.id)[:8]}"
                 name = base
                 counter = 1
                 while name in used_names:
@@ -1934,9 +1935,7 @@ async def _handle_user_turn(
                 instructions = (a.persona_md or a.description or a.name).strip()[:2000]
                 if a.name and a.name != name:
                     desc = f"[{a.name}] {desc}"
-                specs.append(
-                    {"name": name, "description": desc, "instructions": instructions}
-                )
+                specs.append({"name": name, "description": desc, "instructions": instructions})
             squad_subagents_spec = {
                 "enabled": True,
                 "include_general_purpose": False,
@@ -1987,11 +1986,12 @@ async def _handle_user_turn(
             return
 
         # Load recent message history (newest 40) for context.
-        recent = await MessageRepository(db).list_for_session(
-            session_id=session_id, limit=40
-        )
+        recent = await MessageRepository(db).list_for_session(session_id=session_id, limit=40)
         history = [
-            {"role": m.role.value if hasattr(m.role, "value") else str(m.role), "content_json": m.content_json}
+            {
+                "role": m.role.value if hasattr(m.role, "value") else str(m.role),
+                "content_json": m.content_json,
+            }
             for m in recent
             if m.role in {MessageRole.USER, MessageRole.ASSISTANT}
             # Drop synthetic placeholder turns left over from older runs
@@ -1999,10 +1999,7 @@ async def _handle_user_turn(
             # them ``placeholder``). Keeping them in history poisons the next
             # prompt — the model sees long ``[占位 …]`` tails with no real
             # answer and tends to either echo them or return an empty stream.
-            and not (
-                isinstance(m.content_json, dict)
-                and m.content_json.get("placeholder") is True
-            )
+            and not (isinstance(m.content_json, dict) and m.content_json.get("placeholder") is True)
             and not (
                 isinstance(m.content_json, dict)
                 and isinstance(m.content_json.get("text"), str)
@@ -2085,17 +2082,13 @@ async def _handle_user_turn(
     # call; text-only kernels can ignore this list.
     attachments_for_req: list[dict] = []
     for kind, mime, data in attachment_blobs:
-        attachments_for_req.append(
-            {"kind": kind, "mime_type": mime, "data": data}
-        )
+        attachments_for_req.append({"kind": kind, "mime_type": mime, "data": data})
 
     # Prepend the attachment block (if any) so the model sees document
     # excerpts + the list of files now sitting in scratch. The original
     # ``text`` is what the user actually typed and is what we persist on
     # the user Message — the prefix is for the kernel only.
-    user_text_for_kernel = (
-        f"{attachment_prompt_prefix}{text}" if attachment_prompt_prefix else text
-    )
+    user_text_for_kernel = f"{attachment_prompt_prefix}{text}" if attachment_prompt_prefix else text
 
     run_id = uuid.uuid4()
     if active_run_box is not None:
@@ -2160,9 +2153,7 @@ async def _handle_user_turn(
     # makes the agent's tool surface an explicit allow-list driven by
     # the AbilitiesTab toggles.
     tools_meta = metadata.get("tools")
-    builtin_override = (
-        tools_meta.get("builtin") if isinstance(tools_meta, dict) else None
-    )
+    builtin_override = tools_meta.get("builtin") if isinstance(tools_meta, dict) else None
     toolbox_override: list[str] = []
     if isinstance(builtin_override, list):
         toolbox_override = [str(t) for t in builtin_override if isinstance(t, str)]
@@ -2221,14 +2212,10 @@ async def _handle_user_turn(
             # via a separate path). Kept ``thinking_mode`` for backward compat
             # with anything still reading the older key.
             "reasoning_effort": reasoning_effort,
-            "thinking_mode": (
-                "high" if mode == "thinking" else metadata.get("thinking_mode")
-            ),
+            "thinking_mode": ("high" if mode == "thinking" else metadata.get("thinking_mode")),
             "mode": mode,
             "persona_md": agent_snapshot["persona_md"],
-            "default_search_provider_kind": agent_snapshot.get(
-                "default_search_provider_kind"
-            ),
+            "default_search_provider_kind": agent_snapshot.get("default_search_provider_kind"),
             # Per-agent fallback model. When the primary fails to build
             # or stream, the runner falls back to this ``provider:model``
             # string before surfacing ``model.unavailable`` to the user.
@@ -2523,9 +2510,7 @@ async def _capture_run_artifact(
     return captured
 
 
-def _read_injected_skill_ids(
-    backend: Any | None, run_id: uuid.UUID
-) -> list[uuid.UUID]:
+def _read_injected_skill_ids(backend: Any | None, run_id: uuid.UUID) -> list[uuid.UUID]:
     """Pull the run's injected SkillPack id list off the backend.
 
     Returns an empty list when the backend does not expose the
@@ -2582,9 +2567,7 @@ async def _record_skill_injection_usage(
             )
             await db.commit()
     except Exception as exc:
-        log.exception(
-            "skill usage record_usage_batch failed for run %s", run_id
-        )
+        log.exception("skill usage record_usage_batch failed for run %s", run_id)
         try:
             async with factory() as db:
                 await audit_svc.record(
@@ -2604,9 +2587,7 @@ async def _record_skill_injection_usage(
                 )
                 await db.commit()
         except Exception:  # pragma: no cover
-            log.exception(
-                "audit write for skill usage recording failure also failed"
-            )
+            log.exception("audit write for skill usage recording failure also failed")
 
 
 async def _enqueue_judge_for_artifact(

@@ -71,9 +71,7 @@ class WorkflowExecutionResultOut(BaseModel):
     aux_model: str | None
 
     @classmethod
-    def from_dataclass(
-        cls, result: WorkflowExecutionResult
-    ) -> WorkflowExecutionResultOut:
+    def from_dataclass(cls, result: WorkflowExecutionResult) -> WorkflowExecutionResultOut:
         return cls(
             workspace_id=result.workspace_id,
             engine=result.engine,
@@ -114,9 +112,7 @@ async def _require_workspace_admin(
         raise Unauthorized("identity_missing", code="auth.no_identity")
     if identity.platform_role == PlatformRole.PLATFORM_ADMIN:
         return identity
-    await ws_svc.ensure_admin(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_admin(db, workspace_id=workspace_id, identity_id=identity_id)
     return identity
 
 
@@ -132,9 +128,7 @@ async def _require_workspace_member(
         raise Unauthorized("identity_missing", code="auth.no_identity")
     if identity.platform_role == PlatformRole.PLATFORM_ADMIN:
         return identity
-    await ws_svc.ensure_member_access(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=workspace_id, identity_id=identity_id)
     return identity
 
 
@@ -219,9 +213,7 @@ async def get_last_evolution(
     ``last_run_at=None`` and the rest of the fields default to
     ``None`` so the admin UI can render an explicit "never run" state.
     """
-    await _require_workspace_member(
-        workspace_id=workspace_id, db=db, identity_id=identity_id
-    )
+    await _require_workspace_member(workspace_id=workspace_id, db=db, identity_id=identity_id)
 
     stmt = (
         select(AuditEvent)

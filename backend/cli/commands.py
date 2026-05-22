@@ -94,7 +94,9 @@ def create_admin_cmd(email: str, name: str) -> None:
         from app.services.admin import create_platform_admin
 
         async with get_session_factory()() as session:
-            identity = await create_platform_admin(session, email=email, name=name, password=password)
+            identity = await create_platform_admin(
+                session, email=email, name=name, password=password
+            )
             await session.commit()
             console.print(f"[green]Admin created: {identity.email}[/green]")
 
@@ -150,8 +152,7 @@ def seed_templates_cmd() -> None:
             )
             await session.commit()
             console.print(
-                f"[green]Templates refreshed[/green] — {created} created, "
-                f"{updated} updated"
+                f"[green]Templates refreshed[/green] — {created} created, {updated} updated"
             )
 
     asyncio.run(_run())

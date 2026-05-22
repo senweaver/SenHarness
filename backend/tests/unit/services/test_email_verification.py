@@ -16,9 +16,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_issue_then_consume_flips_identity_active(db_session, identity):
-    await IdentityRepository(db_session).update(
-        identity, status=IdentityStatus.PENDING
-    )
+    await IdentityRepository(db_session).update(identity, status=IdentityStatus.PENDING)
     await db_session.flush()
 
     token = await svc.issue_token(db_session, identity_id=identity.id)
@@ -31,9 +29,7 @@ async def test_issue_then_consume_flips_identity_active(db_session, identity):
 
 
 async def test_expired_token_is_rejected(db_session, identity):
-    await IdentityRepository(db_session).update(
-        identity, status=IdentityStatus.PENDING
-    )
+    await IdentityRepository(db_session).update(identity, status=IdentityStatus.PENDING)
     await db_session.flush()
 
     token = await svc.issue_token(db_session, identity_id=identity.id, ttl_seconds=60)
@@ -47,9 +43,7 @@ async def test_expired_token_is_rejected(db_session, identity):
 
 
 async def test_reused_token_is_rejected(db_session, identity):
-    await IdentityRepository(db_session).update(
-        identity, status=IdentityStatus.PENDING
-    )
+    await IdentityRepository(db_session).update(identity, status=IdentityStatus.PENDING)
     await db_session.flush()
 
     token = await svc.issue_token(db_session, identity_id=identity.id)

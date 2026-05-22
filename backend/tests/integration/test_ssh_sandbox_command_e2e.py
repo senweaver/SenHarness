@@ -134,16 +134,12 @@ def _config(**overrides):
 
 
 # ── Tests ──────────────────────────────────────────────────────
-async def test_happy_path_command_executes(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_happy_path_command_executes(db_session, workspace, identity, monkeypatch):
     _install_fake_asyncssh(monkeypatch)
     await _seed_key(db_session, workspace, identity)()
     await db_session.commit()
 
-    monkeypatch.setattr(
-        svc, "get_session_factory", lambda: _patched_factory(db_session)
-    )
+    monkeypatch.setattr(svc, "get_session_factory", lambda: _patched_factory(db_session))
 
     config = _config()
     sandbox = svc.SshSandbox(
@@ -154,7 +150,7 @@ async def test_happy_path_command_executes(
 
     # Pre-create an approved approval for this command — the wait
     # helper polls the DB; a row in APPROVED state returns immediately.
-    approval_id = uuid.uuid4()
+    _approval_id = uuid.uuid4()
     repo = ApprovalRepository(db_session)
     await repo.create(
         workspace_id=workspace.id,
@@ -172,8 +168,10 @@ async def test_happy_path_command_executes(
     # Patch the approval-create path to return our pre-seeded id so the
     # poller picks up the APPROVED row immediately.
     last_id = (
-        await db_session.execute(select(Approval).order_by(Approval.created_at.desc()))
-    ).scalars().first()
+        (await db_session.execute(select(Approval).order_by(Approval.created_at.desc())))
+        .scalars()
+        .first()
+    )
     assert last_id is not None
     last_id.status = ApprovalStatus.APPROVED
     last_id.decided_at = utcnow_naive()
@@ -193,27 +191,25 @@ async def test_happy_path_command_executes(
 
     # Audit row landed.
     rows = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.action == "sandbox.ssh_command_executed"
+        (
+            await db_session.execute(
+                select(AuditEvent).where(AuditEvent.action == "sandbox.ssh_command_executed")
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(rows) == 1
     assert rows[0].metadata_json["host"] == "ops.example.com"
     assert rows[0].metadata_json["exit_code"] == 0
 
 
-async def test_approval_denied_raises_command_denied(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_approval_denied_raises_command_denied(db_session, workspace, identity, monkeypatch):
     _install_fake_asyncssh(monkeypatch)
     await _seed_key(db_session, workspace, identity)()
     await db_session.commit()
 
-    monkeypatch.setattr(
-        svc, "get_session_factory", lambda: _patched_factory(db_session)
-    )
+    monkeypatch.setattr(svc, "get_session_factory", lambda: _patched_factory(db_session))
 
     config = _config()
     sandbox = svc.SshSandbox(
@@ -264,9 +260,7 @@ async def test_approval_timeout_self_expires_and_raises(
     await _seed_key(db_session, workspace, identity)()
     await db_session.commit()
 
-    monkeypatch.setattr(
-        svc, "get_session_factory", lambda: _patched_factory(db_session)
-    )
+    monkeypatch.setattr(svc, "get_session_factory", lambda: _patched_factory(db_session))
 
     # Force the polling helper to hit the deadline path on the first
     # tick by patching ``time.monotonic`` — the second call returns a
@@ -331,9 +325,7 @@ async def test_command_not_in_allowlist_blocks_before_approval(
     await _seed_key(db_session, workspace, identity)()
     await db_session.commit()
 
-    monkeypatch.setattr(
-        svc, "get_session_factory", lambda: _patched_factory(db_session)
-    )
+    monkeypatch.setattr(svc, "get_session_factory", lambda: _patched_factory(db_session))
 
     config = _config(command_allowlist=["uptime"])
     sandbox = svc.SshSandbox(
@@ -349,17 +341,17 @@ async def test_command_not_in_allowlist_blocks_before_approval(
     assert exc.value.code == "sandbox.ssh_command_rejected"
 
     # No approval row was created — the gate runs before the approval.
-    rows = (
-        await db_session.execute(select(Approval))
-    ).scalars().all()
+    rows = (await db_session.execute(select(Approval))).scalars().all()
     assert all(r.tool_name != "ssh_execute" for r in rows)
 
     # Audit row records the rejection.
     audits = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.action == "sandbox.ssh_command_rejected"
+        (
+            await db_session.execute(
+                select(AuditEvent).where(AuditEvent.action == "sandbox.ssh_command_rejected")
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(audits) == 1

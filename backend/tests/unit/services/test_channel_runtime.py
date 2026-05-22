@@ -111,9 +111,7 @@ def _patch_dispatch(monkeypatch):
     async def _fake_dispatch(*, channel_id, inbound):
         captured.append(inbound)
 
-    monkeypatch.setattr(
-        "app.services.channel_runtime.dispatch_inbound", _fake_dispatch
-    )
+    monkeypatch.setattr("app.services.channel_runtime.dispatch_inbound", _fake_dispatch)
     return captured
 
 

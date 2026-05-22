@@ -17,7 +17,10 @@ class AuthSession(UuidPkMixin, TimestampMixin, Base):
     __tablename__ = "auth_sessions"
 
     identity_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("identities.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("identities.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     refresh_jti: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
 

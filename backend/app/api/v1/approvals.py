@@ -70,9 +70,7 @@ async def list_approvals(
                 filtered.append(row)
         rows = filtered
 
-    items = await _serialize_with_departments(
-        repo, workspace_id=workspace_id, rows=rows
-    )
+    items = await _serialize_with_departments(repo, workspace_id=workspace_id, rows=rows)
     return PagedResponse(
         items=items,
         total=len(items),
@@ -132,9 +130,7 @@ async def list_urgent_approvals(
     # Fetch with a wider cap, then apply visibility filter, then trim. This
     # keeps "top 5 soonest-expiring VISIBLE to the caller" accurate even when
     # the caller is not a workspace admin.
-    raw = await repo.list_urgent_pending(
-        workspace_id=workspace_id, limit=max(limit * 10, 50)
-    )
+    raw = await repo.list_urgent_pending(workspace_id=workspace_id, limit=max(limit * 10, 50))
     if perm.has_capability(membership, "approvals.view_all"):
         rows = raw
     else:
@@ -145,9 +141,7 @@ async def list_urgent_approvals(
             ):
                 rows.append(row)
     rows = rows[:limit]
-    return await _serialize_with_departments(
-        repo, workspace_id=workspace_id, rows=rows
-    )
+    return await _serialize_with_departments(repo, workspace_id=workspace_id, rows=rows)
 
 
 @router.get("/counts")
@@ -177,9 +171,7 @@ async def approvals_counts(
     rows = await repo.list_pending(workspace_id=workspace_id, limit=500)
     visible = 0
     for row in rows:
-        if await perm.evaluate_approval_visibility(
-            db, approval=row, actor_membership=membership
-        ):
+        if await perm.evaluate_approval_visibility(db, approval=row, actor_membership=membership):
             visible += 1
     return {"pending": visible}
 
@@ -210,14 +202,10 @@ async def decide_approval(
     # Load row first so we can run permission checks against it.
     row = await repo.get(approval_id)
     if row is None or row.workspace_id != workspace_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Approval not found."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Approval not found.")
 
     # Capability + scope rule check.
-    matched_rule = await perm.require_decide_approval(
-        db, approval=row, actor_membership=membership
-    )
+    matched_rule = await perm.require_decide_approval(db, approval=row, actor_membership=membership)
 
     approved = payload.action == "approve"
     dispatch_result = None
@@ -297,9 +285,7 @@ async def decide_approval(
             "decision": "approve" if approved else "deny",
             "reason": payload.reason,
             "session_id": str(row.session_id) if row.session_id else None,
-            "dispatch_audit_action": (
-                dispatch_result.audit_action if dispatch_result else None
-            ),
+            "dispatch_audit_action": (dispatch_result.audit_action if dispatch_result else None),
             "applied_object_id": (
                 str(dispatch_result.applied_object_id)
                 if dispatch_result and dispatch_result.applied_object_id
@@ -334,9 +320,7 @@ async def decide_approval(
     )
     log_extra = {"matched_rule": matched_rule}
     _ = log_extra  # keep for tracing in P5
-    serialized = await _serialize_with_departments(
-        repo, workspace_id=workspace_id, rows=[row]
-    )
+    serialized = await _serialize_with_departments(repo, workspace_id=workspace_id, rows=[row])
     return ApprovalDecisionResponse(
         approval=serialized[0],
         dispatch_result=dispatch_result,
@@ -357,7 +341,7 @@ async def _audit_dispatch_failure_external(
     effort — never lets an audit failure swallow the original error.
     """
     try:
-        from app.db.session import get_session_factory  # noqa: PLC0415
+        from app.db.session import get_session_factory
 
         factory = get_session_factory()
         async with factory() as fresh:
@@ -368,9 +352,7 @@ async def _audit_dispatch_failure_external(
                 workspace_id=workspace_id,
                 resource_type="approval",
                 resource_id=approval_id,
-                summary=(
-                    f"approval {approval_id} dispatch failed during approve"
-                ),
+                summary=(f"approval {approval_id} dispatch failed during approve"),
                 metadata={
                     "approval_id": str(approval_id),
                     "code": error.code,
@@ -575,8 +557,7 @@ async def bulk_decide_approvals(
             resource_type="approval",
             resource_id=None,
             summary=(
-                f"{'approved' if approved else 'denied'} {len(succeeded)} "
-                f"approval(s) in bulk"
+                f"{'approved' if approved else 'denied'} {len(succeeded)} approval(s) in bulk"
             ),
             metadata={
                 "decision": "approve" if approved else "deny",

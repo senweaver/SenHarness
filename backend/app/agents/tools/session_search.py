@@ -127,9 +127,7 @@ class SessionSearchSummary(BaseModel):
 
     summary: str = Field(default="", max_length=4000)
     bullet_points: list[str] = Field(default_factory=list, max_length=10)
-    evidence_message_ids: list[uuid.UUID] = Field(
-        default_factory=list, max_length=20
-    )
+    evidence_message_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
 
 
 # ─── Raw search ─────────────────────────────────────────────
@@ -246,11 +244,7 @@ def _load_summary_prompt() -> str:
 
     @cache
     def _read() -> str:
-        path = (
-            Path(__file__).resolve().parent.parent
-            / "templates"
-            / "session_search_summary.md"
-        )
+        path = Path(__file__).resolve().parent.parent / "templates" / "session_search_summary.md"
         try:
             return path.read_text(encoding="utf-8").strip()
         except FileNotFoundError:  # pragma: no cover - dev sanity
@@ -300,9 +294,7 @@ async def _summarise_hits(
     """
     factory = get_session_factory()
     async with factory() as db:
-        config = await get_aux_model(
-            db, workspace_id=workspace_id, task=AuxiliaryTask.SUMMARIZE
-        )
+        config = await get_aux_model(db, workspace_id=workspace_id, task=AuxiliaryTask.SUMMARIZE)
     if config is None:
         return None
 
@@ -357,15 +349,11 @@ async def run_session_search(args: SessionSearchArgs) -> dict:
     # ── Per-workspace knobs (rate / breaker thresholds) ───────
     factory = get_session_factory()
     async with factory() as db:
-        aux_settings = await get_workspace_aux_settings(
-            db, workspace_id=ctx.workspace_id
-        )
+        aux_settings = await get_workspace_aux_settings(db, workspace_id=ctx.workspace_id)
     rate_limit = int(aux_settings.get("summarize_rate_per_minute", 30))
     breaker_strikes = int(aux_settings.get("summarize_fail_strikes", 3))
     breaker_window = int(aux_settings.get("summarize_fail_window_seconds", 300))
-    breaker_recover = int(
-        aux_settings.get("summarize_breaker_recover_seconds", 1800)
-    )
+    breaker_recover = int(aux_settings.get("summarize_breaker_recover_seconds", 1800))
 
     # ── Breaker check ────────────────────────────────────────
     breaker_open = await is_breaker_open(
@@ -504,16 +492,13 @@ async def run_session_search(args: SessionSearchArgs) -> dict:
         summary_text = summary_text[: max(1, args.summary_max_chars - 1)] + "…"
 
     # ── Reset breaker on success + audit invocation ────────
-    await reset_failure(
-        bucket=SUMMARIZE_BREAKER_BUCKET, workspace_id=workspace_str
-    )
+    await reset_failure(bucket=SUMMARIZE_BREAKER_BUCKET, workspace_id=workspace_str)
     await _record_audit(
         action=AUDIT_INVOKED,
         workspace_id=ctx.workspace_id,
         actor_identity_id=ctx.identity_id,
         summary_text=(
-            f"session_search summary: {len(accepted_ids)} evidence ids "
-            f"from {len(raw_hits)} hits"
+            f"session_search summary: {len(accepted_ids)} evidence ids from {len(raw_hits)} hits"
         ),
         metadata={
             "hit_count": len(raw_hits),

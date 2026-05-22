@@ -40,9 +40,7 @@ class McpTransport(StrEnum):
 
 class McpServer(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "mcp_servers"
-    __table_args__ = (
-        Index("ix_mcp_servers_workspace_name", "workspace_id", "name"),
-    )
+    __table_args__ = (Index("ix_mcp_servers_workspace_name", "workspace_id", "name"),)
 
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     slug: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -75,9 +73,7 @@ class McpServer(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMix
 
 class Toolbox(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "toolboxes"
-    __table_args__ = (
-        Index("ix_toolboxes_workspace_name", "workspace_id", "name"),
-    )
+    __table_args__ = (Index("ix_toolboxes_workspace_name", "workspace_id", "name"),)
 
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     description: Mapped[str | None] = mapped_column(String(512), nullable=True)
@@ -92,9 +88,7 @@ class Toolbox(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin
 
 class ToolBinding(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "tool_bindings"
-    __table_args__ = (
-        Index("ix_tool_bindings_workspace_toolbox", "workspace_id", "toolbox_id"),
-    )
+    __table_args__ = (Index("ix_tool_bindings_workspace_toolbox", "workspace_id", "toolbox_id"),)
 
     toolbox_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

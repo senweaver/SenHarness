@@ -29,11 +29,7 @@ def build_todo_capability(*, policy: dict[str, Any] | None) -> Any | None:
         log.info("pydantic-ai-todo not installed; todos disabled")
         return None
 
-    enable_subtasks = bool(
-        spec.get("enable_subtasks")
-        if isinstance(spec, dict)
-        else False
-    )
+    enable_subtasks = bool(spec.get("enable_subtasks") if isinstance(spec, dict) else False)
 
     try:
         storage = AsyncMemoryStorage()

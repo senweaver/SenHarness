@@ -71,9 +71,7 @@ class MembershipRepository(AsyncRepository[Membership]):
         rows = (await self.session.execute(stmt)).all()
         return [(row[0], row[1]) for row in rows]
 
-    async def count_by_department(
-        self, *, workspace_id: uuid.UUID
-    ) -> dict[uuid.UUID, int]:
+    async def count_by_department(self, *, workspace_id: uuid.UUID) -> dict[uuid.UUID, int]:
         """Count active members per department (skips NULL)."""
         from sqlalchemy import func
 

@@ -61,9 +61,7 @@ class AzureKeyVaultKeyring(Keyring):
                 "`pip install senharness-backend[kms-azure]`."
             )
         if not settings.AZURE_KV_URL or not settings.AZURE_KV_KEY_NAME:
-            raise KeyringError(
-                "AZURE_KV_URL and AZURE_KV_KEY_NAME must both be set."
-            )
+            raise KeyringError("AZURE_KV_URL and AZURE_KV_KEY_NAME must both be set.")
         credential = DefaultAzureCredential()
         self._kv_url = settings.AZURE_KV_URL
         self._key_name = settings.AZURE_KV_KEY_NAME

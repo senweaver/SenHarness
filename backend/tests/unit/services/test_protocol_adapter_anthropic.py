@@ -270,9 +270,7 @@ def test_response_envelope_tool_use() -> None:
     out = normalized_to_anthropic_response(
         {
             "output_text": "I'll search.",
-            "tool_uses": [
-                {"id": "toolu_42", "name": "search", "input": {"q": "foo"}}
-            ],
+            "tool_uses": [{"id": "toolu_42", "name": "search", "input": {"q": "foo"}}],
             "usage": {"input_tokens": 8, "output_tokens": 5},
             "stop_reason": "tool_use",
             "model": "claude-sonnet-4",
@@ -344,9 +342,7 @@ async def test_stream_text_only_emits_message_lifecycle() -> None:
 
     # message_delta carries usage + stop_reason
     delta_lines = [
-        line
-        for line in body.splitlines()
-        if line.startswith("data:") and "message_delta" in line
+        line for line in body.splitlines() if line.startswith("data:") and "message_delta" in line
     ]
     payload = json.loads(delta_lines[0][5:].strip())
     assert payload["delta"]["stop_reason"] == "end_turn"

@@ -49,9 +49,7 @@ class FileKeyring(Keyring):
     def _bootstrap(self) -> None:
         version = "file-" + datetime.now(UTC).strftime("%Y%m%d%H%M%S")
         key = Fernet.generate_key().decode()
-        self._path.write_text(
-            json.dumps({"current": version, "keys": {version: key}}, indent=2)
-        )
+        self._path.write_text(json.dumps({"current": version, "keys": {version: key}}, indent=2))
         # Windows POSIX-mode write is best-effort — NTFS ACLs gate access
         # there instead.
         with contextlib.suppress(OSError):  # pragma: no cover
@@ -85,9 +83,7 @@ class FileKeyring(Keyring):
 
         try:
             self._current: str = data["current"]
-            self._keys: dict[str, Fernet] = {
-                v: Fernet(k.encode()) for v, k in data["keys"].items()
-            }
+            self._keys: dict[str, Fernet] = {v: Fernet(k.encode()) for v, k in data["keys"].items()}
         except (KeyError, TypeError, ValueError) as exc:
             raise KeyringAccessError("keyring file structure is malformed") from exc
 
@@ -110,23 +106,14 @@ class FileKeyring(Keyring):
             extra = stat.S_IRWXG | stat.S_IRWXO
             if st.st_mode & extra:
                 log.warning(
-                    "keyring file mode appears group/world-readable; "
-                    "tighten NTFS ACLs on this file"
+                    "keyring file mode appears group/world-readable; tighten NTFS ACLs on this file"
                 )
             return
         mode_bits = st.st_mode & 0o777
         if mode_bits != 0o600:
-            raise KeyringAccessError(
-                f"keyring file permissions must be 600 (got 0o{mode_bits:o})"
-            )
+            raise KeyringAccessError(f"keyring file permissions must be 600 (got 0o{mode_bits:o})")
 
     def _save(self) -> None:
-        out = {
-            "current": self._current,
-            "keys": {v: f._signing_key.hex() + f._encryption_key.hex() if False else None for v, f in self._keys.items()},
-        }
-        # Above line guarded by `if False` — we must never export Fernet internals.
-        # Instead we keep raw keys in a shadow dict set at bootstrap/rotate.
         raise KeyringError("FileKeyring._save() requires raw-key tracking; use rotate()")
 
     # ─── Protocol ────────────────────────────────────────
@@ -151,7 +138,9 @@ class FileKeyring(Keyring):
             raise KeyringError("Failed to unwrap DEK (InvalidToken)") from e
 
     def rotate(self) -> str:
-        new_version = "file-" + datetime.now(UTC).strftime("%Y%m%d%H%M%S") + "-" + secrets.token_hex(3)
+        new_version = (
+            "file-" + datetime.now(UTC).strftime("%Y%m%d%H%M%S") + "-" + secrets.token_hex(3)
+        )
         new_key = Fernet.generate_key()
         data = json.loads(self._path.read_text())
         data["keys"][new_version] = new_key.decode()

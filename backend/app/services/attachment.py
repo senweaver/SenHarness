@@ -145,11 +145,7 @@ async def get_for_read(
 ) -> Attachment:
     """Fetch an attachment, enforcing workspace isolation."""
     row = await AsyncRepository(session, Attachment).get(attachment_id)
-    if (
-        row is None
-        or row.deleted_at is not None
-        or row.workspace_id != workspace_id
-    ):
+    if row is None or row.deleted_at is not None or row.workspace_id != workspace_id:
         raise NotFound("attachment_not_found", code="attachment.not_found")
     return row
 
@@ -355,9 +351,7 @@ async def prepare_for_chat_turn(
             prepared.append(
                 PreparedAttachment(
                     ref=ref,
-                    image_blob=(att.kind.value, att.mime_type, blob)
-                    if blob is not None
-                    else None,
+                    image_blob=(att.kind.value, att.mime_type, blob) if blob is not None else None,
                 )
             )
             continue
@@ -375,9 +369,7 @@ async def prepare_for_chat_turn(
             scratch_path.write_bytes(data)
             scratch_rel = scratch_path.name
         except OSError as e:
-            log.warning(
-                "scratch copy failed id=%s -> %s: %s", att.id, scratch_path, e
-            )
+            log.warning("scratch copy failed id=%s -> %s: %s", att.id, scratch_path, e)
             scratch_rel = None
         ref["scratch_path"] = scratch_rel
 
@@ -407,23 +399,19 @@ async def prepare_for_chat_turn(
         text_rel: str | None = None
         if extracted_text and scratch_rel is not None:
             mime_lower = (att.mime_type or "").lower()
-            is_text_native = (
-                mime_lower.startswith("text/")
-                or mime_lower
-                in {
-                    "application/json",
-                    "application/yaml",
-                    "application/x-yaml",
-                    "application/xml",
-                    "application/javascript",
-                    "application/x-sh",
-                    "application/x-python-code",
-                    "application/sql",
-                    "application/toml",
-                    "application/x-toml",
-                    "text/markdown",
-                }
-            )
+            is_text_native = mime_lower.startswith("text/") or mime_lower in {
+                "application/json",
+                "application/yaml",
+                "application/x-yaml",
+                "application/xml",
+                "application/javascript",
+                "application/x-sh",
+                "application/x-python-code",
+                "application/sql",
+                "application/toml",
+                "application/x-toml",
+                "text/markdown",
+            }
             if is_text_native:
                 # Already plaintext on disk — point the agent at the same file.
                 text_rel = scratch_rel

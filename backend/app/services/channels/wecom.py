@@ -224,8 +224,7 @@ class WeComProvider(ChannelProvider):
         corp_id = payload.get("_corp_id")
         if not aes_key or not corp_id:
             log.warning(
-                "wecom parse_inbound missing aes_key / corp_id; "
-                "ingress wasn't configured correctly"
+                "wecom parse_inbound missing aes_key / corp_id; ingress wasn't configured correctly"
             )
             return None
 
@@ -293,10 +292,7 @@ class WeComProvider(ChannelProvider):
         if not token:
             return
 
-        url = (
-            f"https://qyapi.weixin.qq.com/cgi-bin/message/send"
-            f"?access_token={token}"
-        )
+        url = f"https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={token}"
         payload = {
             "touser": thread_key,
             "msgtype": "text",
@@ -335,10 +331,7 @@ class WeComProvider(ChannelProvider):
         token = await _fetch_access_token(corp_id, secret)
         if not token:
             return
-        url = (
-            f"https://qyapi.weixin.qq.com/cgi-bin/message/send"
-            f"?access_token={token}"
-        )
+        url = f"https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={token}"
         payload = {
             "touser": thread_key,
             "msgtype": "text",
@@ -376,10 +369,7 @@ async def _fetch_access_token(corp_id: str, secret: str) -> str | None:
     if cached and cached[1] > now:
         return cached[0]
 
-    url = (
-        "https://qyapi.weixin.qq.com/cgi-bin/gettoken"
-        f"?corpid={corp_id}&corpsecret={secret}"
-    )
+    url = f"https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid={corp_id}&corpsecret={secret}"
     try:
         async with httpx.AsyncClient(timeout=10.0) as cli:
             resp = await cli.get(url)
@@ -415,9 +405,7 @@ def _aes_decrypt(ciphertext_b64: str, aes_key_b64: str) -> tuple[str, str]:
             modes,
         )
     except ImportError as e:
-        raise RuntimeError(
-            "WeCom provider requires the 'cryptography' package"
-        ) from e
+        raise RuntimeError("WeCom provider requires the 'cryptography' package") from e
 
     # WeCom uses 43-char base64 keys (missing one char of padding).
     aes_key = base64.b64decode(aes_key_b64 + "=")

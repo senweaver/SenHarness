@@ -35,9 +35,7 @@ async def _make_pack(db, *, workspace_id, identity_id, slug):
     )
 
 
-async def test_upsert_edge_is_idempotent_and_merges_run_ids(
-    db_session, workspace, identity
-):
+async def test_upsert_edge_is_idempotent_and_merges_run_ids(db_session, workspace, identity):
     a = await _make_pack(
         db_session,
         workspace_id=workspace.id,
@@ -75,9 +73,7 @@ async def test_upsert_edge_is_idempotent_and_merges_run_ids(
     assert second.metadata_json["verdict"] == "ok"
 
 
-async def test_unique_constraint_rejects_duplicate_via_create(
-    db_session, workspace, identity
-):
+async def test_unique_constraint_rejects_duplicate_via_create(db_session, workspace, identity):
     a = await _make_pack(
         db_session,
         workspace_id=workspace.id,
@@ -111,9 +107,7 @@ async def test_unique_constraint_rejects_duplicate_via_create(
     await db_session.rollback()
 
 
-async def test_list_for_pack_returns_both_directions(
-    db_session, workspace, identity
-):
+async def test_list_for_pack_returns_both_directions(db_session, workspace, identity):
     a = await _make_pack(
         db_session,
         workspace_id=workspace.id,
@@ -149,18 +143,12 @@ async def test_list_for_pack_returns_both_directions(
     )
     await db_session.flush()
 
-    around_b = list(
-        await repo.list_for_pack(workspace_id=workspace.id, pack_id=b.id)
-    )
+    around_b = list(await repo.list_for_pack(workspace_id=workspace.id, pack_id=b.id))
     ids = {e.id for e in around_b}
     assert e1.id in ids and e2.id in ids
 
-    incoming = list(
-        await repo.list_incoming(workspace_id=workspace.id, pack_id=b.id)
-    )
-    outgoing = list(
-        await repo.list_outgoing(workspace_id=workspace.id, pack_id=b.id)
-    )
+    incoming = list(await repo.list_incoming(workspace_id=workspace.id, pack_id=b.id))
+    outgoing = list(await repo.list_outgoing(workspace_id=workspace.id, pack_id=b.id))
     assert {e.id for e in incoming} == {e1.id, e2.id}
     assert outgoing == []
 

@@ -324,9 +324,7 @@ async def _create_proposal_approval(
     body: dict[str, Any],
     summary: str,
 ) -> Approval:
-    expires_at = utcnow_naive() + timedelta(
-        days=_ttl_for(config, resource_type)
-    )
+    expires_at = utcnow_naive() + timedelta(days=_ttl_for(config, resource_type))
     repo = ApprovalRepository(db)
     return await repo.create(
         workspace_id=ctx.workspace_id,
@@ -400,9 +398,7 @@ async def run_propose_skill_create(args: ProposeSkillCreateArgs) -> dict:
             return gate
 
         try:
-            if await is_slug_tombstoned(
-                db, workspace_id=ctx.workspace_id, slug=args.slug
-            ):
+            if await is_slug_tombstoned(db, workspace_id=ctx.workspace_id, slug=args.slug):
                 payload = _rejected(
                     "evolver.slug_tombstoned",
                     f"Slug {args.slug!r} was previously tombstoned and cannot be reused.",
@@ -501,10 +497,7 @@ async def run_propose_skill_create(args: ProposeSkillCreateArgs) -> dict:
                 "supporting_run_ids": list(args.supporting_run_ids),
                 "rationale": args.rationale,
             }
-            summary = (
-                f"Evolver proposes new skill pack {pack.slug!r} "
-                f"(v{version.version_no})"
-            )
+            summary = f"Evolver proposes new skill pack {pack.slug!r} (v{version.version_no})"
             approval = await _create_proposal_approval(
                 db,
                 ctx=ctx,
@@ -544,21 +537,17 @@ async def run_propose_skill_create(args: ProposeSkillCreateArgs) -> dict:
                 "version_no": int(version.version_no),
                 "content_hash": version.content_hash,
                 "expires_at": (
-                    approval.expires_at.isoformat()
-                    if approval.expires_at is not None
-                    else None
+                    approval.expires_at.isoformat() if approval.expires_at is not None else None
                 ),
             }
-        except Exception:  # noqa: BLE001
+        except Exception:
             log.exception(
                 "evolver propose_skill_create failed (workspace=%s slug=%s)",
                 ctx.workspace_id,
                 args.slug,
             )
             await db.rollback()
-            await _bump_breaker_on_internal_error(
-                workspace_id=ctx.workspace_id, config=config
-            )
+            await _bump_breaker_on_internal_error(workspace_id=ctx.workspace_id, config=config)
             return _rejected(
                 "evolver.internal_error",
                 "Internal error filing the create proposal; the breaker counter advanced.",
@@ -591,9 +580,7 @@ async def run_propose_skill_patch(args: ProposeSkillPatchArgs) -> dict:
             return gate
 
         try:
-            pack = await _load_pack(
-                db, workspace_id=ctx.workspace_id, pack_id=args.pack_id
-            )
+            pack = await _load_pack(db, workspace_id=ctx.workspace_id, pack_id=args.pack_id)
             if pack is None:
                 payload = _rejected(
                     "evolver.pack_not_found",
@@ -624,9 +611,7 @@ async def run_propose_skill_patch(args: ProposeSkillPatchArgs) -> dict:
                 return payload
 
             version_repo = SkillPackVersionRepository(db)
-            current = await version_repo.get_active(
-                workspace_id=ctx.workspace_id, pack_id=pack.id
-            )
+            current = await version_repo.get_active(workspace_id=ctx.workspace_id, pack_id=pack.id)
             if current is not None:
                 current_text = current.content_md or ""
             else:
@@ -724,8 +709,7 @@ async def run_propose_skill_patch(args: ProposeSkillPatchArgs) -> dict:
                 "rationale": args.rationale,
             }
             summary = (
-                f"Evolver proposes patch on skill pack {pack.slug!r} "
-                f"(→ v{version.version_no})"
+                f"Evolver proposes patch on skill pack {pack.slug!r} (→ v{version.version_no})"
             )
             approval = await _create_proposal_approval(
                 db,
@@ -767,21 +751,17 @@ async def run_propose_skill_patch(args: ProposeSkillPatchArgs) -> dict:
                 "version_no": int(version.version_no),
                 "content_hash": version.content_hash,
                 "expires_at": (
-                    approval.expires_at.isoformat()
-                    if approval.expires_at is not None
-                    else None
+                    approval.expires_at.isoformat() if approval.expires_at is not None else None
                 ),
             }
-        except Exception:  # noqa: BLE001
+        except Exception:
             log.exception(
                 "evolver propose_skill_patch failed (workspace=%s pack=%s)",
                 ctx.workspace_id,
                 args.pack_id,
             )
             await db.rollback()
-            await _bump_breaker_on_internal_error(
-                workspace_id=ctx.workspace_id, config=config
-            )
+            await _bump_breaker_on_internal_error(workspace_id=ctx.workspace_id, config=config)
             return _rejected(
                 "evolver.internal_error",
                 "Internal error filing the patch proposal; the breaker counter advanced.",
@@ -814,9 +794,7 @@ async def run_propose_skill_edit(args: ProposeSkillEditArgs) -> dict:
             return gate
 
         try:
-            pack = await _load_pack(
-                db, workspace_id=ctx.workspace_id, pack_id=args.pack_id
-            )
+            pack = await _load_pack(db, workspace_id=ctx.workspace_id, pack_id=args.pack_id)
             if pack is None:
                 payload = _rejected(
                     "evolver.pack_not_found",
@@ -847,9 +825,7 @@ async def run_propose_skill_edit(args: ProposeSkillEditArgs) -> dict:
                 return payload
 
             version_repo = SkillPackVersionRepository(db)
-            current = await version_repo.get_active(
-                workspace_id=ctx.workspace_id, pack_id=pack.id
-            )
+            current = await version_repo.get_active(workspace_id=ctx.workspace_id, pack_id=pack.id)
             try:
                 version = await create_version(
                     db,
@@ -886,9 +862,7 @@ async def run_propose_skill_edit(args: ProposeSkillEditArgs) -> dict:
                 "version_id": str(version.id),
                 "version_no": int(version.version_no),
                 "content_hash": version.content_hash,
-                "previous_content_hash": (
-                    current.content_hash if current is not None else None
-                ),
+                "previous_content_hash": (current.content_hash if current is not None else None),
                 "content_excerpt": _short_excerpt(args.new_content_md, head=160),
                 "supporting_run_ids": list(args.supporting_run_ids),
                 "rationale": args.rationale,
@@ -934,21 +908,17 @@ async def run_propose_skill_edit(args: ProposeSkillEditArgs) -> dict:
                 "version_id": str(version.id),
                 "version_no": int(version.version_no),
                 "expires_at": (
-                    approval.expires_at.isoformat()
-                    if approval.expires_at is not None
-                    else None
+                    approval.expires_at.isoformat() if approval.expires_at is not None else None
                 ),
             }
-        except Exception:  # noqa: BLE001
+        except Exception:
             log.exception(
                 "evolver propose_skill_edit failed (workspace=%s pack=%s)",
                 ctx.workspace_id,
                 args.pack_id,
             )
             await db.rollback()
-            await _bump_breaker_on_internal_error(
-                workspace_id=ctx.workspace_id, config=config
-            )
+            await _bump_breaker_on_internal_error(workspace_id=ctx.workspace_id, config=config)
             return _rejected(
                 "evolver.internal_error",
                 "Internal error filing the edit proposal; the breaker counter advanced.",
@@ -1001,9 +971,7 @@ async def run_propose_skill_delete(args: ProposeSkillDeleteArgs) -> dict:
             return gate
 
         try:
-            pack = await _load_pack(
-                db, workspace_id=ctx.workspace_id, pack_id=args.pack_id
-            )
+            pack = await _load_pack(db, workspace_id=ctx.workspace_id, pack_id=args.pack_id)
             if pack is None:
                 payload = _rejected(
                     "evolver.pack_not_found",
@@ -1113,21 +1081,17 @@ async def run_propose_skill_delete(args: ProposeSkillDeleteArgs) -> dict:
                 "approval_id": str(approval.id),
                 "pack_id": str(pack.id),
                 "expires_at": (
-                    approval.expires_at.isoformat()
-                    if approval.expires_at is not None
-                    else None
+                    approval.expires_at.isoformat() if approval.expires_at is not None else None
                 ),
             }
-        except Exception:  # noqa: BLE001
+        except Exception:
             log.exception(
                 "evolver propose_skill_delete failed (workspace=%s pack=%s)",
                 ctx.workspace_id,
                 args.pack_id,
             )
             await db.rollback()
-            await _bump_breaker_on_internal_error(
-                workspace_id=ctx.workspace_id, config=config
-            )
+            await _bump_breaker_on_internal_error(workspace_id=ctx.workspace_id, config=config)
             return _rejected(
                 "evolver.internal_error",
                 "Internal error filing the delete proposal; the breaker counter advanced.",
@@ -1185,9 +1149,7 @@ async def run_propose_skill_write_file(args: ProposeSkillWriteFileArgs) -> dict:
                 await db.commit()
                 return payload
 
-            pack = await _load_pack(
-                db, workspace_id=ctx.workspace_id, pack_id=args.pack_id
-            )
+            pack = await _load_pack(db, workspace_id=ctx.workspace_id, pack_id=args.pack_id)
             if pack is None:
                 payload = _rejected(
                     "evolver.pack_not_found",
@@ -1244,8 +1206,7 @@ async def run_propose_skill_write_file(args: ProposeSkillWriteFileArgs) -> dict:
                 "rationale": args.rationale,
             }
             summary = (
-                f"Evolver proposes write_file {args.relative_path!r} "
-                f"on skill pack {pack.slug!r}"
+                f"Evolver proposes write_file {args.relative_path!r} on skill pack {pack.slug!r}"
             )
             approval = await _create_proposal_approval(
                 db,
@@ -1282,12 +1243,10 @@ async def run_propose_skill_write_file(args: ProposeSkillWriteFileArgs) -> dict:
                 "relative_path": args.relative_path,
                 "content_hash": content_hash,
                 "expires_at": (
-                    approval.expires_at.isoformat()
-                    if approval.expires_at is not None
-                    else None
+                    approval.expires_at.isoformat() if approval.expires_at is not None else None
                 ),
             }
-        except Exception:  # noqa: BLE001
+        except Exception:
             log.exception(
                 "evolver propose_skill_write_file failed (workspace=%s pack=%s path=%s)",
                 ctx.workspace_id,
@@ -1295,9 +1254,7 @@ async def run_propose_skill_write_file(args: ProposeSkillWriteFileArgs) -> dict:
                 args.relative_path,
             )
             await db.rollback()
-            await _bump_breaker_on_internal_error(
-                workspace_id=ctx.workspace_id, config=config
-            )
+            await _bump_breaker_on_internal_error(workspace_id=ctx.workspace_id, config=config)
             return _rejected(
                 "evolver.internal_error",
                 "Internal error filing the write_file proposal; the breaker counter advanced.",
@@ -1330,9 +1287,7 @@ async def run_propose_skill_remove_file(args: ProposeSkillRemoveFileArgs) -> dic
             return gate
 
         try:
-            pack = await _load_pack(
-                db, workspace_id=ctx.workspace_id, pack_id=args.pack_id
-            )
+            pack = await _load_pack(db, workspace_id=ctx.workspace_id, pack_id=args.pack_id)
             if pack is None:
                 payload = _rejected(
                     "evolver.pack_not_found",
@@ -1407,8 +1362,7 @@ async def run_propose_skill_remove_file(args: ProposeSkillRemoveFileArgs) -> dic
                 "rationale": args.rationale,
             }
             summary = (
-                f"Evolver proposes remove_file {args.relative_path!r} "
-                f"from skill pack {pack.slug!r}"
+                f"Evolver proposes remove_file {args.relative_path!r} from skill pack {pack.slug!r}"
             )
             approval = await _create_proposal_approval(
                 db,
@@ -1443,12 +1397,10 @@ async def run_propose_skill_remove_file(args: ProposeSkillRemoveFileArgs) -> dic
                 "pack_id": str(pack.id),
                 "relative_path": args.relative_path,
                 "expires_at": (
-                    approval.expires_at.isoformat()
-                    if approval.expires_at is not None
-                    else None
+                    approval.expires_at.isoformat() if approval.expires_at is not None else None
                 ),
             }
-        except Exception:  # noqa: BLE001
+        except Exception:
             log.exception(
                 "evolver propose_skill_remove_file failed (workspace=%s pack=%s path=%s)",
                 ctx.workspace_id,
@@ -1456,9 +1408,7 @@ async def run_propose_skill_remove_file(args: ProposeSkillRemoveFileArgs) -> dic
                 args.relative_path,
             )
             await db.rollback()
-            await _bump_breaker_on_internal_error(
-                workspace_id=ctx.workspace_id, config=config
-            )
+            await _bump_breaker_on_internal_error(workspace_id=ctx.workspace_id, config=config)
             return _rejected(
                 "evolver.internal_error",
                 "Internal error filing the remove_file proposal; the breaker counter advanced.",

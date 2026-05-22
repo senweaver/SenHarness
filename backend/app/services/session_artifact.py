@@ -316,9 +316,7 @@ async def capture_artifact(
         # WS reconnect retried the FINAL handler). Roll back and serve
         # the winner instead — preserves true idempotency.
         await db.rollback()
-        existing = await repo.get_by_run_id(
-            workspace_id=workspace_id, run_id=run_id
-        )
+        existing = await repo.get_by_run_id(workspace_id=workspace_id, run_id=run_id)
         if existing is not None:
             return existing
         raise
@@ -467,9 +465,7 @@ async def update_judge_score(
     """M0.3 hook — judge writes back its score on the captured artifact."""
     if not (-1.0 <= judge_score <= 1.0):
         raise ValueError("judge_score must be in [-1, 1]")
-    row = await get_artifact_by_id(
-        db, workspace_id=workspace_id, artifact_id=artifact_id
-    )
+    row = await get_artifact_by_id(db, workspace_id=workspace_id, artifact_id=artifact_id)
     row.judge_score = float(judge_score)
     await db.flush([row])
     await db.refresh(row)
@@ -486,12 +482,9 @@ async def _compute_goal_alignment_avg(
     valid_ids = [mid for mid in message_ids if mid is not None]
     if not valid_ids:
         return None
-    stmt = (
-        select(GoalAlignmentScore.score)
-        .where(
-            GoalAlignmentScore.workspace_id == workspace_id,
-            GoalAlignmentScore.message_id.in_(valid_ids),
-        )
+    stmt = select(GoalAlignmentScore.score).where(
+        GoalAlignmentScore.workspace_id == workspace_id,
+        GoalAlignmentScore.message_id.in_(valid_ids),
     )
     rows = (await db.execute(stmt)).scalars().all()
     if not rows:

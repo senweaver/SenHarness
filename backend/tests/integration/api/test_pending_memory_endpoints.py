@@ -22,9 +22,7 @@ async def _bootstrap(async_client) -> tuple[dict, str]:
         json={"email": email, "name": "Pm Api", "password": password},
     )
     assert r.status_code == 201, r.text
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -40,9 +38,7 @@ async def _bootstrap(async_client) -> tuple[dict, str]:
 
 
 async def _new_session(async_client, headers) -> str:
-    r = await async_client.post(
-        "/api/v1/sessions", headers=headers, json={"kind": "p2p"}
-    )
+    r = await async_client.post("/api/v1/sessions", headers=headers, json={"kind": "p2p"})
     assert r.status_code in (200, 201), r.text
     return r.json()["id"]
 
@@ -54,9 +50,7 @@ def _identity_id_from_token(headers: dict) -> str:
     return str(decode_token(raw, expected_kind="access")["sub"])
 
 
-async def _seed_pending(
-    *, workspace_id: str, session_id: str, identity_id: str
-) -> str:
+async def _seed_pending(*, workspace_id: str, session_id: str, identity_id: str) -> str:
     from app.db.models.pending_memory import PendingMemoryTargetTable
     from app.db.session import get_session_factory
     from app.services import pending_memory as pending_memory_svc
@@ -97,12 +91,8 @@ async def test_list_session_pending_happy(async_client):
     headers, ws_id = await _bootstrap(async_client)
     sid = await _new_session(async_client, headers)
     iid = _identity_id_from_token(headers)
-    pid = await _seed_pending(
-        workspace_id=ws_id, session_id=sid, identity_id=iid
-    )
-    r = await async_client.get(
-        f"/api/v1/sessions/{sid}/pending-memories", headers=headers
-    )
+    pid = await _seed_pending(workspace_id=ws_id, session_id=sid, identity_id=iid)
+    r = await async_client.get(f"/api/v1/sessions/{sid}/pending-memories", headers=headers)
     assert r.status_code == 200, r.text
     rows = r.json()
     assert any(row["id"] == pid for row in rows)
@@ -115,9 +105,7 @@ async def test_list_session_pending_cross_workspace_blocked(async_client):
     await _seed_pending(workspace_id=ws_a, session_id=sid, identity_id=iid_a)
 
     headers_b, _ws_b = await _bootstrap(async_client)
-    r = await async_client.get(
-        f"/api/v1/sessions/{sid}/pending-memories", headers=headers_b
-    )
+    r = await async_client.get(f"/api/v1/sessions/{sid}/pending-memories", headers=headers_b)
     assert r.status_code in (403, 404)
 
 
@@ -125,9 +113,7 @@ async def test_cancel_pending_happy(async_client):
     headers, ws_id = await _bootstrap(async_client)
     sid = await _new_session(async_client, headers)
     iid = _identity_id_from_token(headers)
-    pid = await _seed_pending(
-        workspace_id=ws_id, session_id=sid, identity_id=iid
-    )
+    pid = await _seed_pending(workspace_id=ws_id, session_id=sid, identity_id=iid)
     r = await async_client.post(
         f"/api/v1/sessions/{sid}/pending-memories/{pid}/cancel",
         headers=headers,
@@ -164,9 +150,7 @@ async def test_workspace_stats_cross_tenant_blocked(async_client):
 
 async def test_admin_promote_now_requires_platform_admin(async_client):
     headers, _ws_id = await _bootstrap(async_client)
-    r = await async_client.post(
-        "/api/v1/admin/pending-memories/promote-now", headers=headers
-    )
+    r = await async_client.post("/api/v1/admin/pending-memories/promote-now", headers=headers)
     assert r.status_code in (401, 403)
 
 
@@ -177,9 +161,7 @@ async def test_admin_promote_now_happy(async_client):
     await _seed_pending(workspace_id=ws_id, session_id=sid, identity_id=iid)
     await _promote_to_platform_admin(iid)
 
-    r = await async_client.post(
-        "/api/v1/admin/pending-memories/promote-now", headers=headers
-    )
+    r = await async_client.post("/api/v1/admin/pending-memories/promote-now", headers=headers)
     assert r.status_code == 200, r.text
     body = r.json()
     assert "workspaces_visited" in body

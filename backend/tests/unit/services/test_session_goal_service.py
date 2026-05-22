@@ -118,9 +118,7 @@ async def test_get_goal_rejects_cross_workspace(db_session, workspace, identity)
     )
     other_workspace_id = uuid.uuid4()
     with pytest.raises(NotFound):
-        await goal_svc.get_goal_or_404(
-            db_session, goal_id=g.id, workspace_id=other_workspace_id
-        )
+        await goal_svc.get_goal_or_404(db_session, goal_id=g.id, workspace_id=other_workspace_id)
 
 
 async def test_update_goal_threshold_audit(db_session, workspace, identity):
@@ -142,9 +140,7 @@ async def test_update_goal_threshold_audit(db_session, workspace, identity):
     assert updated.alignment_threshold == 0.8
 
 
-async def test_record_score_flags_below_threshold(
-    db_session, workspace, identity
-):
+async def test_record_score_flags_below_threshold(db_session, workspace, identity):
     sess = await _seed_session(db_session, workspace, identity)
     g = await goal_svc.lock_goal(
         db_session,
@@ -183,9 +179,7 @@ async def test_record_score_flags_below_threshold(
     assert score2.flagged is False
 
 
-async def test_record_score_rejects_cross_workspace(
-    db_session, workspace, identity
-):
+async def test_record_score_rejects_cross_workspace(db_session, workspace, identity):
     sess = await _seed_session(db_session, workspace, identity)
     g = await goal_svc.lock_goal(
         db_session,

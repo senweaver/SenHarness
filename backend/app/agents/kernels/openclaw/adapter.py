@@ -139,12 +139,8 @@ class OpenClawBackend(AgentBackend):
         # Now drain events. Each iteration opens a short-lived DB session so
         # we don't hold connections across the full run lifetime.
         after_seq = -1
-        poll_interval = max(
-            0.05, settings.OPENCLAW_RUN_POLL_INTERVAL_MS / 1000.0
-        )
-        deadline = asyncio.get_event_loop().time() + float(
-            settings.OPENCLAW_GATEWAY_RUN_TIMEOUT_S
-        )
+        poll_interval = max(0.05, settings.OPENCLAW_RUN_POLL_INTERVAL_MS / 1000.0)
+        deadline = asyncio.get_event_loop().time() + float(settings.OPENCLAW_GATEWAY_RUN_TIMEOUT_S)
 
         try:
             while True:
@@ -192,9 +188,7 @@ class OpenClawBackend(AgentBackend):
             repo = GatewayRepository(db)
             # Find the originating request row to learn workspace_id + adapter_id.
             existing = await repo.list_for_run(run_id=run_id)
-            req_rows = [
-                r for r in existing if r.direction.value == "request" and r.kind == "run"
-            ]
+            req_rows = [r for r in existing if r.direction.value == "request" and r.kind == "run"]
             if not req_rows:
                 return
             origin = req_rows[0]

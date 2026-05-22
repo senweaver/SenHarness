@@ -37,7 +37,7 @@ class FakeRedis:
             bucket[k] = str(v)
         return len(mapping)
 
-    async def expire(self, key: str, ttl_seconds: int) -> bool:  # noqa: ARG002
+    async def expire(self, key: str, ttl_seconds: int) -> bool:
         return True
 
     async def delete(self, key: str) -> int:
@@ -226,17 +226,11 @@ async def test_chain_capped_at_max_attempts(db_session, workspace):
     ]
 
 
-async def test_workspace_chain_wins_over_platform_default(
-    db_session, workspace
-):
-    await _seed_workspace_failover(
-        db_session, workspace, enabled=True, chain=["deepseek:v3"]
-    )
+async def test_workspace_chain_wins_over_platform_default(db_session, workspace):
+    await _seed_workspace_failover(db_session, workspace, enabled=True, chain=["deepseek:v3"])
     from app.services.provider_chain import get_workspace_failover_config
 
-    cfg = await get_workspace_failover_config(
-        db_session, workspace_id=workspace.id
-    )
+    cfg = await get_workspace_failover_config(db_session, workspace_id=workspace.id)
     assert cfg.enabled is True
     assert cfg.chain_raw == ["deepseek:v3"]
 
@@ -244,7 +238,5 @@ async def test_workspace_chain_wins_over_platform_default(
 async def test_failover_enabled_default_off(db_session, workspace):
     from app.services.provider_chain import get_workspace_failover_config
 
-    cfg = await get_workspace_failover_config(
-        db_session, workspace_id=workspace.id
-    )
+    cfg = await get_workspace_failover_config(db_session, workspace_id=workspace.id)
     assert cfg.enabled is False

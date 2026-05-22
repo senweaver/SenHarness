@@ -23,9 +23,7 @@ class TestSchemeAllowlist:
             assert assert_safe_url("http://example.com/") == "http://example.com/"
 
     def test_https_is_allowed(self):
-        with patch(
-            "app.core.url_safety._resolve_all", return_value=["93.184.216.34"]
-        ):
+        with patch("app.core.url_safety._resolve_all", return_value=["93.184.216.34"]):
             assert assert_safe_url("https://example.com/x") == "https://example.com/x"
 
     @pytest.mark.parametrize(
@@ -71,12 +69,14 @@ class TestMetadataEndpoints:
     """169.254.169.254 is always blocked, even when ``allow_private=True``."""
 
     def test_aws_imds_blocked(self):
-        with patch(
-            "app.core.url_safety._resolve_all",
-            return_value=["169.254.169.254"],
+        with (
+            patch(
+                "app.core.url_safety._resolve_all",
+                return_value=["169.254.169.254"],
+            ),
+            pytest.raises(UnsafeURLError) as exc,
         ):
-            with pytest.raises(UnsafeURLError) as exc:
-                assert_safe_url("http://anything/")
+            assert_safe_url("http://anything/")
         assert exc.value.code == "ssrf.metadata_endpoint"
 
     def test_direct_imds_ip_blocked(self):
@@ -86,11 +86,11 @@ class TestMetadataEndpoints:
         assert exc.value.code == "ssrf.metadata_endpoint"
 
     def test_aws_ipv6_metadata_blocked(self):
-        with patch(
-            "app.core.url_safety._resolve_all", return_value=["fd00:ec2::254"]
+        with (
+            patch("app.core.url_safety._resolve_all", return_value=["fd00:ec2::254"]),
+            pytest.raises(UnsafeURLError) as exc,
         ):
-            with pytest.raises(UnsafeURLError) as exc:
-                assert_safe_url("http://example-aws.internal/")
+            assert_safe_url("http://example-aws.internal/")
         assert exc.value.code == "ssrf.metadata_endpoint"
 
 
@@ -123,9 +123,7 @@ class TestPrivateRanges:
     def test_allow_private_bypasses_range_check(self):
         """``allow_private=True`` is for trusted intranet connectors that
         are explicitly wired up by the operator."""
-        with patch(
-            "app.core.url_safety._resolve_all", return_value=["10.0.0.5"]
-        ):
+        with patch("app.core.url_safety._resolve_all", return_value=["10.0.0.5"]):
             assert (
                 assert_safe_url("http://intranet.local/", allow_private=True)
                 == "http://intranet.local/"
@@ -134,11 +132,11 @@ class TestPrivateRanges:
     def test_allow_private_still_blocks_metadata(self):
         """Cloud metadata endpoints have no legitimate use, so they stay
         blocked even with the allow_private escape hatch."""
-        with patch(
-            "app.core.url_safety._resolve_all", return_value=["169.254.169.254"]
+        with (
+            patch("app.core.url_safety._resolve_all", return_value=["169.254.169.254"]),
+            pytest.raises(UnsafeURLError) as exc,
         ):
-            with pytest.raises(UnsafeURLError) as exc:
-                assert_safe_url("http://anything/", allow_private=True)
+            assert_safe_url("http://anything/", allow_private=True)
         assert exc.value.code == "ssrf.metadata_endpoint"
 
 
@@ -156,10 +154,12 @@ class TestEdgeCases:
         """A hostname that resolves to both a public and a private IP
         must be rejected — the attacker could re-resolve post-check to
         hand us the private one."""
-        with patch(
-            "app.core.url_safety._resolve_all",
-            return_value=["93.184.216.34", "127.0.0.1"],
+        with (
+            patch(
+                "app.core.url_safety._resolve_all",
+                return_value=["93.184.216.34", "127.0.0.1"],
+            ),
+            pytest.raises(UnsafeURLError) as exc,
         ):
-            with pytest.raises(UnsafeURLError) as exc:
-                assert_safe_url("http://dns-rebind.example/")
+            assert_safe_url("http://dns-rebind.example/")
         assert exc.value.code == "ssrf.private_address"

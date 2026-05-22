@@ -28,15 +28,18 @@ async def _seed(
     workspace_id: uuid.UUID | None,
 ) -> JobRun:
     now = utcnow_naive()
-    finished_at = now - timedelta(minutes=minutes_ago) if status in {
-        JobRunStatus.SUCCESS,
-        JobRunStatus.FAILED,
-        JobRunStatus.FAILED_PERMANENT,
-    } else None
-    started_at = (
-        now - timedelta(minutes=minutes_ago, seconds=1)
-        if status != JobRunStatus.QUEUED
+    finished_at = (
+        now - timedelta(minutes=minutes_ago)
+        if status
+        in {
+            JobRunStatus.SUCCESS,
+            JobRunStatus.FAILED,
+            JobRunStatus.FAILED_PERMANENT,
+        }
         else None
+    )
+    started_at = (
+        now - timedelta(minutes=minutes_ago, seconds=1) if status != JobRunStatus.QUEUED else None
     )
     row = JobRun(
         job_id=f"j-{uuid.uuid4().hex[:8]}",
@@ -55,9 +58,7 @@ async def _seed(
     return row
 
 
-async def test_get_queue_stats_partitions_by_function_and_status(
-    db_session, workspace
-):
+async def test_get_queue_stats_partitions_by_function_and_status(db_session, workspace):
     repo = JobRunRepository(db_session)
     cutoff = utcnow_naive() - timedelta(minutes=30)
 
@@ -95,9 +96,7 @@ async def test_get_queue_stats_partitions_by_function_and_status(
         workspace_id=workspace.id,
     )
 
-    stats = await repo.get_queue_stats(
-        since=cutoff, workspace_id=workspace.id
-    )
+    stats = await repo.get_queue_stats(since=cutoff, workspace_id=workspace.id)
     assert stats["judge_session_artifact"]["success"] == 2
     assert stats["curator_tick"]["running"] == 1
     assert stats["curator_tick"]["failed"] == 1
@@ -106,9 +105,7 @@ async def test_get_queue_stats_partitions_by_function_and_status(
     assert "evolver_workspace_sweep" not in stats
 
 
-async def test_aggregate_health_includes_lifetime_failed_permanent(
-    db_session, workspace
-):
+async def test_aggregate_health_includes_lifetime_failed_permanent(db_session, workspace):
     repo = JobRunRepository(db_session)
 
     # Old permanent failure — outside the 1h window.

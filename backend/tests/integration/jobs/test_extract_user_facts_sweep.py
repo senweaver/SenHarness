@@ -156,12 +156,16 @@ async def test_sweep_isolates_per_identity_failure(async_client, monkeypatch):
     factory = get_session_factory()
     async with factory() as db:
         rows = (
-            await db.execute(
-                select(AuditEvent).where(
-                    AuditEvent.action == job.AUDIT_UPDATE_FAILED,
-                    AuditEvent.workspace_id == uuid.UUID(ws_a),
+            (
+                await db.execute(
+                    select(AuditEvent).where(
+                        AuditEvent.action == job.AUDIT_UPDATE_FAILED,
+                        AuditEvent.workspace_id == uuid.UUID(ws_a),
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
     assert rows, "expected one user_profile.update_failed audit row"
     _ = ws_b, ident_b  # signal coverage of the unaffected pair

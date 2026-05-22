@@ -125,8 +125,6 @@ def build_content_guards(policy: dict[str, Any] | None) -> list[Any]:
 
     try:
         from pydantic_ai_shields import (
-            InputGuard,
-            OutputGuard,
             PiiDetector,
             PromptInjection,
             SecretRedaction,

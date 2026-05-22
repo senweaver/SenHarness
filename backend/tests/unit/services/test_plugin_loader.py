@@ -52,9 +52,7 @@ def _write_plugin(
     """
     folder = root / name
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / "__init__.py").write_text(
-        "\"\"\"test plugin.\"\"\"\n", encoding="utf-8"
-    )
+    (folder / "__init__.py").write_text('"""test plugin."""\n', encoding="utf-8")
     if entry_module is None:
         entry_module = f"{name}.entry"
     if not omit_manifest:
@@ -68,9 +66,7 @@ def _write_plugin(
             "entry_module": entry_module,
         }
         if manifest_format == "json":
-            (folder / "plugin.json").write_text(
-                json.dumps(manifest), encoding="utf-8"
-            )
+            (folder / "plugin.json").write_text(json.dumps(manifest), encoding="utf-8")
         else:
             raise ValueError(f"unsupported manifest_format {manifest_format!r}")
     if not omit_register:
@@ -104,9 +100,7 @@ def test_discover_finds_manifest_and_computes_sha256(tmp_path: Path) -> None:
     # changes the digest deterministically.
     assert isinstance(plugin.sha256, str)
     assert len(plugin.sha256) == 64
-    (folder / "entry.py").write_text(
-        "def register(ctx):\n    pass\n", encoding="utf-8"
-    )
+    (folder / "entry.py").write_text("def register(ctx):\n    pass\n", encoding="utf-8")
     redigested = asyncio.run(loader.discover_plugins(tmp_path))
     assert redigested[0].sha256 != plugin.sha256
 

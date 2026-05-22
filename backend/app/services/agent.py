@@ -10,13 +10,13 @@ from app.core.errors import NotFound
 from app.db.models.agent import Agent, AgentVisibility, AutonomyLevel, BackendKind
 from app.repositories.agent import AgentRepository, AgentStarRepository
 
-DEFAULT_AGENT_DESCRIPTION = "默认智能体，随时为你服务。"  # noqa: RUF001
+DEFAULT_AGENT_DESCRIPTION = "默认智能体，随时为你服务。"
 DEFAULT_AGENT_PERSONA = (
     "# 默认人格\n\n"
-    "你是 SenHarness 的默认智能体，目标是用最简短、最直接的方式完成用户的请求。\n\n"  # noqa: RUF001
-    "原则：\n"  # noqa: RUF001
-    "- 先给结果，再给解释。\n"  # noqa: RUF001
-    "- 不确定时主动澄清，不乱猜。\n"  # noqa: RUF001
+    "你是 SenHarness 的默认智能体，目标是用最简短、最直接的方式完成用户的请求。\n\n"
+    "原则：\n"
+    "- 先给结果，再给解释。\n"
+    "- 不确定时主动澄清，不乱猜。\n"
     "- 涉及写入、执行、外部调用时主动说明风险。\n"
 )
 
@@ -167,9 +167,7 @@ async def clone_public_agent(
         raise PermissionDenied("not_public", code="agent.not_public")
 
     src_meta = dict(src.metadata_json or {})
-    cloned_meta = {
-        k: v for k, v in src_meta.items() if k not in _TEMPLATE_OWNED_KEYS
-    }
+    cloned_meta = {k: v for k, v in src_meta.items() if k not in _TEMPLATE_OWNED_KEYS}
 
     return await AgentRepository(session).create(
         workspace_id=target_workspace_id,

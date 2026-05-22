@@ -35,10 +35,7 @@ router = APIRouter(prefix="/moderation", tags=["moderation"])
 
 async def _is_platform_admin(db, identity_id: uuid.UUID) -> bool:
     ident = await IdentityRepository(db).get(identity_id)
-    return (
-        ident is not None
-        and ident.platform_role == PlatformRole.PLATFORM_ADMIN
-    )
+    return ident is not None and ident.platform_role == PlatformRole.PLATFORM_ADMIN
 
 
 async def _require_moderator(
@@ -50,16 +47,10 @@ async def _require_moderator(
     if await _is_platform_admin(db, identity_id):
         return True
     if workspace_id is None:
-        raise Unauthorized(
-            "no_active_workspace", code="auth.no_active_workspace"
-        )
-    mem = await ws_svc.ensure_member_access(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+        raise Unauthorized("no_active_workspace", code="auth.no_active_workspace")
+    mem = await ws_svc.ensure_member_access(db, workspace_id=workspace_id, identity_id=identity_id)
     if mem.role not in {BuiltinRole.OWNER.value, BuiltinRole.ADMIN.value}:
-        raise PermissionDenied(
-            "moderator_required", code="moderation.moderator_required"
-        )
+        raise PermissionDenied("moderator_required", code="moderation.moderator_required")
     return False  # workspace-scoped moderator
 
 
@@ -73,18 +64,13 @@ async def list_reports(
     offset: int = Query(0, ge=0),
 ) -> list[AgentReportEnriched]:
     platform_admin = await _require_moderator(db, identity_id, workspace_id)
-    rows = await ReportRepository(db).list_for_triage(
-        status=status, limit=limit, offset=offset
-    )
+    rows = await ReportRepository(db).list_for_triage(status=status, limit=limit, offset=offset)
 
     out: list[AgentReportEnriched] = []
     for report, agent, reporter, reviewer in rows:
         # Workspace-scoped moderators can only see reports for agents in their
         # active workspace. Platform admins see everything.
-        if (
-            not platform_admin
-            and (agent is None or agent.workspace_id != workspace_id)
-        ):
+        if not platform_admin and (agent is None or agent.workspace_id != workspace_id):
             continue
         card = AgentReportEnriched.model_validate(report)
         card.agent_name = agent.name if agent else None

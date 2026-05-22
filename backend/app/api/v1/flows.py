@@ -47,16 +47,12 @@ def _validate_merged_no_agent_config(
         try:
             ScriptModeConfig.model_validate(trigger_config or {})
         except Exception as e:
-            raise ValidationFailed(
-                str(e), code="flow.script_config_invalid"
-            ) from e
+            raise ValidationFailed(str(e), code="flow.script_config_invalid") from e
     elif execution_mode == FlowExecutionMode.NO_AGENT_HTTP:
         try:
             HttpModeConfig.model_validate(trigger_config or {})
         except Exception as e:
-            raise ValidationFailed(
-                str(e), code="flow.http_config_invalid"
-            ) from e
+            raise ValidationFailed(str(e), code="flow.http_config_invalid") from e
 
 
 @router.get("", response_model=list[FlowRead])
@@ -129,9 +125,7 @@ async def update_flow(
     patch = body.model_dump(exclude_none=True)
     merged_mode = patch.get("execution_mode", flow.execution_mode)
     merged_config = patch.get("trigger_config", flow.trigger_config) or {}
-    _validate_merged_no_agent_config(
-        execution_mode=merged_mode, trigger_config=merged_config
-    )
+    _validate_merged_no_agent_config(execution_mode=merged_mode, trigger_config=merged_config)
     flow = await FlowRepository(db).update(flow, **patch)
     await audit_svc.record(
         db,

@@ -120,9 +120,7 @@ class InflightRun(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
     # Trimmed snapshot of the originating ``RunRequest`` minus secrets and
     # raw attachment bytes. Used for diagnostic display and (eventually)
     # the ``/retry`` reissue path. Never round-trip secrets / bytes here.
-    request_snapshot: Mapped[dict] = mapped_column(
-        JSONB, default=dict, nullable=False
-    )
+    request_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
     last_event_seq: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
@@ -145,9 +143,7 @@ class InflightRun(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
     # ``host:pid:start_seconds`` — the ``recover_inflight_runs`` sweep
     # treats any token that doesn't equal the current process's prefix
     # as belonging to a previous backend incarnation.
-    pid_token: Mapped[str | None] = mapped_column(
-        String(PID_TOKEN_MAX_CHARS), nullable=True
-    )
+    pid_token: Mapped[str | None] = mapped_column(String(PID_TOKEN_MAX_CHARS), nullable=True)
 
     started_at: Mapped[datetime] = mapped_column(
         nullable=False,
@@ -160,14 +156,10 @@ class InflightRun(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
     )
     finished_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
-    error_kind: Mapped[str | None] = mapped_column(
-        String(ERROR_KIND_MAX_CHARS), nullable=True
-    )
+    error_kind: Mapped[str | None] = mapped_column(String(ERROR_KIND_MAX_CHARS), nullable=True)
 
     # Live runtime probes — set by the native runner so the Agent View
     # cards can render the active phase / tool without scraping events.
     # NULL between transitions; cleared when the run terminates.
     current_phase: Mapped[str | None] = mapped_column(String(40), nullable=True)
-    running_tool_name: Mapped[str | None] = mapped_column(
-        String(80), nullable=True
-    )
+    running_tool_name: Mapped[str | None] = mapped_column(String(80), nullable=True)

@@ -134,9 +134,7 @@ async def get_board(
     ws_id = _require_workspace(workspace_id)
     await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     board = await svc.get_board(db, workspace_id=ws_id, board_id=board_id)
-    cards = await svc.list_cards(
-        db, workspace_id=ws_id, board_id=board_id
-    )
+    cards = await svc.list_cards(db, workspace_id=ws_id, board_id=board_id)
     return BoardKanbanRead(
         board=ProjectBoardRead.model_validate(board),
         columns=_columns_snapshot(cards),
@@ -234,9 +232,7 @@ async def list_board_cards(
 ) -> list[BoardCardRead]:
     ws_id = _require_workspace(workspace_id)
     await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
-    rows = await svc.list_cards(
-        db, workspace_id=ws_id, board_id=board_id, column=column
-    )
+    rows = await svc.list_cards(db, workspace_id=ws_id, board_id=board_id, column=column)
     return [BoardCardRead.model_validate(r) for r in rows]
 
 
@@ -282,9 +278,7 @@ async def create_board_card(
             "board_id": str(card.board_id),
             "column": card.column.value,
             "priority": card.priority.value,
-            "assignee_agent_id": str(card.assignee_agent_id)
-            if card.assignee_agent_id
-            else None,
+            "assignee_agent_id": str(card.assignee_agent_id) if card.assignee_agent_id else None,
         },
         request=request,
     )
@@ -473,9 +467,7 @@ async def complete_card(
     "/agents/{agent_id}/cards",
     response_model=list[BoardCardRead],
     status_code=status.HTTP_200_OK,
-    dependencies=[
-        Depends(rate_limit("cards_per_agent", limit=60, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("cards_per_agent", limit=60, period_seconds=60))],
     tags=["project_boards"],
 )
 async def list_cards_for_agent(
@@ -487,7 +479,5 @@ async def list_cards_for_agent(
 ) -> list[BoardCardRead]:
     ws_id = _require_workspace(workspace_id)
     await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
-    rows = await svc.list_cards_for_agent(
-        db, workspace_id=ws_id, agent_id=agent_id, limit=limit
-    )
+    rows = await svc.list_cards_for_agent(db, workspace_id=ws_id, agent_id=agent_id, limit=limit)
     return [BoardCardRead.model_validate(r) for r in rows]

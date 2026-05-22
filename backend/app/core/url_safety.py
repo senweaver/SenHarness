@@ -88,9 +88,7 @@ def assert_safe_url(url: str, *, allow_private: bool = False) -> str:
     return url
 
 
-def resolve_safe_url(
-    url: str, *, allow_private: bool = False
-) -> tuple[str, str | None]:
+def resolve_safe_url(url: str, *, allow_private: bool = False) -> tuple[str, str | None]:
     """Validate ``url`` and return ``(url, pinned_ip)``.
 
     The pinned IP is the first address ``url``'s hostname resolves to;
@@ -110,9 +108,7 @@ def resolve_safe_url(
     try:
         parsed = urlparse(url)
     except ValueError as e:
-        raise UnsafeURLError(
-            f"URL parse failed: {e}", code="ssrf.parse_failed"
-        ) from e
+        raise UnsafeURLError(f"URL parse failed: {e}", code="ssrf.parse_failed") from e
 
     scheme = (parsed.scheme or "").lower()
     if scheme not in ALLOWED_SCHEMES:
@@ -123,9 +119,7 @@ def resolve_safe_url(
 
     host = (parsed.hostname or "").lower()
     if not host:
-        raise UnsafeURLError(
-            "URL has no hostname", code="ssrf.missing_host"
-        )
+        raise UnsafeURLError("URL has no hostname", code="ssrf.missing_host")
 
     if host in _BLOCKED_HOSTNAMES:
         raise UnsafeURLError(
@@ -155,8 +149,7 @@ def resolve_safe_url(
 
         if not allow_private and _is_dangerous_ip(ip):
             raise UnsafeURLError(
-                f"URL resolves to private / loopback / link-local "
-                f"address {ip}",
+                f"URL resolves to private / loopback / link-local address {ip}",
                 code="ssrf.private_address",
             )
 

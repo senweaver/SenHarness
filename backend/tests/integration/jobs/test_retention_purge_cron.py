@@ -40,9 +40,7 @@ async def _bootstrap(async_client) -> dict[str, str]:
     )
     assert r.status_code == 201, r.text
     ident_id = r.json()["identity_id"]
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     r = await async_client.post(
@@ -93,20 +91,14 @@ async def _seed_old_artifact(ws_id: str, ident_id: str, *, days_ago: int) -> uui
 async def _set_retention(settings_obj: RetentionSettings) -> None:
     factory = get_session_factory()
     async with factory() as db:
-        await set_system_setting(
-            db, SystemSettingKey.RETENTION, settings_obj.model_dump()
-        )
+        await set_system_setting(db, SystemSettingKey.RETENTION, settings_obj.model_dump())
         await db.commit()
 
 
 async def test_dry_run_audits_but_does_not_delete(async_client):
     ctx = await _bootstrap(async_client)
-    aid = await _seed_old_artifact(
-        ctx["workspace_id"], ctx["identity_id"], days_ago=60
-    )
-    await _set_retention(
-        RetentionSettings(physical_purge_enabled=False)
-    )
+    aid = await _seed_old_artifact(ctx["workspace_id"], ctx["identity_id"], days_ago=60)
+    await _set_retention(RetentionSettings(physical_purge_enabled=False))
 
     summary = await retention_physical_purge({})
 
@@ -117,20 +109,12 @@ async def test_dry_run_audits_but_does_not_delete(async_client):
     factory = get_session_factory()
     async with factory() as db:
         survivor = (
-            await db.execute(
-                select(SessionArtifact).where(SessionArtifact.id == aid)
-            )
+            await db.execute(select(SessionArtifact).where(SessionArtifact.id == aid))
         ).scalar_one_or_none()
         assert survivor is not None
 
         audits = (
-            (
-                await db.execute(
-                    select(AuditEvent).where(
-                        AuditEvent.action == "data.physical_purge"
-                    )
-                )
-            )
+            (await db.execute(select(AuditEvent).where(AuditEvent.action == "data.physical_purge")))
             .scalars()
             .all()
         )
@@ -141,9 +125,7 @@ async def test_dry_run_audits_but_does_not_delete(async_client):
 
 async def test_enabled_purge_actually_deletes(async_client):
     ctx = await _bootstrap(async_client)
-    aid = await _seed_old_artifact(
-        ctx["workspace_id"], ctx["identity_id"], days_ago=60
-    )
+    aid = await _seed_old_artifact(ctx["workspace_id"], ctx["identity_id"], days_ago=60)
     await _set_retention(RetentionSettings(physical_purge_enabled=True))
 
     summary = await retention_physical_purge({})
@@ -153,18 +135,14 @@ async def test_enabled_purge_actually_deletes(async_client):
     factory = get_session_factory()
     async with factory() as db:
         gone = (
-            await db.execute(
-                select(SessionArtifact).where(SessionArtifact.id == aid)
-            )
+            await db.execute(select(SessionArtifact).where(SessionArtifact.id == aid))
         ).scalar_one_or_none()
         assert gone is None
 
 
 async def test_per_table_override_changes_retention(async_client):
     ctx = await _bootstrap(async_client)
-    aid = await _seed_old_artifact(
-        ctx["workspace_id"], ctx["identity_id"], days_ago=60
-    )
+    aid = await _seed_old_artifact(ctx["workspace_id"], ctx["identity_id"], days_ago=60)
     # Override session_artifacts to 90 days while keeping purge enabled.
     await _set_retention(
         RetentionSettings(
@@ -182,8 +160,6 @@ async def test_per_table_override_changes_retention(async_client):
     factory = get_session_factory()
     async with factory() as db:
         survivor = (
-            await db.execute(
-                select(SessionArtifact).where(SessionArtifact.id == aid)
-            )
+            await db.execute(select(SessionArtifact).where(SessionArtifact.id == aid))
         ).scalar_one_or_none()
         assert survivor is not None

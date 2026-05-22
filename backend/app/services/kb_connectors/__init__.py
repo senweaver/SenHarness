@@ -41,9 +41,7 @@ def register_connector(connector: KbConnector) -> KbConnector:
     if not connector.kind:
         raise ValueError("KbConnector.kind must be a non-empty string")
     if connector.kind in _REGISTRY:
-        log.warning(
-            "kb connector %r re-registered; last writer wins", connector.kind
-        )
+        log.warning("kb connector %r re-registered; last writer wins", connector.kind)
     _REGISTRY[connector.kind] = connector
     return connector
 
@@ -79,9 +77,9 @@ def describe_connectors() -> list[dict]:
 
 
 # ── Bundled connectors — importing them runs register_connector(). ──
-from app.services.kb_connectors.file_connector import FileConnector  # noqa: E402
-from app.services.kb_connectors.s3_connector import S3Connector  # noqa: E402
-from app.services.kb_connectors.url_connector import UrlConnector  # noqa: E402
+from app.services.kb_connectors.file_connector import FileConnector
+from app.services.kb_connectors.s3_connector import S3Connector
+from app.services.kb_connectors.url_connector import UrlConnector
 
 register_connector(UrlConnector())
 register_connector(FileConnector())

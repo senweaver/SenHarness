@@ -25,9 +25,7 @@ async def _bootstrap(async_client) -> tuple[dict, str]:
         json={"email": email, "name": "Diff Tester", "password": password},
     )
     assert r.status_code == 201, r.text
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -136,9 +134,7 @@ async def test_versions_diff_unknown_pack_returns_404(async_client) -> None:
 
 async def test_versions_diff_unauth_blocked(async_client) -> None:
     pack_id = uuid.uuid4()
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pack_id}/versions/v1/diff/v2"
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pack_id}/versions/v1/diff/v2")
     assert r.status_code in (401, 403)
 
 

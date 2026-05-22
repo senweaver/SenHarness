@@ -108,9 +108,7 @@ async def _load_settings(db: AsyncSession) -> WorkspaceQuotaSettings:
 
 
 # ── Source kind inference ────────────────────────────────────
-async def infer_source_kind(
-    db: AsyncSession, identity: Identity
-) -> CreationKind:
+async def infer_source_kind(db: AsyncSession, identity: Identity) -> CreationKind:
     """Best-effort guess at how this identity originally entered the platform.
 
     Order of preference:
@@ -144,9 +142,7 @@ async def infer_source_kind(
     return CreationKind.SELF_REGISTER
 
 
-def _default_for_kind(
-    settings: WorkspaceQuotaSettings, kind: CreationKind
-) -> int:
+def _default_for_kind(settings: WorkspaceQuotaSettings, kind: CreationKind) -> int:
     if kind == CreationKind.OAUTH_REGISTER:
         return settings.default_per_oauth
     if kind == CreationKind.ADMIN_PROVISION:
@@ -275,9 +271,7 @@ async def _audit_failure(
 
 
 # ── Public API ───────────────────────────────────────────────
-async def get_quota(
-    db: AsyncSession, *, identity_id: uuid.UUID
-) -> QuotaStatus:
+async def get_quota(db: AsyncSession, *, identity_id: uuid.UUID) -> QuotaStatus:
     """Return the snapshot the ``GET /me/workspace-quota`` route serves."""
     identity = await db.get(Identity, identity_id)
     if identity is None:
@@ -292,7 +286,10 @@ async def get_quota(
     remaining = max(0, limit - used)
 
     creation_allowed = True
-    if source_kind == CreationKind.SELF_REGISTER and not settings.creation_allowed_for_self_registered:
+    if (
+        source_kind == CreationKind.SELF_REGISTER
+        and not settings.creation_allowed_for_self_registered
+    ):
         creation_allowed = False
 
     db_attempts = await _count_recent_attempts(
@@ -300,9 +297,7 @@ async def get_quota(
         identity_id=identity_id,
         period_seconds=settings.creation_rate_period_seconds,
     )
-    ledger_attempts = _ledger_count(
-        identity_id, settings.creation_rate_period_seconds
-    )
+    ledger_attempts = _ledger_count(identity_id, settings.creation_rate_period_seconds)
     rate_used = max(db_attempts, ledger_attempts)
 
     grandfathered = override is not None and override > default_limit
@@ -810,7 +805,11 @@ async def list_admin_quotas(
     for ident in identities:
         kind = await infer_source_kind(db, ident)
         default_limit = _default_for_kind(settings, kind)
-        eff = ident.workspace_quota_override if ident.workspace_quota_override is not None else default_limit
+        eff = (
+            ident.workspace_quota_override
+            if ident.workspace_quota_override is not None
+            else default_limit
+        )
         used = await _count_used(db, identity_id=ident.id, settings=settings)
         rows.append(
             AdminQuotaRow(
@@ -843,7 +842,11 @@ async def admin_quota_for_identity(
     settings = await _load_settings(db)
     kind = await infer_source_kind(db, ident)
     default_limit = _default_for_kind(settings, kind)
-    eff = ident.workspace_quota_override if ident.workspace_quota_override is not None else default_limit
+    eff = (
+        ident.workspace_quota_override
+        if ident.workspace_quota_override is not None
+        else default_limit
+    )
     used = await _count_used(db, identity_id=identity_id, settings=settings)
     return AdminQuotaRow(
         identity_id=ident.id,

@@ -509,8 +509,7 @@ def register_kind_from_plugin(kind: str, entry: CatalogEntry) -> None:
     """
     if not isinstance(entry, CatalogEntry):
         raise TypeError(
-            f"register_kind_from_plugin expected CatalogEntry; got "
-            f"{type(entry).__name__}"
+            f"register_kind_from_plugin expected CatalogEntry; got {type(entry).__name__}"
         )
     if entry.kind != kind:
         raise ValueError(
@@ -518,9 +517,7 @@ def register_kind_from_plugin(kind: str, entry: CatalogEntry) -> None:
             f"{entry.kind!r}, register_model_provider argument was {kind!r}"
         )
     if kind in _BUILTIN_KINDS:
-        raise ValueError(
-            f"plugin cannot override builtin model provider kind: {kind!r}"
-        )
+        raise ValueError(f"plugin cannot override builtin model provider kind: {kind!r}")
     if kind in _PLUGIN_REGISTERED_KINDS:
         raise ValueError(
             f"plugin model provider kind {kind!r} already registered; reload "
@@ -529,10 +526,7 @@ def register_kind_from_plugin(kind: str, entry: CatalogEntry) -> None:
     _BY_KIND[kind] = entry
     for alias in entry.aliases:
         if alias in _BUILTIN_KINDS:
-            raise ValueError(
-                f"plugin model provider alias {alias!r} collides with a "
-                "builtin kind"
-            )
+            raise ValueError(f"plugin model provider alias {alias!r} collides with a builtin kind")
         _BY_KIND[alias] = entry
     _PLUGIN_REGISTERED_KINDS.add(kind)
 

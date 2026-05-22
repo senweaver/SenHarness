@@ -147,7 +147,5 @@ class TestParseInbound:
         assert msg is None
 
     def test_other_event_ignored(self):
-        msg = QQBotProvider().parse_inbound(
-            {"op": 0, "t": "READY", "d": {}}, headers={}
-        )
+        msg = QQBotProvider().parse_inbound({"op": 0, "t": "READY", "d": {}}, headers={})
         assert msg is None

@@ -28,9 +28,7 @@ class FindToolsArgs(BaseModel):
             "(e.g. 'parse a CSV', 'send a slack message')."
         ),
     )
-    top_k: int = Field(
-        default=5, ge=1, le=20, description="Max number of matches to return."
-    )
+    top_k: int = Field(default=5, ge=1, le=20, description="Max number of matches to return.")
     include_descriptions: bool = Field(
         default=True,
         description="Set false if you only need tool names (saves tokens).",
@@ -85,11 +83,7 @@ def run_find_tools(args: FindToolsArgs) -> dict[str, Any]:
         {
             "name": name,
             "score": round(score, 2),
-            **(
-                {"description": description}
-                if args.include_descriptions
-                else {}
-            ),
+            **({"description": description} if args.include_descriptions else {}),
         }
         for score, name, description in scored
     ]

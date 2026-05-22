@@ -41,9 +41,7 @@ from app.db.mixins import (
 )
 
 
-class LogicalThread(
-    UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base
-):
+class LogicalThread(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "logical_threads"
 
     identity_id: Mapped[uuid.UUID] = mapped_column(
@@ -103,9 +101,7 @@ class ThreadChannelBinding(
     # Discord snowflake, ...). NULL paired with a NULL channel_id keeps
     # the row valid for web/CLI bindings keyed only by ``identity_id``
     # via the parent thread.
-    external_user_id: Mapped[str | None] = mapped_column(
-        String(200), nullable=True, index=True
-    )
+    external_user_id: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
     last_seen_at: Mapped[datetime] = mapped_column(
         nullable=False,
         server_default=func.now(),
@@ -116,9 +112,7 @@ class ThreadChannelBinding(
     # honours an unpaired binding only when ``cross_platform_enabled``
     # is True AND a pairing-code consume has flipped the flag for both
     # sides of the pair.
-    is_paired: Mapped[bool] = mapped_column(
-        default=False, server_default="false", nullable=False
-    )
+    is_paired: Mapped[bool] = mapped_column(default=False, server_default="false", nullable=False)
 
     __table_args__ = (
         UniqueConstraint(

@@ -28,7 +28,8 @@ class MemoryRepository(AsyncRepository[Memory]):
         if not scopes:
             return []
         scope_clauses = [
-            (Memory.scope == s) & (Memory.scope_id.is_(None) if sid is None else Memory.scope_id == sid)
+            (Memory.scope == s)
+            & (Memory.scope_id.is_(None) if sid is None else Memory.scope_id == sid)
             for s, sid in scopes
         ]
         from sqlalchemy import or_
@@ -85,9 +86,7 @@ class MemoryRepository(AsyncRepository[Memory]):
         stmt = stmt.order_by(desc(Memory.updated_at)).offset(offset).limit(limit)
         return (await self.session.execute(stmt)).scalars().all()
 
-    async def stats(
-        self, *, workspace_id: uuid.UUID
-    ) -> dict[str, dict[str, int]]:
+    async def stats(self, *, workspace_id: uuid.UUID) -> dict[str, dict[str, int]]:
         """Return ``{"by_scope": {...}, "by_kind": {...}, "total": int}``."""
         from sqlalchemy import func
 
@@ -95,26 +94,14 @@ class MemoryRepository(AsyncRepository[Memory]):
             Memory.workspace_id == workspace_id,
             Memory.deleted_at.is_(None),
         )
-        scope_stmt = (
-            select(Memory.scope, func.count(Memory.id))
-            .where(*cond)
-            .group_by(Memory.scope)
-        )
-        kind_stmt = (
-            select(Memory.kind, func.count(Memory.id))
-            .where(*cond)
-            .group_by(Memory.kind)
-        )
+        scope_stmt = select(Memory.scope, func.count(Memory.id)).where(*cond).group_by(Memory.scope)
+        kind_stmt = select(Memory.kind, func.count(Memory.id)).where(*cond).group_by(Memory.kind)
         total_stmt = select(func.count(Memory.id)).where(*cond)
 
         by_scope = {
-            str(r[0]): int(r[1] or 0)
-            for r in (await self.session.execute(scope_stmt)).all()
+            str(r[0]): int(r[1] or 0) for r in (await self.session.execute(scope_stmt)).all()
         }
-        by_kind = {
-            str(r[0]): int(r[1] or 0)
-            for r in (await self.session.execute(kind_stmt)).all()
-        }
+        by_kind = {str(r[0]): int(r[1] or 0) for r in (await self.session.execute(kind_stmt)).all()}
         total = int((await self.session.execute(total_stmt)).scalar() or 0)
         return {"by_scope": by_scope, "by_kind": by_kind, "total": total}
 

@@ -26,9 +26,7 @@ router = APIRouter(prefix="/agent-runtime", tags=["agent-runtime"])
 
 def _require_workspace(workspace_id: uuid.UUID | None) -> uuid.UUID:
     if workspace_id is None:
-        raise Unauthorized(
-            "no_active_workspace", code="auth.no_active_workspace"
-        )
+        raise Unauthorized("no_active_workspace", code="auth.no_active_workspace")
     return workspace_id
 
 
@@ -106,9 +104,7 @@ async def get_snapshot(
 ) -> AgentRuntimeSnapshot:
     """Live workspace-scoped view of all in-flight runs."""
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     snap = await runtime_svc.build_snapshot(db, workspace_id=ws_id)
     return AgentRuntimeSnapshot(
         summary=snap.summary,
@@ -131,9 +127,7 @@ async def get_workspace_summaries(
     Membership is hard-capped (alphabetical by name) in the service
     layer to keep this O(small).
     """
-    summaries = await runtime_svc.build_workspace_summaries(
-        db, identity_id=identity_id
-    )
+    summaries = await runtime_svc.build_workspace_summaries(db, identity_id=identity_id)
     return WorkspaceRuntimeSummariesOut(
         summaries=[
             WorkspaceRuntimeSummary(
@@ -159,9 +153,7 @@ async def stop_run(
 ) -> _StopResult:
     """Cancel an in-flight run via the kernel cancel hook + audit."""
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     result = await inflight_svc.force_recycle_run(
         db,
         workspace_id=ws_id,
@@ -207,9 +199,7 @@ async def sweep_lost_runs(
 ) -> _SweepResult:
     """Manually trigger the LOST-run reaper for this workspace."""
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     result = await inflight_svc.reap_stale(db)
     await db.commit()
     return _SweepResult(
@@ -265,9 +255,7 @@ async def agent_runtime_ws(websocket: WebSocket) -> None:
     try:
         payload = decode_token(token, expected_kind="access")
         identity_id = uuid.UUID(payload["sub"])
-        jwt_workspace_id = (
-            uuid.UUID(payload["ws"]) if payload.get("ws") else None
-        )
+        jwt_workspace_id = uuid.UUID(payload["ws"]) if payload.get("ws") else None
     except Exception:
         await websocket.close(code=4401)
         return
@@ -291,9 +279,7 @@ async def agent_runtime_ws(websocket: WebSocket) -> None:
     async with factory() as db:
         try:
             for ws_id in target_workspaces:
-                await ws_svc.ensure_member_access(
-                    db, workspace_id=ws_id, identity_id=identity_id
-                )
+                await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
         except Exception:
             await websocket.close(code=4403)
             return
@@ -305,9 +291,7 @@ async def agent_runtime_ws(websocket: WebSocket) -> None:
         q = await runtime_svc.RUNTIME_BUS.subscribe(ws_id)
         queues.append((ws_id, q))
 
-    fan_in: asyncio.Queue[dict] = asyncio.Queue(
-        maxsize=runtime_svc.RUNTIME_BUS.QUEUE_MAX
-    )
+    fan_in: asyncio.Queue[dict] = asyncio.Queue(maxsize=runtime_svc.RUNTIME_BUS.QUEUE_MAX)
 
     async def _forward(source: asyncio.Queue[dict]) -> None:
         while True:
@@ -317,13 +301,9 @@ async def agent_runtime_ws(websocket: WebSocket) -> None:
             except asyncio.QueueFull:
                 # Match the bus's drop-on-overflow behaviour so a
                 # wedged socket never wedges the publisher.
-                log.warning(
-                    "agent_runtime ws fan-in full; dropping event"
-                )
+                log.warning("agent_runtime ws fan-in full; dropping event")
 
-    forwarders = [
-        asyncio.create_task(_forward(q)) for _, q in queues
-    ]
+    forwarders = [asyncio.create_task(_forward(q)) for _, q in queues]
 
     try:
         while True:

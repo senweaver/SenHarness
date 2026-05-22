@@ -17,8 +17,6 @@ from pydantic import BaseModel, Field
 class GeneralSettings(BaseModel):
     site_name: str = Field(default="SenHarness", min_length=1, max_length=120)
     site_logo_url: str | None = Field(default=None, max_length=500)
-    primary_color_hex: str = Field(
-        default="#3B82F6", pattern=r"^#[0-9A-Fa-f]{6}$"
-    )
+    primary_color_hex: str = Field(default="#3B82F6", pattern=r"^#[0-9A-Fa-f]{6}$")
     default_locale: Literal["en-US", "zh-CN"] = "en-US"
     default_timezone: str = Field(default="UTC", min_length=1, max_length=64)

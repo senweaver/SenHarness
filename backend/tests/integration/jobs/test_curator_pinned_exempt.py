@@ -40,9 +40,7 @@ async def _bootstrap(async_client) -> str:
     return workspace["id"]
 
 
-async def _seed_pinned_idle_pack(
-    *, ws_id: str, days_unused: int
-) -> uuid.UUID:
+async def _seed_pinned_idle_pack(*, ws_id: str, days_unused: int) -> uuid.UUID:
     factory = get_session_factory()
     now = utcnow_naive()
     async with factory() as db:
@@ -76,35 +74,40 @@ async def test_pinned_active_pack_is_never_archived(async_client):
 
     factory = get_session_factory()
     async with factory() as db:
-        pack = (
-            await db.execute(select(SkillPack).where(SkillPack.id == pinned_pid))
-        ).scalar_one()
+        pack = (await db.execute(select(SkillPack).where(SkillPack.id == pinned_pid))).scalar_one()
         assert pack.state == SkillPackState.ACTIVE
         assert pack.pinned is True
 
         # No archive approval for a pinned pack.
         approvals = (
-            await db.execute(
-                select(Approval).where(
-                    Approval.workspace_id == uuid.UUID(ws_id),
-                    Approval.resource_type
-                    == ApprovalResourceType.SKILL_PACK_ARCHIVE.value,
-                    Approval.resource_id == pinned_pid,
+            (
+                await db.execute(
+                    select(Approval).where(
+                        Approval.workspace_id == uuid.UUID(ws_id),
+                        Approval.resource_type == ApprovalResourceType.SKILL_PACK_ARCHIVE.value,
+                        Approval.resource_id == pinned_pid,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert approvals == []
 
         # The skip audit lands so the activity feed surfaces the skip.
         skip_audits = (
-            await db.execute(
-                select(AuditEvent).where(
-                    AuditEvent.workspace_id == uuid.UUID(ws_id),
-                    AuditEvent.action == "skill.transition_skipped_pinned",
-                    AuditEvent.resource_id == pinned_pid,
+            (
+                await db.execute(
+                    select(AuditEvent).where(
+                        AuditEvent.workspace_id == uuid.UUID(ws_id),
+                        AuditEvent.action == "skill.transition_skipped_pinned",
+                        AuditEvent.resource_id == pinned_pid,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(skip_audits) >= 1
 
 
@@ -138,13 +141,16 @@ async def test_pinned_stale_pack_is_never_proposed_for_archive(async_client):
 
     async with factory() as db:
         approvals = (
-            await db.execute(
-                select(Approval).where(
-                    Approval.workspace_id == uuid.UUID(ws_id),
-                    Approval.resource_type
-                    == ApprovalResourceType.SKILL_PACK_ARCHIVE.value,
-                    Approval.resource_id == pid,
+            (
+                await db.execute(
+                    select(Approval).where(
+                        Approval.workspace_id == uuid.UUID(ws_id),
+                        Approval.resource_type == ApprovalResourceType.SKILL_PACK_ARCHIVE.value,
+                        Approval.resource_id == pid,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert approvals == []

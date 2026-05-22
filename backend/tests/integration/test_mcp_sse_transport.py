@@ -84,7 +84,7 @@ class _FakeSession:
         self.call_calls: list[tuple[str, dict]] = []
         self.closed = False
 
-    async def __aenter__(self) -> "_FakeSession":
+    async def __aenter__(self) -> _FakeSession:
         return self
 
     async def __aexit__(self, exc_type, exc, tb) -> None:
@@ -164,9 +164,7 @@ def fake_sdk(monkeypatch):
     def _patch(behaviour: dict[str, Any] | None = None) -> _FakeSession:
         state["behaviour"] = dict(behaviour or {})
         bundle, session = _build_fake_sdk(state["behaviour"])
-        monkeypatch.setattr(
-            mcp_client_module, "_import_sdk", lambda: bundle
-        )
+        monkeypatch.setattr(mcp_client_module, "_import_sdk", lambda: bundle)
         state["session"] = session
         return session
 
@@ -263,9 +261,9 @@ async def test_keepalive_closes_after_consecutive_failures(fake_sdk, monkeypatch
     assert client._closed
     actions = [a for a, _ in audit_calls]
     assert "mcp.keepalive_timeout" in actions
-    timeout_event = [
+    timeout_event = next(
         payload for action, payload in audit_calls if action == "mcp.keepalive_timeout"
-    ][0]
+    )
     assert timeout_event["misses"] >= KEEPALIVE_FAILURE_GRACE
 
 

@@ -86,12 +86,8 @@ api_router.include_router(session_artifacts.router, tags=["sessions"])
 api_router.include_router(lineage.router, tags=["sessions"])
 api_router.include_router(aux_config.router, tags=["workspaces"])
 api_router.include_router(providers.router, prefix="/providers", tags=["providers"])
-api_router.include_router(
-    provider_catalog.router, prefix="/provider-catalog", tags=["providers"]
-)
-api_router.include_router(
-    search_providers.router, prefix="/search-providers", tags=["providers"]
-)
+api_router.include_router(provider_catalog.router, prefix="/provider-catalog", tags=["providers"])
+api_router.include_router(search_providers.router, prefix="/search-providers", tags=["providers"])
 api_router.include_router(memory.router, prefix="/memory", tags=["memory"])
 api_router.include_router(memory_profiles.router)
 api_router.include_router(pending_memories.router)
@@ -138,6 +134,4 @@ api_router.include_router(threads.router)
 api_router.include_router(tools.router)
 api_router.include_router(traces.router)
 api_router.include_router(sidebar.router, prefix="/sidebar", tags=["sidebar"])
-api_router.include_router(
-    onboarding.router, prefix="/onboarding", tags=["onboarding"]
-)
+api_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])

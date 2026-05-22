@@ -15,13 +15,10 @@ from app.services import skill_verifier as verifier_svc
 pytestmark = pytest.mark.asyncio
 
 
-def _make_artifact_stub(
-    *, turns: list[dict] | None = None, slug_text: str = ""
-) -> SimpleNamespace:
+def _make_artifact_stub(*, turns: list[dict] | None = None, slug_text: str = "") -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
-        turns_json=turns
-        or [{"role": "user", "iteration": 0, "text": slug_text or "hi"}],
+        turns_json=turns or [{"role": "user", "iteration": 0, "text": slug_text or "hi"}],
         invoked_tools=["search"],
         iteration_count=2,
         final_outcome="success",
@@ -52,8 +49,9 @@ async def test_replay_returns_old_new_pair_on_happy_path(db_session, workspace):
             return response_format(score=0, rationale="meh")
         return response_format(score=1, rationale="great")
 
-    with patch.object(verifier_svc, "get_aux_model", _stub_aux_resolver), patch.object(
-        verifier_svc, "call_aux_chat", fake_chat
+    with (
+        patch.object(verifier_svc, "get_aux_model", _stub_aux_resolver),
+        patch.object(verifier_svc, "call_aux_chat", fake_chat),
     ):
         pair = await verifier_svc.replay_judge_with_skill_swap(
             db_session,
@@ -71,9 +69,7 @@ async def test_replay_returns_old_new_pair_on_happy_path(db_session, workspace):
     assert any("NEW body" in p for p in call_payloads)
 
 
-async def test_replay_returns_zero_zero_when_first_call_raises(
-    db_session, workspace
-):
+async def test_replay_returns_zero_zero_when_first_call_raises(db_session, workspace):
     artifact = _make_artifact_stub()
 
     async def crash_chat(*, config, system, user, response_format, timeout_s):
@@ -85,8 +81,9 @@ async def test_replay_returns_zero_zero_when_first_call_raises(
             raise RuntimeError("aux exploded")
         return verifier_svc._ReplayScore(score=1, rationale="ok")
 
-    with patch.object(verifier_svc, "get_aux_model", _stub_aux_resolver), patch.object(
-        verifier_svc, "call_aux_chat", crash_chat
+    with (
+        patch.object(verifier_svc, "get_aux_model", _stub_aux_resolver),
+        patch.object(verifier_svc, "call_aux_chat", crash_chat),
     ):
         pair = await verifier_svc.replay_judge_with_skill_swap(
             db_session,
@@ -102,9 +99,7 @@ async def test_replay_returns_zero_zero_when_first_call_raises(
     assert pair.new_score == 0
 
 
-async def test_replay_returns_zero_zero_when_no_aux_configured(
-    db_session, workspace
-):
+async def test_replay_returns_zero_zero_when_no_aux_configured(db_session, workspace):
     artifact = _make_artifact_stub()
 
     async def no_aux(_db, *, workspace_id, task):
@@ -141,8 +136,9 @@ async def test_replay_truncates_long_turns_payload(db_session, workspace):
         captured.append(user)
         return response_format(score=0, rationale="x")
 
-    with patch.object(verifier_svc, "get_aux_model", _stub_aux_resolver), patch.object(
-        verifier_svc, "call_aux_chat", echo_chat
+    with (
+        patch.object(verifier_svc, "get_aux_model", _stub_aux_resolver),
+        patch.object(verifier_svc, "call_aux_chat", echo_chat),
     ):
         await verifier_svc.replay_judge_with_skill_swap(
             db_session,
@@ -161,9 +157,7 @@ async def test_replay_truncates_long_turns_payload(db_session, workspace):
         assert len(prompt) < verifier_svc._TURNS_REPLAY_BUDGET + 5_000
 
 
-async def test_replay_falls_back_to_judge_aux_when_skill_review_missing(
-    db_session, workspace
-):
+async def test_replay_falls_back_to_judge_aux_when_skill_review_missing(db_session, workspace):
     artifact = _make_artifact_stub()
     seen_tasks: list[AuxiliaryTask] = []
 
@@ -178,8 +172,9 @@ async def test_replay_falls_back_to_judge_aux_when_skill_review_missing(
         _ = (config, system, user, timeout_s)
         return response_format(score=1, rationale="ok")
 
-    with patch.object(verifier_svc, "get_aux_model", fallback_resolver), patch.object(
-        verifier_svc, "call_aux_chat", ok_chat
+    with (
+        patch.object(verifier_svc, "get_aux_model", fallback_resolver),
+        patch.object(verifier_svc, "call_aux_chat", ok_chat),
     ):
         pair = await verifier_svc.replay_judge_with_skill_swap(
             db_session,

@@ -45,7 +45,5 @@ class SquadMemberRepository(AsyncRepository[SquadMember]):
 class SquadStarRepository(AsyncRepository[SquadStar]):
     model = SquadStar
 
-    async def get_for(
-        self, identity_id: uuid.UUID, squad_id: uuid.UUID
-    ) -> SquadStar | None:
+    async def get_for(self, identity_id: uuid.UUID, squad_id: uuid.UUID) -> SquadStar | None:
         return await self.get_by(identity_id=identity_id, squad_id=squad_id)

@@ -58,9 +58,9 @@ class TestVerifySignature:
         raw_secret = b"teams-secret"
         encoded_secret = base64.b64encode(raw_secret).decode("utf-8")
         body = b"payload"
-        expected = base64.b64encode(
-            hmac.new(raw_secret, body, hashlib.sha256).digest()
-        ).decode("utf-8")
+        expected = base64.b64encode(hmac.new(raw_secret, body, hashlib.sha256).digest()).decode(
+            "utf-8"
+        )
         assert _compute_hmac_digest(encoded_secret, body) == expected
 
 

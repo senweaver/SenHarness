@@ -22,9 +22,7 @@ from app.repositories.identity import IdentityRepository
 log = logging.getLogger(__name__)
 
 
-async def mark_onboarded(
-    db: AsyncSession, *, identity_id: uuid.UUID
-) -> datetime:
+async def mark_onboarded(db: AsyncSession, *, identity_id: uuid.UUID) -> datetime:
     repo = IdentityRepository(db)
     identity = await repo.get(identity_id)
     if identity is None:

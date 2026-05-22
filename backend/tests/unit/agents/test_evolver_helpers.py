@@ -200,18 +200,14 @@ async def test_list_session_artifacts_respects_since_days(
         finished_at=now - timedelta(days=30),
     )
 
-    result = await run_list_session_artifacts(
-        ListSessionArtifactsArgs(limit=10, since_days=7)
-    )
+    result = await run_list_session_artifacts(ListSessionArtifactsArgs(limit=10, since_days=7))
     ids = {item["artifact_id"] for item in result["items"]}
     assert str(recent.id) in ids
     assert str(ancient.id) not in ids
 
 
 # ─── read_skill_pack ─────────────────────────────────────────
-async def test_read_skill_pack_returns_active_content(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_read_skill_pack_returns_active_content(db_session, workspace, identity, monkeypatch):
     _set_ctx(workspace, identity)
     monkeypatch.setattr(
         "app.agents.tools.evolver_helpers.get_session_factory",
@@ -258,9 +254,7 @@ async def test_read_skill_pack_returns_active_content(
     assert result["active_version_no"] == version.version_no
 
 
-async def test_read_skill_pack_truncates_long_body(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_read_skill_pack_truncates_long_body(db_session, workspace, identity, monkeypatch):
     _set_ctx(workspace, identity)
     monkeypatch.setattr(
         "app.agents.tools.evolver_helpers.get_session_factory",
@@ -304,9 +298,7 @@ async def test_read_skill_pack_truncates_long_body(
     assert len(result["content_md"]) == READ_SKILL_PACK_TRUNCATE_CHARS
 
 
-async def test_read_skill_pack_unknown_pack_rejects(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_read_skill_pack_unknown_pack_rejects(db_session, workspace, identity, monkeypatch):
     _set_ctx(workspace, identity)
     monkeypatch.setattr(
         "app.agents.tools.evolver_helpers.get_session_factory",

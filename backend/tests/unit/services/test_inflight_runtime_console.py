@@ -65,14 +65,10 @@ async def _register(
 
 
 # ─── list_active_for_console ────────────────────────────────
-async def test_list_active_includes_running_and_paused(
-    db_session, workspace, identity, agent
-):
+async def test_list_active_includes_running_and_paused(db_session, workspace, identity, agent):
     row = await _register(db_session, workspace, identity, agent=agent)
 
-    rows = await svc.list_active_for_console(
-        db_session, workspace_id=workspace.id
-    )
+    rows = await svc.list_active_for_console(db_session, workspace_id=workspace.id)
 
     assert any(r.run_id == row.run_id for r in rows)
     surfaced = next(r for r in rows if r.run_id == row.run_id)
@@ -117,9 +113,7 @@ async def test_list_active_isolates_workspaces(db_session, identity, agent):
     assert b_row.run_id not in a_run_ids
 
 
-async def test_list_active_projects_zombie_and_lost(
-    db_session, workspace, identity
-):
+async def test_list_active_projects_zombie_and_lost(db_session, workspace, identity):
     """LOST rows split into zombie / lost on error_kind."""
     zombie_row = await _register(db_session, workspace, identity)
     await svc.transition(
@@ -136,17 +130,13 @@ async def test_list_active_projects_zombie_and_lost(
         error_kind=svc.ERROR_KIND_BACKEND_RESTART,
     )
 
-    rows = await svc.list_active_for_console(
-        db_session, workspace_id=workspace.id
-    )
+    rows = await svc.list_active_for_console(db_session, workspace_id=workspace.id)
     by_run = {r.run_id: r for r in rows}
     assert by_run[zombie_row.run_id].state_bucket == "zombie"
     assert by_run[lost_row.run_id].state_bucket == "lost"
 
 
-async def test_list_active_filters_by_state_bucket(
-    db_session, workspace, identity
-):
+async def test_list_active_filters_by_state_bucket(db_session, workspace, identity):
     running = await _register(db_session, workspace, identity)
     cancelled = await _register(db_session, workspace, identity)
     await svc.transition(
@@ -166,9 +156,7 @@ async def test_list_active_filters_by_state_bucket(
     assert not any(r.run_id == running.run_id for r in only_killed)
 
 
-async def test_elapsed_seconds_uses_finished_at_for_terminal(
-    db_session, workspace, identity
-):
+async def test_elapsed_seconds_uses_finished_at_for_terminal(db_session, workspace, identity):
     row = await _register(db_session, workspace, identity)
     raw = await InflightRunRepository(db_session).get(row.id)
     assert raw is not None
@@ -181,17 +169,13 @@ async def test_elapsed_seconds_uses_finished_at_for_terminal(
         error_kind=svc.ERROR_KIND_ADMIN_FORCE_RECYCLE,
     )
 
-    rows = await svc.list_active_for_console(
-        db_session, workspace_id=workspace.id
-    )
+    rows = await svc.list_active_for_console(db_session, workspace_id=workspace.id)
     surfaced = next(r for r in rows if r.run_id == raw.run_id)
     assert surfaced.elapsed_seconds >= 120
 
 
 # ─── runtime_console_stats ──────────────────────────────────
-async def test_runtime_console_stats_counts_buckets(
-    db_session, workspace, identity
-):
+async def test_runtime_console_stats_counts_buckets(db_session, workspace, identity):
     running = await _register(db_session, workspace, identity)
     paused = await _register(db_session, workspace, identity)
     await svc.transition(
@@ -207,9 +191,7 @@ async def test_runtime_console_stats_counts_buckets(
         error_kind=svc.ERROR_KIND_HEARTBEAT_TIMEOUT,
     )
 
-    stats = await svc.runtime_console_stats(
-        db_session, workspace_id=workspace.id
-    )
+    stats = await svc.runtime_console_stats(db_session, workspace_id=workspace.id)
     assert stats.running >= 1
     assert stats.paused >= 1
     assert stats.zombie >= 1
@@ -218,9 +200,7 @@ async def test_runtime_console_stats_counts_buckets(
 
 
 # ─── force_recycle_run ──────────────────────────────────────
-async def test_force_recycle_happy_path(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_force_recycle_happy_path(db_session, workspace, identity, monkeypatch):
     """Cancels the kernel task, flips state, writes audit + notification."""
     cancel_calls: list[uuid.UUID] = []
 
@@ -232,9 +212,7 @@ async def test_force_recycle_happy_path(
         "app.agents.kernels.registry.get_backend",
         lambda kind: _StubBackend(),
     )
-    monkeypatch.setattr(
-        "app.services.notification_events.emit_event", _stub_emit
-    )
+    monkeypatch.setattr("app.services.notification_events.emit_event", _stub_emit)
 
     row = await _register(db_session, workspace, identity)
 
@@ -257,12 +235,14 @@ async def test_force_recycle_happy_path(
     assert refreshed.finished_at is not None
 
     audit_rows = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.action == svc.AUDIT_FORCE_RECYCLED
+        (
+            await db_session.execute(
+                select(AuditEvent).where(AuditEvent.action == svc.AUDIT_FORCE_RECYCLED)
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert any(a.workspace_id == workspace.id for a in audit_rows)
 
 
@@ -278,9 +258,7 @@ async def _stub_emit(*_args, **_kwargs):
     }
 
 
-async def test_force_recycle_unknown_run_raises_not_found(
-    db_session, workspace, identity
-):
+async def test_force_recycle_unknown_run_raises_not_found(db_session, workspace, identity):
     with pytest.raises(svc.RunNotFoundError):
         await svc.force_recycle_run(
             db_session,
@@ -290,9 +268,7 @@ async def test_force_recycle_unknown_run_raises_not_found(
         )
 
 
-async def test_force_recycle_cross_workspace_raises_not_found(
-    db_session, identity
-):
+async def test_force_recycle_cross_workspace_raises_not_found(db_session, identity):
     """A run belonging to workspace A must 404 when looked up via ws B."""
     from app.services import workspace as ws_svc
 
@@ -323,9 +299,7 @@ async def test_force_recycle_cross_workspace_raises_not_found(
 async def test_force_recycle_terminal_raises_terminal_error(
     db_session, workspace, identity, monkeypatch
 ):
-    monkeypatch.setattr(
-        "app.services.notification_events.emit_event", _stub_emit
-    )
+    monkeypatch.setattr("app.services.notification_events.emit_event", _stub_emit)
     row = await _register(db_session, workspace, identity)
     await svc.transition(
         db_session,
@@ -351,9 +325,7 @@ async def test_force_recycle_audits_failure_when_backend_missing(
         "app.agents.kernels.registry.get_backend",
         lambda kind: None,
     )
-    monkeypatch.setattr(
-        "app.services.notification_events.emit_event", _stub_emit
-    )
+    monkeypatch.setattr("app.services.notification_events.emit_event", _stub_emit)
     row = await _register(db_session, workspace, identity)
 
     result = await svc.force_recycle_run(
@@ -367,13 +339,17 @@ async def test_force_recycle_audits_failure_when_backend_missing(
     assert result["state"] == "cancelled"
 
     failure_rows = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.action == svc.AUDIT_FORCE_RECYCLE_FAILED,
-                AuditEvent.workspace_id == workspace.id,
+        (
+            await db_session.execute(
+                select(AuditEvent).where(
+                    AuditEvent.action == svc.AUDIT_FORCE_RECYCLE_FAILED,
+                    AuditEvent.workspace_id == workspace.id,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(failure_rows) >= 1
 
     refreshed = await InflightRunRepository(db_session).get(row.id)

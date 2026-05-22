@@ -97,10 +97,7 @@ def redact_args(payload: Any, *, depth: int = 0, max_depth: int = 6) -> Any:
                 out[key_str] = redact_args(v, depth=depth + 1, max_depth=max_depth)
         return out
     if isinstance(payload, (list, tuple)):
-        return [
-            redact_args(item, depth=depth + 1, max_depth=max_depth)
-            for item in payload
-        ]
+        return [redact_args(item, depth=depth + 1, max_depth=max_depth) for item in payload]
     if isinstance(payload, (str, int, float, bool)) or payload is None:
         return payload
     if isinstance(payload, uuid.UUID):
@@ -333,12 +330,8 @@ async def get_queue_health(
     """
     since = _now() - window
     repo = JobRunRepository(db)
-    by_function = await repo.get_queue_stats(
-        since=since, workspace_id=workspace_id
-    )
-    aggregate = await repo.aggregate_health(
-        since=since, workspace_id=workspace_id
-    )
+    by_function = await repo.get_queue_stats(since=since, workspace_id=workspace_id)
+    aggregate = await repo.aggregate_health(since=since, workspace_id=workspace_id)
     return {
         "window_started_at": since,
         "window_seconds": int(window.total_seconds()),

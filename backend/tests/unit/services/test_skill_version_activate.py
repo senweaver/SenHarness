@@ -56,9 +56,7 @@ async def _make_pack_with_v1(db, *, workspace_id, identity):
 async def test_activate_first_version_sets_active_and_mirrors(
     db_session, workspace, identity
 ) -> None:
-    pack, v1 = await _make_pack_with_v1(
-        db_session, workspace_id=workspace.id, identity=identity
-    )
+    pack, v1 = await _make_pack_with_v1(db_session, workspace_id=workspace.id, identity=identity)
     await db_session.refresh(v1)
     await db_session.refresh(pack)
     assert v1.state == SkillPackVersionState.ACTIVE
@@ -66,12 +64,8 @@ async def test_activate_first_version_sets_active_and_mirrors(
     assert pack.content_hash == v1.content_hash
 
 
-async def test_activate_new_version_retires_previous(
-    db_session, workspace, identity
-) -> None:
-    pack, v1 = await _make_pack_with_v1(
-        db_session, workspace_id=workspace.id, identity=identity
-    )
+async def test_activate_new_version_retires_previous(db_session, workspace, identity) -> None:
+    pack, v1 = await _make_pack_with_v1(db_session, workspace_id=workspace.id, identity=identity)
     v2 = await svc.create_version(
         db_session,
         workspace_id=workspace.id,
@@ -96,12 +90,8 @@ async def test_activate_new_version_retires_previous(
     assert pack.content_hash == v2.content_hash
 
 
-async def test_activate_idempotent_when_already_active(
-    db_session, workspace, identity
-) -> None:
-    pack, v1 = await _make_pack_with_v1(
-        db_session, workspace_id=workspace.id, identity=identity
-    )
+async def test_activate_idempotent_when_already_active(db_session, workspace, identity) -> None:
+    pack, v1 = await _make_pack_with_v1(db_session, workspace_id=workspace.id, identity=identity)
     activated = await svc.activate_version(
         db_session,
         workspace_id=workspace.id,
@@ -110,19 +100,13 @@ async def test_activate_idempotent_when_already_active(
     )
     assert activated.state == SkillPackVersionState.ACTIVE
     repo = SkillPackVersionRepository(db_session)
-    rows = await repo.list_for_pack(
-        workspace_id=workspace.id, pack_id=pack.id, limit=10
-    )
+    rows = await repo.list_for_pack(workspace_id=workspace.id, pack_id=pack.id, limit=10)
     active_rows = [r for r in rows if r.state == SkillPackVersionState.ACTIVE]
     assert len(active_rows) == 1
 
 
-async def test_activate_rejected_version_raises(
-    db_session, workspace, identity
-) -> None:
-    pack, _ = await _make_pack_with_v1(
-        db_session, workspace_id=workspace.id, identity=identity
-    )
+async def test_activate_rejected_version_raises(db_session, workspace, identity) -> None:
+    pack, _ = await _make_pack_with_v1(db_session, workspace_id=workspace.id, identity=identity)
     v2 = await svc.create_version(
         db_session,
         workspace_id=workspace.id,
@@ -149,12 +133,8 @@ async def test_activate_rejected_version_raises(
         )
 
 
-async def test_activate_syncs_skill_file_content(
-    db_session, workspace, identity
-) -> None:
-    pack, _ = await _make_pack_with_v1(
-        db_session, workspace_id=workspace.id, identity=identity
-    )
+async def test_activate_syncs_skill_file_content(db_session, workspace, identity) -> None:
+    pack, _ = await _make_pack_with_v1(db_session, workspace_id=workspace.id, identity=identity)
     new_body = "new SKILL.md body for v2"
     v2 = await svc.create_version(
         db_session,

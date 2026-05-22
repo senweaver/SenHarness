@@ -77,9 +77,7 @@ async def _seed_pack(db_session, *, workspace_id: uuid.UUID, slug: str):
     return pack
 
 
-async def test_repeated_invocations_yield_identical_ids(
-    db_session, workspace
-):
+async def test_repeated_invocations_yield_identical_ids(db_session, workspace):
     p1 = await _seed_pack(db_session, workspace_id=workspace.id, slug="alpha")
     p2 = await _seed_pack(db_session, workspace_id=workspace.id, slug="bravo")
     p3 = await _seed_pack(db_session, workspace_id=workspace.id, slug="charlie")
@@ -95,14 +93,10 @@ async def test_repeated_invocations_yield_identical_ids(
     assert ids_a == ids_b
     assert cap_a is not None and cap_b is not None
     assert [s.name for s in cap_a.skills] == [s.name for s in cap_b.skills]
-    assert [s.content for s in cap_a.skills] == [
-        s.content for s in cap_b.skills
-    ]
+    assert [s.content for s in cap_a.skills] == [s.content for s in cap_b.skills]
 
 
-async def test_policy_order_does_not_change_injection_order(
-    db_session, workspace
-):
+async def test_policy_order_does_not_change_injection_order(db_session, workspace):
     p1 = await _seed_pack(db_session, workspace_id=workspace.id, slug="alpha-2")
     p2 = await _seed_pack(db_session, workspace_id=workspace.id, slug="bravo-2")
     p3 = await _seed_pack(db_session, workspace_id=workspace.id, slug="charlie-2")
@@ -126,12 +120,8 @@ async def test_unrelated_pack_does_not_leak_into_run(db_session, workspace):
     must never appear in the resolved id list — otherwise the cache
     prefix would shift the moment another agent gets a new pack added.
     """
-    bound = await _seed_pack(
-        db_session, workspace_id=workspace.id, slug="bound-pack"
-    )
-    await _seed_pack(
-        db_session, workspace_id=workspace.id, slug="unrelated-pack"
-    )
+    bound = await _seed_pack(db_session, workspace_id=workspace.id, slug="bound-pack")
+    await _seed_pack(db_session, workspace_id=workspace.id, slug="unrelated-pack")
 
     cap, ids = await skills_mod.build_skills_capability(
         policy={"skills": [str(bound.id)]},

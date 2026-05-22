@@ -121,21 +121,15 @@ async def test_record_success_clears_state():
             cooldown_threshold=3,
             cooldown_seconds=300,
         )
-    cooldown = await health_svc.is_in_cooldown(
-        redis, provider_kind="openai", model_id="gpt-5"
-    )
+    cooldown = await health_svc.is_in_cooldown(redis, provider_kind="openai", model_id="gpt-5")
     assert cooldown is True
 
-    snap = await health_svc.record_success(
-        redis, provider_kind="openai", model_id="gpt-5"
-    )
+    snap = await health_svc.record_success(redis, provider_kind="openai", model_id="gpt-5")
     assert snap.consecutive_failures == 0
     assert snap.cooldown_until is None
     assert snap.last_success_at is not None
 
-    cooldown = await health_svc.is_in_cooldown(
-        redis, provider_kind="openai", model_id="gpt-5"
-    )
+    cooldown = await health_svc.is_in_cooldown(redis, provider_kind="openai", model_id="gpt-5")
     assert cooldown is False
 
 
@@ -154,11 +148,9 @@ async def test_is_in_cooldown_expires_with_time():
     # Manually expire the cooldown by rewriting Redis with a past time.
     health_svc.reset_cache()
     redis.store["provider_health:deepseek:v3"]["cooldown_until"] = (
-        (datetime.now(UTC) - timedelta(seconds=10)).isoformat()
-    )
-    cooldown = await health_svc.is_in_cooldown(
-        redis, provider_kind="deepseek", model_id="v3"
-    )
+        datetime.now(UTC) - timedelta(seconds=10)
+    ).isoformat()
+    cooldown = await health_svc.is_in_cooldown(redis, provider_kind="deepseek", model_id="v3")
     assert cooldown is False
 
 
@@ -174,9 +166,7 @@ async def test_get_health_uses_redis_after_cache_reset():
     )
     health_svc.reset_cache()
 
-    snap = await health_svc.get_health(
-        redis, provider_kind="anthropic", model_id="sonnet"
-    )
+    snap = await health_svc.get_health(redis, provider_kind="anthropic", model_id="sonnet")
     assert snap.consecutive_failures == 1
     assert snap.last_failure_kind == health_svc.FailureKind.CONNECTION
 
@@ -184,14 +174,10 @@ async def test_get_health_uses_redis_after_cache_reset():
 async def test_redis_unreachable_fails_open():
     """A degraded Redis must never trip a cooldown by accident."""
 
-    cooldown = await health_svc.is_in_cooldown(
-        None, provider_kind="openai", model_id="gpt-5"
-    )
+    cooldown = await health_svc.is_in_cooldown(None, provider_kind="openai", model_id="gpt-5")
     assert cooldown is False
 
-    snap = await health_svc.get_health(
-        None, provider_kind="openai", model_id="gpt-5"
-    )
+    snap = await health_svc.get_health(None, provider_kind="openai", model_id="gpt-5")
     assert snap.consecutive_failures == 0
 
 
@@ -223,9 +209,7 @@ def test_classify_5xx_via_status_code():
             super().__init__("503 service unavailable")
             self.response = _Resp()
 
-    assert health_svc.classify_exception(HTTPStatusError()) == (
-        health_svc.FailureKind.SERVER_5XX
-    )
+    assert health_svc.classify_exception(HTTPStatusError()) == (health_svc.FailureKind.SERVER_5XX)
 
 
 def test_classify_auth_via_text():

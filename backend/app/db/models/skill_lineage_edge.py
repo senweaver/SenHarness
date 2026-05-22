@@ -57,9 +57,7 @@ class SkillLineageEdgeKind(StrEnum):
     PULLED_FROM_HUB = "pulled_from_hub"
 
 
-SKILL_LINEAGE_EDGE_KIND_VALUES: tuple[str, ...] = tuple(
-    k.value for k in SkillLineageEdgeKind
-)
+SKILL_LINEAGE_EDGE_KIND_VALUES: tuple[str, ...] = tuple(k.value for k in SkillLineageEdgeKind)
 
 
 class SkillLineageEdge(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
@@ -93,9 +91,7 @@ class SkillLineageEdge(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
         server_default="[]",
         nullable=False,
     )
-    hub_pack_slug: Mapped[str | None] = mapped_column(
-        String(120), nullable=True
-    )
+    hub_pack_slug: Mapped[str | None] = mapped_column(String(120), nullable=True)
     metadata_json: Mapped[dict] = mapped_column(
         JSONB,
         default=dict,

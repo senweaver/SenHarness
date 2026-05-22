@@ -92,9 +92,7 @@ async def create_collection(
     return KnowledgeCollectionRead.model_validate(col)
 
 
-@router.patch(
-    "/collections/{collection_id}", response_model=KnowledgeCollectionRead
-)
+@router.patch("/collections/{collection_id}", response_model=KnowledgeCollectionRead)
 async def update_collection(
     collection_id: uuid.UUID,
     body: KnowledgeCollectionUpdate,
@@ -114,9 +112,7 @@ async def update_collection(
     return KnowledgeCollectionRead.model_validate(col)
 
 
-@router.delete(
-    "/collections/{collection_id}", status_code=status.HTTP_204_NO_CONTENT
-)
+@router.delete("/collections/{collection_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_collection(
     collection_id: uuid.UUID,
     db: DBSession,
@@ -237,9 +233,7 @@ async def ingest_from_attachment(
     await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     col = await svc.get_collection_or_404(db, collection_id, workspace_id=ws_id)
     # Load the attachment (workspace-scoped) + read bytes off disk.
-    att = await att_svc.get_for_read(
-        db, attachment_id=body.attachment_id, workspace_id=ws_id
-    )
+    att = await att_svc.get_for_read(db, attachment_id=body.attachment_id, workspace_id=ws_id)
     try:
         data = att_svc.read_bytes(att)
     except Exception as e:
@@ -268,10 +262,7 @@ async def ingest_from_attachment(
         workspace_id=ws_id,
         resource_type="doc",
         resource_id=result.doc.id,
-        summary=(
-            f"ingested {att.filename!r} → {result.chunks} chunks "
-            f"(collection {col.name!r})"
-        ),
+        summary=(f"ingested {att.filename!r} → {result.chunks} chunks (collection {col.name!r})"),
         metadata={
             "attachment_id": str(att.id),
             "chunks": result.chunks,

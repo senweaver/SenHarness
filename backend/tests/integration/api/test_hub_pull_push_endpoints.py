@@ -141,9 +141,7 @@ async def test_promote_happy_creates_pending_approval(async_client):
         from sqlalchemy import select
 
         row = (
-            await db.execute(
-                select(Approval).where(Approval.id == uuid.UUID(body["approval_id"]))
-            )
+            await db.execute(select(Approval).where(Approval.id == uuid.UUID(body["approval_id"])))
         ).scalar_one()
         assert row.status == ApprovalStatus.PENDING
         assert row.resource_type == "hub_promotion"

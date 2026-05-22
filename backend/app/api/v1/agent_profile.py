@@ -58,9 +58,7 @@ async def _require_workspace_member(
     identity = await _resolve_identity(db, identity_id)
     if identity.platform_role == PlatformRole.PLATFORM_ADMIN:
         return identity
-    await ws_svc.ensure_member_access(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=workspace_id, identity_id=identity_id)
     return identity
 
 
@@ -73,15 +71,11 @@ async def _require_workspace_admin(
     identity = await _resolve_identity(db, identity_id)
     if identity.platform_role == PlatformRole.PLATFORM_ADMIN:
         return identity
-    await ws_svc.ensure_admin(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_admin(db, workspace_id=workspace_id, identity_id=identity_id)
     return identity
 
 
-async def _resolve_agent_workspace(
-    db: DBSession, *, agent_id: uuid.UUID
-) -> uuid.UUID:
+async def _resolve_agent_workspace(db: DBSession, *, agent_id: uuid.UUID) -> uuid.UUID:
     """Return the workspace_id of the agent (or 404)."""
     from app.db.models.agent import Agent
 
@@ -106,12 +100,8 @@ async def get_agent_profile(
 ) -> AgentProfileRead:
     """Workspace-member read. Never carries cross-workspace stats."""
     workspace_id = await _resolve_agent_workspace(db, agent_id=agent_id)
-    await _require_workspace_member(
-        workspace_id=workspace_id, db=db, identity_id=identity_id
-    )
-    profile = await agent_profile_svc.get_profile(
-        db, workspace_id=workspace_id, agent_id=agent_id
-    )
+    await _require_workspace_member(workspace_id=workspace_id, db=db, identity_id=identity_id)
+    profile = await agent_profile_svc.get_profile(db, workspace_id=workspace_id, agent_id=agent_id)
     if profile is None:
         raise NotFound(
             "agent_profile_missing",

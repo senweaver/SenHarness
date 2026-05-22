@@ -57,9 +57,9 @@ from app.agents.tools.skill_propose import (
     _rejected,
 )
 from app.core.security import utcnow_naive
+from app.db.models.agent import Agent
 from app.db.models.approval import Approval, ApprovalResourceType, ApprovalStatus
 from app.db.models.channel import Channel
-from app.db.models.agent import Agent
 from app.db.session import get_session_factory
 from app.jobs._breaker import bump_failure, consume_rate, is_breaker_open
 from app.repositories.approval import ApprovalRepository
@@ -75,8 +75,8 @@ __all__ = [
     "CRONJOB_PROPOSE_RATE_BUCKET",
     "CRONJOB_PROPOSE_RATE_PER_MINUTE",
     "ProposeCronjobArgs",
-    "ScheduleParseError",
     "ScheduleKind",
+    "ScheduleParseError",
     "parse_schedule",
     "run_propose_cronjob",
 ]
@@ -165,9 +165,7 @@ def parse_schedule(schedule: str) -> tuple[ScheduleKind, dict[str, Any]]:
         amount = int(interval_match.group(1))
         unit = interval_match.group(2)
         if amount <= 0:
-            raise ScheduleParseError(
-                "interval amount must be positive (got 'every 0...')"
-            )
+            raise ScheduleParseError("interval amount must be positive (got 'every 0...')")
         seconds = amount * _INTERVAL_UNIT_SECONDS[unit]
         return "interval", {
             "expression": text,
@@ -184,15 +182,11 @@ def parse_schedule(schedule: str) -> tuple[ScheduleKind, dict[str, Any]]:
         try:
             from apscheduler.triggers.cron import CronTrigger
         except ImportError as exc:  # pragma: no cover - dep is required
-            raise ScheduleParseError(
-                f"apscheduler not installed: {exc}"
-            ) from exc
+            raise ScheduleParseError(f"apscheduler not installed: {exc}") from exc
         try:
             CronTrigger.from_crontab(text, timezone="UTC")
         except Exception as exc:
-            raise ScheduleParseError(
-                f"invalid cron expression: {exc}"
-            ) from exc
+            raise ScheduleParseError(f"invalid cron expression: {exc}") from exc
         return "cron", {"expression": text, "expr": text, "tz": "UTC"}
 
     try:
@@ -310,7 +304,7 @@ async def _check_breaker_and_rate(
 
 
 def _ttl_for_flow_create(config: EvolverSettings) -> int:
-    return int(getattr(config.approval_ttl_days, "flow_create"))
+    return int(config.approval_ttl_days.flow_create)
 
 
 async def _agent_belongs_to_workspace(
@@ -397,9 +391,7 @@ async def run_propose_cronjob(args: ProposeCronjobArgs) -> dict:
     ctx = get_context()
     factory = get_session_factory()
     async with factory() as db:
-        config, disabled = await _check_workspace_enabled(
-            db, workspace_id=ctx.workspace_id
-        )
+        config, disabled = await _check_workspace_enabled(db, workspace_id=ctx.workspace_id)
         if disabled is not None:
             await _audit_rejected(
                 db,
@@ -543,10 +535,7 @@ async def run_propose_cronjob(args: ProposeCronjobArgs) -> dict:
             }
             ttl_days = _ttl_for_flow_create(config)
             expires_at = utcnow_naive() + timedelta(days=ttl_days)
-            summary = (
-                f"Evolver proposes cronjob {args.name!r} "
-                f"(schedule_kind={schedule_kind})"
-            )
+            summary = f"Evolver proposes cronjob {args.name!r} (schedule_kind={schedule_kind})"
             approval = await ApprovalRepository(db).create(
                 workspace_id=ctx.workspace_id,
                 session_id=None,
@@ -586,9 +575,7 @@ async def run_propose_cronjob(args: ProposeCronjobArgs) -> dict:
                 "approval_id": str(approval.id),
                 "schedule_kind": schedule_kind,
                 "expires_at": (
-                    approval.expires_at.isoformat()
-                    if approval.expires_at is not None
-                    else None
+                    approval.expires_at.isoformat() if approval.expires_at is not None else None
                 ),
             }
         except Exception:
@@ -598,9 +585,7 @@ async def run_propose_cronjob(args: ProposeCronjobArgs) -> dict:
                 args.name,
             )
             await db.rollback()
-            await _bump_breaker_on_internal_error(
-                workspace_id=ctx.workspace_id, config=config
-            )
+            await _bump_breaker_on_internal_error(workspace_id=ctx.workspace_id, config=config)
             return _rejected(
                 "evolver.internal_error",
                 "Internal error filing the cronjob proposal; the breaker counter advanced.",

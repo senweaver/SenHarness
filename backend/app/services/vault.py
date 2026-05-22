@@ -76,9 +76,7 @@ async def reveal_secret(item: VaultItem) -> str:
     return data.decode()
 
 
-async def replace_secret(
-    session: AsyncSession, *, item: VaultItem, plaintext: str
-) -> VaultItem:
+async def replace_secret(session: AsyncSession, *, item: VaultItem, plaintext: str) -> VaultItem:
     kr = get_keyring()
     sealed = seal_str(plaintext, keyring=kr)
     repo: AsyncRepository[VaultItem] = AsyncRepository(session, VaultItem)
@@ -114,9 +112,7 @@ async def reveal_workspace_secret(
     :class:`VaultKeyNotFoundError` rather than returning an empty
     string, matching the substitution helper's fail-loud contract.
     """
-    item = await _lookup_workspace_secret(
-        session, workspace_id=workspace_id, name=name
-    )
+    item = await _lookup_workspace_secret(session, workspace_id=workspace_id, name=name)
     if item is None:
         raise VaultKeyNotFoundError(name)
     return await reveal_secret(item)
@@ -155,9 +151,7 @@ async def resolve_vault_template(
         cached = cache.get((scope, key))
         if cached is not None:
             return cached
-        item = await _lookup_workspace_secret(
-            session, workspace_id=workspace_id, name=key
-        )
+        item = await _lookup_workspace_secret(session, workspace_id=workspace_id, name=key)
         if item is None:
             raise VaultKeyNotFoundError(key)
         plaintext = await reveal_secret(item)

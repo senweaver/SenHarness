@@ -111,9 +111,7 @@ async def test_run_agent_one_shot_captures_artifact(
     assert assistant_turns[-1]["message_id"] is not None
 
 
-async def test_capture_audit_row_emitted(
-    db_session, workspace, identity
-):
+async def test_capture_audit_row_emitted(db_session, workspace, identity):
     """``capture_artifact`` emits ``audit_events(action="artifact.captured")``."""
     from sqlalchemy import select
 

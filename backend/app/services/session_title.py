@@ -99,7 +99,7 @@ def _clean_title(raw: str) -> str:
     for ch in ('"', "'", "『", "』", "「", "」"):
         s = s.strip(ch)
     s = re.sub(r"\s+", " ", s)
-    for ch in (".", "·", "。", "!", "?", "！", "？"):  # noqa: RUF001 - intentional CJK punctuation strip
+    for ch in (".", "·", "。", "!", "?", "！", "？"):
         s = s.rstrip(ch)
     if len(s) > _TITLE_MAX_CHARS:
         s = s[:_TITLE_MAX_CHARS].rstrip()
@@ -116,9 +116,7 @@ async def _summarise_with_llm(
     transcript: str,
 ) -> str | None:
     """Round-trip the title prompt through pydantic-ai. ``None`` on any failure."""
-    resolved = await resolve_for_agent(
-        workspace_id=workspace_id, agent_id=agent_id, override=None
-    )
+    resolved = await resolve_for_agent(workspace_id=workspace_id, agent_id=agent_id, override=None)
     resolved = _cheap_model_for(resolved)
     if resolved is None:
         return None
@@ -174,9 +172,7 @@ async def maybe_upgrade_title(
         if str(sess.title_source) == TitleSource.USER.value:
             return None
 
-        msgs = await MessageRepository(db).list_for_session(
-            session_id=session_id, limit=8
-        )
+        msgs = await MessageRepository(db).list_for_session(session_id=session_id, limit=8)
         # Need at least one user + one assistant turn for a sensible summary.
         roles = {m.role for m in msgs}
         if MessageRole.USER not in roles or MessageRole.ASSISTANT not in roles:

@@ -52,18 +52,12 @@ async def _register(db_session, workspace, identity, *, agent=None):
     )
 
 
-async def test_returns_empty_for_identity_with_no_memberships(
-    db_session, identity
-):
-    summaries = await runtime_svc.build_workspace_summaries(
-        db_session, identity_id=identity.id
-    )
+async def test_returns_empty_for_identity_with_no_memberships(db_session, identity):
+    summaries = await runtime_svc.build_workspace_summaries(db_session, identity_id=identity.id)
     assert summaries == []
 
 
-async def test_aggregates_counts_across_workspaces(
-    db_session, identity
-):
+async def test_aggregates_counts_across_workspaces(db_session, identity):
     ws_a = await ws_svc.create_workspace(
         db_session,
         name=f"A-{uuid.uuid4().hex[:6]}",
@@ -82,9 +76,7 @@ async def test_aggregates_counts_across_workspaces(
     await _register(db_session, ws_a, identity)
     await _register(db_session, ws_b, identity)
 
-    summaries = await runtime_svc.build_workspace_summaries(
-        db_session, identity_id=identity.id
-    )
+    summaries = await runtime_svc.build_workspace_summaries(db_session, identity_id=identity.id)
     by_ws = {s.workspace_id: s for s in summaries}
     assert by_ws[ws_a.id].running == 2
     assert by_ws[ws_b.id].running == 1
@@ -95,9 +87,7 @@ async def test_aggregates_counts_across_workspaces(
     assert by_ws[ws_b.id].stuck == 0
 
 
-async def test_excludes_workspaces_without_membership(
-    db_session, identity
-):
+async def test_excludes_workspaces_without_membership(db_session, identity):
     """A workspace the identity doesn't belong to must not appear."""
     from app.services import auth as auth_svc
 
@@ -125,17 +115,13 @@ async def test_excludes_workspaces_without_membership(
     await _register(db_session, other_ws, other.identity)
     await _register(db_session, own_ws, identity)
 
-    summaries = await runtime_svc.build_workspace_summaries(
-        db_session, identity_id=identity.id
-    )
+    summaries = await runtime_svc.build_workspace_summaries(db_session, identity_id=identity.id)
     ws_ids = {s.workspace_id for s in summaries}
     assert own_ws.id in ws_ids
     assert other_ws.id not in ws_ids
 
 
-async def test_classifies_stuck_via_hard_cap(
-    db_session, identity
-):
+async def test_classifies_stuck_via_hard_cap(db_session, identity):
     """A row whose ``started_at`` is older than ``HARD_CAP_MS`` is stuck."""
     workspace = await ws_svc.create_workspace(
         db_session,
@@ -148,14 +134,10 @@ async def test_classifies_stuck_via_hard_cap(
     repo = InflightRunRepository(db_session)
     raw = await repo.get(row.id)
     assert raw is not None
-    raw.started_at = utcnow_naive() - timedelta(
-        milliseconds=runtime_svc.HARD_CAP_MS + 60_000
-    )
+    raw.started_at = utcnow_naive() - timedelta(milliseconds=runtime_svc.HARD_CAP_MS + 60_000)
     await db_session.flush()
 
-    summaries = await runtime_svc.build_workspace_summaries(
-        db_session, identity_id=identity.id
-    )
+    summaries = await runtime_svc.build_workspace_summaries(db_session, identity_id=identity.id)
     by_ws = {s.workspace_id: s for s in summaries}
     assert by_ws[workspace.id].stuck >= 1
 
@@ -176,8 +158,6 @@ async def test_ignores_terminal_rows(db_session, identity):
         target_state=InflightRunState.COMPLETED,
     )
 
-    summaries = await runtime_svc.build_workspace_summaries(
-        db_session, identity_id=identity.id
-    )
+    summaries = await runtime_svc.build_workspace_summaries(db_session, identity_id=identity.id)
     by_ws = {s.workspace_id: s for s in summaries}
     assert by_ws[workspace.id].running == 0

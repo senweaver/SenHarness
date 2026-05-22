@@ -59,7 +59,7 @@ from app.core.errors import (
     PermissionDenied,
 )
 from app.core.security import utcnow_naive
-from app.db.models.approval import Approval, ApprovalStatus
+from app.db.models.approval import Approval
 from app.db.models.hub_skill_pack import HubScope, HubSkillPack, HubSkillPackState
 from app.db.models.hub_skill_pack_version import HubSkillPackVersion
 from app.db.models.identity import Identity, PlatformRole
@@ -148,12 +148,12 @@ class HubPullResult:
     """
 
     __slots__ = (
-        "status",
         "hub_pack_id",
         "hub_version_no",
         "local_pack_id",
         "local_version_id",
         "local_version_no",
+        "status",
     )
 
     def __init__(
@@ -245,9 +245,7 @@ async def initiate_promotion(
             extras={"blockers": list(preview.blockers)},
         )
 
-    if target_scope == HubScope.PLATFORM and (
-        actor.platform_role != PlatformRole.PLATFORM_ADMIN
-    ):
+    if target_scope == HubScope.PLATFORM and (actor.platform_role != PlatformRole.PLATFORM_ADMIN):
         raise HubScopePermissionDenied(
             "platform_admin_required",
             code="hub.scope_permission_denied",
@@ -262,9 +260,7 @@ async def initiate_promotion(
         "target_scope": target_scope.value,
         "target_slug": preview.target_slug,
         "target_tenant_id": (
-            str(preview.target_tenant_id)
-            if preview.target_tenant_id is not None
-            else None
+            str(preview.target_tenant_id) if preview.target_tenant_id is not None else None
         ),
         "sanitized_content_hash": preview.sanitized_content_hash,
         "sanitization_stats": {
@@ -277,9 +273,7 @@ async def initiate_promotion(
             "failure_reason": sanitized_stats.failure_reason,
         },
         "will_dedup_against_version_id": (
-            str(preview.will_dedup_against.id)
-            if preview.will_dedup_against is not None
-            else None
+            str(preview.will_dedup_against.id) if preview.will_dedup_against is not None else None
         ),
         "will_dedup_against_pack_id": (
             str(preview.will_dedup_against.hub_pack_id)
@@ -296,10 +290,7 @@ async def initiate_promotion(
         run_id=None,
         tool_name="none",
         tool_args=approval_body,
-        summary=(
-            f"hub promote: pack {pack_id} → "
-            f"{target_scope.value}/{preview.target_slug}"
-        ),
+        summary=(f"hub promote: pack {pack_id} → {target_scope.value}/{preview.target_slug}"),
         requested_by_identity_id=actor.id,
         expires_at=expires_at,
         resource_type=HUB_PROMOTION_RESOURCE_TYPE,
@@ -314,8 +305,7 @@ async def initiate_promotion(
         resource_type="skill_pack",
         resource_id=pack_id,
         summary=(
-            f"hub promote proposed: pack {pack_id} → "
-            f"{target_scope.value}/{preview.target_slug}"
+            f"hub promote proposed: pack {pack_id} → {target_scope.value}/{preview.target_slug}"
         ),
         metadata={
             "approval_id": str(approval.id),
@@ -323,9 +313,7 @@ async def initiate_promotion(
             "target_scope": target_scope.value,
             "target_slug": preview.target_slug,
             "target_tenant_id": (
-                str(preview.target_tenant_id)
-                if preview.target_tenant_id is not None
-                else None
+                str(preview.target_tenant_id) if preview.target_tenant_id is not None else None
             ),
             "sanitized_content_hash": preview.sanitized_content_hash,
             "will_dedup_against_version_id": (
@@ -360,9 +348,7 @@ async def apply_promotion(
     """
     approval_row = await ApprovalRepository(db).get(approval_id)
     if approval_row is None:
-        raise NotFound(
-            "approval_not_found", code="approval.not_found"
-        )
+        raise NotFound("approval_not_found", code="approval.not_found")
     if approval_row.resource_type != HUB_PROMOTION_RESOURCE_TYPE:
         raise NotFound(
             "approval_not_hub_promotion",
@@ -387,16 +373,12 @@ async def apply_promotion(
 
     target_scope = HubScope(body.get("target_scope") or HubScope.TENANT.value)
     version_id_raw = body.get("version_id")
-    version_id = (
-        uuid.UUID(str(version_id_raw)) if version_id_raw else None
-    )
+    version_id = uuid.UUID(str(version_id_raw)) if version_id_raw else None
     target_slug = body.get("target_slug")
 
     # Resolve actor identity for the audit / subscription back-ref.
     actor: Identity | None = None
-    actor_id_for_audit = (
-        actor_identity_id or approval_row.requested_by_identity_id
-    )
+    actor_id_for_audit = actor_identity_id or approval_row.requested_by_identity_id
     if actor_id_for_audit is not None:
         actor = await db.get(Identity, actor_id_for_audit)
     if actor is None:
@@ -549,9 +531,7 @@ async def apply_promotion(
             "hub_version_no": hub_version.version_no,
             "deduped": deduped,
             "scope": target_scope.value,
-            "target_tenant_id": (
-                str(target_tenant_id) if target_tenant_id is not None else None
-            ),
+            "target_tenant_id": (str(target_tenant_id) if target_tenant_id is not None else None),
             "sanitized_content_hash": sanitized_content_hash,
             "subscription_id": str(subscription.id),
         },
@@ -567,9 +547,7 @@ async def apply_promotion(
     }
 
 
-async def _retire_active(
-    repo: HubSkillPackVersionRepository, *, hub_pack_id: uuid.UUID
-) -> None:
+async def _retire_active(repo: HubSkillPackVersionRepository, *, hub_pack_id: uuid.UUID) -> None:
     """Flip the current ``is_active=true`` row off so the new winner
     can take the slot inside the same transaction. M3.1 promised
     "at most one is_active per hub_pack" — this enforces it.
@@ -590,9 +568,7 @@ async def _ensure_subscription(
     auto_pull: bool,
     last_pulled_version_no: int | None,
 ) -> WorkspaceHubSubscription:
-    existing = await repo.get_by_pack(
-        workspace_id=workspace_id, hub_pack_id=hub_pack.id
-    )
+    existing = await repo.get_by_pack(workspace_id=workspace_id, hub_pack_id=hub_pack.id)
     if existing is not None:
         existing.auto_pull = auto_pull
         if last_pulled_version_no is not None:
@@ -612,9 +588,7 @@ async def _ensure_subscription(
     return sub
 
 
-async def _synthesize_actor(
-    db: AsyncSession, *, approval_row: Approval
-) -> Identity:
+async def _synthesize_actor(db: AsyncSession, *, approval_row: Approval) -> Identity:
     """Return a placeholder identity when the requester is gone.
 
     The eligibility checks inside :func:`preview_promotion` only read
@@ -657,9 +631,7 @@ async def subscribe(
     )
 
     repo = WorkspaceHubSubscriptionRepository(db)
-    sub = await repo.get_by_pack(
-        workspace_id=workspace_id, hub_pack_id=hub_pack_id
-    )
+    sub = await repo.get_by_pack(workspace_id=workspace_id, hub_pack_id=hub_pack_id)
     created: bool
     if sub is None:
         sub = await repo.create(
@@ -718,9 +690,7 @@ async def unsubscribe(
     """
     await hub_svc.require_hub_enabled(db)
     repo = WorkspaceHubSubscriptionRepository(db)
-    sub = await repo.get_by_pack(
-        workspace_id=workspace_id, hub_pack_id=hub_pack_id
-    )
+    sub = await repo.get_by_pack(workspace_id=workspace_id, hub_pack_id=hub_pack_id)
     if sub is None:
         raise HubSubscriptionNotFound(
             "hub_subscription_not_found",
@@ -731,9 +701,7 @@ async def unsubscribe(
         "hub_pack_id": str(hub_pack_id),
         "auto_pull": sub.auto_pull,
         "last_pulled_version_no": sub.last_pulled_version_no,
-        "last_pulled_at": (
-            sub.last_pulled_at.isoformat() if sub.last_pulled_at else None
-        ),
+        "last_pulled_at": (sub.last_pulled_at.isoformat() if sub.last_pulled_at else None),
     }
     await repo.hard_delete(sub)
 
@@ -786,9 +754,7 @@ async def pull_now(
     )
 
     sub_repo = WorkspaceHubSubscriptionRepository(db)
-    sub = await sub_repo.get_by_pack(
-        workspace_id=workspace_id, hub_pack_id=hub_pack_id
-    )
+    sub = await sub_repo.get_by_pack(workspace_id=workspace_id, hub_pack_id=hub_pack_id)
     if sub is None:
         raise HubSubscriptionNotFound(
             "hub_subscription_not_found",
@@ -803,10 +769,7 @@ async def pull_now(
             hub_pack_id=hub_pack_id,
         )
 
-    if (
-        sub.last_pulled_version_no is not None
-        and sub.last_pulled_version_no >= active.version_no
-    ):
+    if sub.last_pulled_version_no is not None and sub.last_pulled_version_no >= active.version_no:
         await audit_svc.record(
             db,
             action=AUDIT_PULLED_UP_TO_DATE,
@@ -814,10 +777,7 @@ async def pull_now(
             workspace_id=workspace_id,
             resource_type="hub_skill_pack",
             resource_id=hub_pack_id,
-            summary=(
-                f"hub pull skipped (up to date): pack {pack.slug!r} "
-                f"v{active.version_no}"
-            ),
+            summary=(f"hub pull skipped (up to date): pack {pack.slug!r} v{active.version_no}"),
             metadata={
                 "hub_pack_id": str(hub_pack_id),
                 "hub_pack_slug": pack.slug,
@@ -919,9 +879,7 @@ async def _ensure_local_pack_for_pull(
             "hub": {
                 "hub_pack_id": str(hub_pack.id),
                 "scope": hub_pack.scope.value,
-                "tenant_id": (
-                    str(hub_pack.tenant_id) if hub_pack.tenant_id else None
-                ),
+                "tenant_id": (str(hub_pack.tenant_id) if hub_pack.tenant_id else None),
             }
         },
         created_by=actor_identity_id,
@@ -954,9 +912,7 @@ async def _create_local_pulled_version(
     )
     if existing is not None:
         return existing
-    next_no = await repo.next_version_no(
-        workspace_id=workspace_id, pack_id=local_pack.id
-    )
+    next_no = await repo.next_version_no(workspace_id=workspace_id, pack_id=local_pack.id)
     version = await repo.create(
         workspace_id=workspace_id,
         pack_id=local_pack.id,

@@ -49,9 +49,7 @@ async def list_search_providers(
     return [await _attach_has_key(p) for p in rows]
 
 
-@router.post(
-    "", response_model=SearchProviderRead, status_code=status.HTTP_201_CREATED
-)
+@router.post("", response_model=SearchProviderRead, status_code=status.HTTP_201_CREATED)
 async def create_search_provider(
     body: SearchProviderCreate,
     db: DBSession,

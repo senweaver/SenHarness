@@ -36,9 +36,7 @@ def _require_workspace(workspace_id: uuid.UUID | None) -> uuid.UUID:
 @router.get(
     "",
     response_model=list[NotificationRead],
-    dependencies=[
-        Depends(rate_limit("notifications_list", limit=60, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("notifications_list", limit=60, period_seconds=60))],
 )
 async def list_notifications(
     db: DBSession,
@@ -102,9 +100,7 @@ async def list_notifications(
 
 @router.get(
     "/counts",
-    dependencies=[
-        Depends(rate_limit("notifications_count", limit=120, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("notifications_count", limit=120, period_seconds=60))],
 )
 async def notification_counts(
     db: DBSession,
@@ -122,9 +118,7 @@ async def notification_counts(
 
 @router.get(
     "/unread-count",
-    dependencies=[
-        Depends(rate_limit("notifications_count", limit=120, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("notifications_count", limit=120, period_seconds=60))],
 )
 async def unread_count(
     db: DBSession,
@@ -144,9 +138,7 @@ async def unread_count(
 @router.get(
     "/{notification_id}",
     response_model=NotificationRead,
-    dependencies=[
-        Depends(rate_limit("notifications_read", limit=120, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("notifications_read", limit=120, period_seconds=60))],
 )
 async def get_notification(
     notification_id: uuid.UUID,
@@ -158,11 +150,7 @@ async def get_notification(
     ws_id = _require_workspace(workspace_id)
     await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     row = await NotificationRepository(db).get(notification_id)
-    if (
-        row is None
-        or row.workspace_id != ws_id
-        or row.recipient_identity_id != identity_id
-    ):
+    if row is None or row.workspace_id != ws_id or row.recipient_identity_id != identity_id:
         raise NotFound("notification_not_found", code="notification.not_found")
     return NotificationRead.model_validate(row)
 
@@ -170,9 +158,7 @@ async def get_notification(
 @router.post(
     "/{notification_id}/read",
     response_model=NotificationRead,
-    dependencies=[
-        Depends(rate_limit("notifications_mark", limit=60, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("notifications_mark", limit=60, period_seconds=60))],
 )
 async def mark_read(
     notification_id: uuid.UUID,
@@ -183,11 +169,7 @@ async def mark_read(
     ws_id = _require_workspace(workspace_id)
     await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     row = await NotificationRepository(db).get(notification_id)
-    if (
-        row is None
-        or row.workspace_id != ws_id
-        or row.recipient_identity_id != identity_id
-    ):
+    if row is None or row.workspace_id != ws_id or row.recipient_identity_id != identity_id:
         raise NotFound("notification_not_found", code="notification.not_found")
     row = await notif_svc.mark_read(db, notification=row)
     await db.commit()
@@ -197,9 +179,7 @@ async def mark_read(
 @router.post(
     "/{notification_id}/unread",
     response_model=NotificationRead,
-    dependencies=[
-        Depends(rate_limit("notifications_mark", limit=60, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("notifications_mark", limit=60, period_seconds=60))],
 )
 async def mark_unread(
     notification_id: uuid.UUID,
@@ -214,11 +194,7 @@ async def mark_unread(
     await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     repo = NotificationRepository(db)
     row = await repo.get(notification_id)
-    if (
-        row is None
-        or row.workspace_id != ws_id
-        or row.recipient_identity_id != identity_id
-    ):
+    if row is None or row.workspace_id != ws_id or row.recipient_identity_id != identity_id:
         raise NotFound("notification_not_found", code="notification.not_found")
     if row.read_at is not None:
         row = await repo.update(row, read_at=None)
@@ -226,9 +202,7 @@ async def mark_unread(
     return NotificationRead.model_validate(row)
 
 
-async def _mark_all_for(
-    db, *, workspace_id: uuid.UUID, identity_id: uuid.UUID
-) -> int:
+async def _mark_all_for(db, *, workspace_id: uuid.UUID, identity_id: uuid.UUID) -> int:
     rows = await NotificationRepository(db).list_for_recipient(
         workspace_id=workspace_id,
         recipient_identity_id=identity_id,
@@ -245,9 +219,7 @@ async def _mark_all_for(
 
 @router.post(
     "/read-all",
-    dependencies=[
-        Depends(rate_limit("notifications_bulk", limit=10, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("notifications_bulk", limit=10, period_seconds=60))],
 )
 async def mark_all_read(
     db: DBSession,
@@ -262,9 +234,7 @@ async def mark_all_read(
 
 @router.post(
     "/mark-all-read",
-    dependencies=[
-        Depends(rate_limit("notifications_bulk", limit=10, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("notifications_bulk", limit=10, period_seconds=60))],
 )
 async def mark_all_read_alias(
     db: DBSession,

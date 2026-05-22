@@ -23,9 +23,7 @@ pytestmark = pytest.mark.asyncio
 
 
 def _bearer(identity_id: uuid.UUID) -> dict[str, str]:
-    token, _, _ = create_access_token(
-        identity_id=str(identity_id), workspace_id=None, roles=[]
-    )
+    token, _, _ = create_access_token(identity_id=str(identity_id), workspace_id=None, roles=[])
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -53,9 +51,7 @@ async def _seed_registry(db_session, *, name: str = "alpha") -> PluginRegistry:
 async def test_list_plugins_happy_path(async_client, db_session, identity):
     await _make_admin(db_session, identity)
     await _seed_registry(db_session)
-    resp = await async_client.get(
-        "/api/v1/admin/plugins", headers=_bearer(identity.id)
-    )
+    resp = await async_client.get("/api/v1/admin/plugins", headers=_bearer(identity.id))
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert isinstance(body, list)
@@ -63,9 +59,7 @@ async def test_list_plugins_happy_path(async_client, db_session, identity):
 
 
 async def test_list_plugins_rejects_non_admin(async_client, db_session, identity):
-    resp = await async_client.get(
-        "/api/v1/admin/plugins", headers=_bearer(identity.id)
-    )
+    resp = await async_client.get("/api/v1/admin/plugins", headers=_bearer(identity.id))
     assert resp.status_code == 403
 
 
@@ -73,9 +67,7 @@ async def test_list_plugins_rejects_non_admin(async_client, db_session, identity
 async def test_get_plugin_happy(async_client, db_session, identity):
     await _make_admin(db_session, identity)
     row = await _seed_registry(db_session)
-    resp = await async_client.get(
-        f"/api/v1/admin/plugins/{row.id}", headers=_bearer(identity.id)
-    )
+    resp = await async_client.get(f"/api/v1/admin/plugins/{row.id}", headers=_bearer(identity.id))
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["id"] == str(row.id)
@@ -84,9 +76,7 @@ async def test_get_plugin_happy(async_client, db_session, identity):
 
 async def test_get_plugin_rejects_non_admin(async_client, db_session, identity):
     row = await _seed_registry(db_session)
-    resp = await async_client.get(
-        f"/api/v1/admin/plugins/{row.id}", headers=_bearer(identity.id)
-    )
+    resp = await async_client.get(f"/api/v1/admin/plugins/{row.id}", headers=_bearer(identity.id))
     assert resp.status_code == 403
 
 
@@ -118,18 +108,18 @@ async def test_approve_plugin_happy(async_client, db_session, identity):
     assert body["status"] == PluginRegistryStatus.APPROVED.value
 
     audits = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.action == "plugin.approved_by_admin"
+        (
+            await db_session.execute(
+                select(AuditEvent).where(AuditEvent.action == "plugin.approved_by_admin")
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert any(a.resource_id == row.id for a in audits)
 
 
-async def test_approve_plugin_rejects_non_admin(
-    async_client, db_session, identity
-):
+async def test_approve_plugin_rejects_non_admin(async_client, db_session, identity):
     row = await _seed_registry(db_session)
     resp = await async_client.post(
         f"/api/v1/admin/plugins/{row.id}/approve",
@@ -154,9 +144,7 @@ async def test_reject_plugin_happy(async_client, db_session, identity):
     assert body["approved_by_platform_admin"] is False
 
 
-async def test_reject_plugin_rejects_non_admin(
-    async_client, db_session, identity
-):
+async def test_reject_plugin_rejects_non_admin(async_client, db_session, identity):
     row = await _seed_registry(db_session)
     resp = await async_client.post(
         f"/api/v1/admin/plugins/{row.id}/reject",
@@ -169,9 +157,7 @@ async def test_reject_plugin_rejects_non_admin(
 # ── POST /admin/plugins/scan ────────────────────────────────
 async def test_scan_plugins_happy(async_client, db_session, identity):
     await _make_admin(db_session, identity)
-    resp = await async_client.post(
-        "/api/v1/admin/plugins/scan", headers=_bearer(identity.id)
-    )
+    resp = await async_client.post("/api/v1/admin/plugins/scan", headers=_bearer(identity.id))
     # Without an on-disk plugins directory the scan returns 0
     # discovered plus the seeded rows total. We just verify the
     # contract (200 + ScanResult shape).
@@ -183,18 +169,14 @@ async def test_scan_plugins_happy(async_client, db_session, identity):
 
 
 async def test_scan_plugins_rejects_non_admin(async_client, db_session, identity):
-    resp = await async_client.post(
-        "/api/v1/admin/plugins/scan", headers=_bearer(identity.id)
-    )
+    resp = await async_client.post("/api/v1/admin/plugins/scan", headers=_bearer(identity.id))
     assert resp.status_code == 403
 
 
 # ── POST /admin/plugins/reload ──────────────────────────────
 async def test_reload_plugins_happy(async_client, db_session, identity):
     await _make_admin(db_session, identity)
-    resp = await async_client.post(
-        "/api/v1/admin/plugins/reload", headers=_bearer(identity.id)
-    )
+    resp = await async_client.post("/api/v1/admin/plugins/reload", headers=_bearer(identity.id))
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert "loaded" in body
@@ -202,10 +184,6 @@ async def test_reload_plugins_happy(async_client, db_session, identity):
     assert "allow_user_plugins" in body
 
 
-async def test_reload_plugins_rejects_non_admin(
-    async_client, db_session, identity
-):
-    resp = await async_client.post(
-        "/api/v1/admin/plugins/reload", headers=_bearer(identity.id)
-    )
+async def test_reload_plugins_rejects_non_admin(async_client, db_session, identity):
+    resp = await async_client.post("/api/v1/admin/plugins/reload", headers=_bearer(identity.id))
     assert resp.status_code == 403

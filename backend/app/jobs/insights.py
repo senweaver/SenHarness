@@ -46,7 +46,6 @@ from app.agents.auxiliary_client import (
 from app.agents.tools.skill_propose import EVOLVER_BREAKER_BUCKET
 from app.core.security import utcnow_naive
 from app.db.models.message import MessageRole
-from app.db.models.session_artifact import SessionArtifact
 from app.db.session import get_session_factory
 from app.jobs._breaker import bump_failure, is_breaker_open, reset_failure
 from app.repositories.session_artifact import SessionArtifactRepository
@@ -90,9 +89,7 @@ class InsightItem(BaseModel):
     title: str = Field(min_length=2, max_length=120)
     summary: str = Field(min_length=10, max_length=600)
     category: InsightCategory = "general"
-    evidence_artifact_ids: list[uuid.UUID] = Field(
-        default_factory=list, max_length=10
-    )
+    evidence_artifact_ids: list[uuid.UUID] = Field(default_factory=list, max_length=10)
 
 
 class InsightsResult(BaseModel):
@@ -185,9 +182,7 @@ async def generate_insights(
             actor_identity_id=identity_uuid,
             action="insights.cross_session_summarized",
             session_id=session_uuid,
-            summary=(
-                f"insights generated for last {days}d — no artifacts in window"
-            ),
+            summary=(f"insights generated for last {days}d — no artifacts in window"),
             metadata={
                 "days": days,
                 "artifact_count": 0,
@@ -234,9 +229,7 @@ async def generate_insights(
             workspace_id=ws_uuid, artifacts=artifacts, days=days
         )
         if aux_skipped_reason is None:
-            await reset_failure(
-                bucket=EVOLVER_BREAKER_BUCKET, workspace_id=str(ws_uuid)
-            )
+            await reset_failure(bucket=EVOLVER_BREAKER_BUCKET, workspace_id=str(ws_uuid))
         else:
             await bump_failure(
                 bucket=EVOLVER_BREAKER_BUCKET,
@@ -249,9 +242,7 @@ async def generate_insights(
                 actor_identity_id=identity_uuid,
                 action="insights.aux_skipped",
                 session_id=session_uuid,
-                summary=(
-                    f"insights aux skipped — {aux_skipped_reason}"
-                ),
+                summary=(f"insights aux skipped — {aux_skipped_reason}"),
                 metadata={
                     "days": days,
                     "artifact_count": len(artifacts),
@@ -271,9 +262,7 @@ async def generate_insights(
     persisted_message_id: uuid.UUID | None = None
     try:
         async with factory() as db:
-            sess = await session_svc.get_session_or_404(
-                db, session_uuid, workspace_id=ws_uuid
-            )
+            sess = await session_svc.get_session_or_404(db, session_uuid, workspace_id=ws_uuid)
             msg = await session_svc.append_message(
                 db,
                 session_obj=sess,
@@ -316,9 +305,7 @@ async def generate_insights(
             "degraded": aux_skipped_reason is not None,
             "skip_reason": aux_skipped_reason,
             "duration_ms": duration_ms,
-            "message_id": (
-                str(persisted_message_id) if persisted_message_id else None
-            ),
+            "message_id": (str(persisted_message_id) if persisted_message_id else None),
             "trigger": "generate_insights",
         },
     )
@@ -331,16 +318,12 @@ async def generate_insights(
         "aux_model": aux_model_used,
         "degraded": aux_skipped_reason is not None,
         "session_id": str(session_uuid),
-        "message_id": (
-            str(persisted_message_id) if persisted_message_id else None
-        ),
+        "message_id": (str(persisted_message_id) if persisted_message_id else None),
     }
 
 
 # ─── Permanent-failure hook ──────────────────────────────────
-async def on_insights_job_failed_permanent(
-    ctx: dict[str, Any], exc: BaseException
-) -> None:
+async def on_insights_job_failed_permanent(ctx: dict[str, Any], exc: BaseException) -> None:
     """ARQ hook for ``generate_insights`` exhausting its retry budget.
 
     Mirrors the curator / evolver hooks: writes one stable audit row
@@ -357,13 +340,9 @@ async def on_insights_job_failed_permanent(
                 workspace_id=None,
                 resource_type="job",
                 resource_id=None,
-                summary=(
-                    f"generate_insights failed permanently: {exc!r}"
-                ),
+                summary=(f"generate_insights failed permanently: {exc!r}"),
                 metadata={
-                    "function": str(
-                        ctx.get("function") or "generate_insights"
-                    ),
+                    "function": str(ctx.get("function") or "generate_insights"),
                     "job_id": ctx.get("job_id"),
                     "exception": repr(exc),
                     "job_try": ctx.get("job_try"),
@@ -420,15 +399,9 @@ async def _load_artifacts_for_identity(
                 run_id=art.run_id,
                 final_outcome=art.final_outcome,
                 error_kind=art.error_kind,
-                judge_score=(
-                    float(art.judge_score)
-                    if art.judge_score is not None
-                    else None
-                ),
+                judge_score=(float(art.judge_score) if art.judge_score is not None else None),
                 invoked_tools=list(art.invoked_tools or []),
-                injected_skill_pack_ids=[
-                    str(s) for s in (art.injected_skill_pack_ids or [])
-                ],
+                injected_skill_pack_ids=[str(s) for s in (art.injected_skill_pack_ids or [])],
                 iteration_count=int(art.iteration_count or 0),
                 finished_at=art.finished_at,
             )
@@ -445,9 +418,7 @@ async def _resolve_artifact_cap(*, workspace_id: uuid.UUID) -> int:
                 get_workspace_insights_config,
             )
 
-            cfg = await get_workspace_insights_config(
-                db, workspace_id=workspace_id
-            )
+            cfg = await get_workspace_insights_config(db, workspace_id=workspace_id)
             return int(cfg.max_artifacts_per_summary)
     except Exception:  # pragma: no cover - defensive
         return 200
@@ -462,14 +433,10 @@ async def _is_aux_breaker_open(*, workspace_id: uuid.UUID) -> bool:
         async with factory() as db:
             from app.services.evolver_config import get_workspace_evolver_config
 
-            cfg = await get_workspace_evolver_config(
-                db, workspace_id=workspace_id
-            )
+            cfg = await get_workspace_evolver_config(db, workspace_id=workspace_id)
             trip_at = max(1, int(cfg.evolver_breaker_strikes or trip_at))
     except Exception:  # pragma: no cover - fail-open on config read
-        log.exception(
-            "insights breaker trip_at lookup failed for ws=%s", workspace_id
-        )
+        log.exception("insights breaker trip_at lookup failed for ws=%s", workspace_id)
     return await is_breaker_open(
         bucket=EVOLVER_BREAKER_BUCKET,
         workspace_id=str(workspace_id),
@@ -594,9 +561,7 @@ def _heuristic_items(
     return items[:7]
 
 
-def _unique_sessions(
-    artifacts: Sequence[_ArtifactSnapshot], *, limit: int
-) -> list[uuid.UUID]:
+def _unique_sessions(artifacts: Sequence[_ArtifactSnapshot], *, limit: int) -> list[uuid.UUID]:
     """Stable de-dup of session_ids preserving newest-first order."""
     seen: set[uuid.UUID] = set()
     out: list[uuid.UUID] = []
@@ -701,9 +666,7 @@ async def _resolve_aux_config(
                 task=AuxiliaryTask.SUMMARIZE,
                 model=cfg.aux_model,
             )
-    return await get_aux_model(
-        db, workspace_id=workspace_id, task=AuxiliaryTask.SUMMARIZE
-    )
+    return await get_aux_model(db, workspace_id=workspace_id, task=AuxiliaryTask.SUMMARIZE)
 
 
 def _aux_system_prompt(*, days: int) -> str:
@@ -737,7 +700,7 @@ def _build_aux_user_prompt(
         for tool in art.invoked_tools:
             tool_counter[tool] += 1
         if art.judge_score is not None:
-            score_dist[int(round(art.judge_score))] += 1
+            score_dist[round(art.judge_score)] += 1
 
     header = (
         f"window_days={days} artifact_count={len(artifacts)} "
@@ -794,9 +757,7 @@ def render_insights_markdown(
         return _empty_state_markdown(days=days, artifact_count=artifact_count)
 
     lines: list[str] = []
-    lines.append(
-        f"### Cross-session insights — last {days} day(s)"
-    )
+    lines.append(f"### Cross-session insights — last {days} day(s)")
     summary_line = (
         f"Across **{artifact_count}** of your recent runs"
         if artifact_count
@@ -810,9 +771,7 @@ def render_insights_markdown(
     lines.append("")
 
     for idx, item in enumerate(items, start=1):
-        category_label = _CATEGORY_LABELS.get(
-            item.category, _CATEGORY_LABELS["general"]
-        )
+        category_label = _CATEGORY_LABELS.get(item.category, _CATEGORY_LABELS["general"])
         lines.append(f"**{idx}. {item.title}** _({category_label})_")
         lines.append(item.summary.strip())
         if item.evidence_session_ids:
@@ -821,9 +780,7 @@ def render_insights_markdown(
                 short = str(sid).split("-", 1)[0]
                 link_parts.append(f"[Session {short}](/?session={sid})")
             evidence = " · ".join(link_parts)
-            lines.append(
-                f"_Evidence ({item.evidence_run_count} run(s)):_ {evidence}"
-            )
+            lines.append(f"_Evidence ({item.evidence_run_count} run(s)):_ {evidence}")
         lines.append("")
 
     lines.append(
@@ -857,9 +814,7 @@ async def _post_no_insights_message(
     body = _empty_state_markdown(days=days, artifact_count=0)
     try:
         async with factory() as db:
-            sess = await session_svc.get_session_or_404(
-                db, session_id, workspace_id=workspace_id
-            )
+            sess = await session_svc.get_session_or_404(db, session_id, workspace_id=workspace_id)
             await session_svc.append_message(
                 db,
                 session_obj=sess,
@@ -876,9 +831,7 @@ async def _post_no_insights_message(
             )
             await db.commit()
     except Exception:  # pragma: no cover
-        log.exception(
-            "no-insights message persist failed session=%s", session_id
-        )
+        log.exception("no-insights message persist failed session=%s", session_id)
 
 
 async def _audit(

@@ -82,10 +82,10 @@ async def _seed_artifact(
 def _patch_aux(monkeypatch, *, draft):
     """Monkeypatch the aux model + extractor to avoid network."""
 
-    async def _no_breaker(*, bucket, workspace_id, trip_at):  # noqa: ARG001
+    async def _no_breaker(*, bucket, workspace_id, trip_at):
         return False
 
-    async def _stub_aux(db, *, workspace_id, task):  # noqa: ARG001
+    async def _stub_aux(db, *, workspace_id, task):
         return svc.AuxiliaryConfig(
             task=task,
             model="openai:gpt-test",
@@ -93,10 +93,10 @@ def _patch_aux(monkeypatch, *, draft):
             api_key_ref=None,
         )
 
-    async def _stub_extract(*, config, artifacts):  # noqa: ARG001
+    async def _stub_extract(*, config, artifacts):
         return draft
 
-    async def _silent_audit(**kwargs):  # noqa: ANN003
+    async def _silent_audit(**kwargs):
         return None
 
     monkeypatch.setattr(svc, "is_breaker_open", _no_breaker)
@@ -105,9 +105,7 @@ def _patch_aux(monkeypatch, *, draft):
     monkeypatch.setattr(audit_svc, "record", _silent_audit)
 
 
-async def test_no_artifacts_skips_with_reason(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_no_artifacts_skips_with_reason(db_session, workspace, identity, monkeypatch):
     _patch_aux(monkeypatch, draft=svc._FactExtractionDraft(facts=[]))
     outcome = await svc.extract_facts_from_runs(
         db_session,
@@ -120,9 +118,7 @@ async def test_no_artifacts_skips_with_reason(
     assert outcome.facts_superseded == 0
 
 
-async def test_first_extraction_persists_rows(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_first_extraction_persists_rows(db_session, workspace, identity, monkeypatch):
     await _seed_artifact(db_session, workspace, identity)
     draft = svc._FactExtractionDraft(
         facts=[
@@ -154,13 +150,17 @@ async def test_first_extraction_persists_rows(
     from sqlalchemy import select
 
     rows = (
-        await db_session.execute(
-            select(UserProfileFact).where(
-                UserProfileFact.workspace_id == workspace.id,
-                UserProfileFact.identity_id == identity.id,
+        (
+            await db_session.execute(
+                select(UserProfileFact).where(
+                    UserProfileFact.workspace_id == workspace.id,
+                    UserProfileFact.identity_id == identity.id,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     dims = {r.dimension for r in rows}
     assert UserProfileDimension.COMMUNICATION_STYLE in dims
     assert UserProfileDimension.GOAL_PATTERN in dims
@@ -170,9 +170,7 @@ async def test_first_extraction_persists_rows(
         assert r.superseded_by_id is None
 
 
-async def test_unchanged_facts_not_duplicated(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_unchanged_facts_not_duplicated(db_session, workspace, identity, monkeypatch):
     await _seed_artifact(db_session, workspace, identity)
     draft = svc._FactExtractionDraft(
         facts=[
@@ -202,9 +200,7 @@ async def test_unchanged_facts_not_duplicated(
     assert second.facts_superseded == 0
 
 
-async def test_supersede_chain_records_old_id(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_supersede_chain_records_old_id(db_session, workspace, identity, monkeypatch):
     await _seed_artifact(db_session, workspace, identity)
     first_draft = svc._FactExtractionDraft(
         facts=[
@@ -234,7 +230,7 @@ async def test_supersede_chain_records_old_id(
         ]
     )
 
-    async def _stub_extract(*, config, artifacts):  # noqa: ARG001
+    async def _stub_extract(*, config, artifacts):
         return second_draft
 
     monkeypatch.setattr(svc, "_extract_with_aux", _stub_extract)

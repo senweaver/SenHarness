@@ -86,14 +86,10 @@ class KbConnector(abc.ABC):
         required = set(schema.get("required", []))
         missing = [k for k in required if not config.get(k)]
         if missing:
-            raise ValueError(
-                f"connector {self.kind!r} missing required config fields: {missing}"
-            )
+            raise ValueError(f"connector {self.kind!r} missing required config fields: {missing}")
 
     @abc.abstractmethod
-    def sync(
-        self, *, config: dict
-    ) -> AsyncIterator[ConnectorDocument | SyncProgressEvent]:
+    def sync(self, *, config: dict) -> AsyncIterator[ConnectorDocument | SyncProgressEvent]:
         """Yield docs + progress events for one sync pass.
 
         Implementations are async iterators; the service layer consumes the

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/senweaver/SenHarness/tree/main/docs
+    about: Architecture, deployment, harness engineering, and feature guides.
+  - name: Discussions
+    url: https://github.com/senweaver/SenHarness/discussions
+    about: Questions, ideas, and show-and-tell.
+  - name: Security disclosure
+    url: https://github.com/senweaver/SenHarness/security/advisories/new
+    about: Report a vulnerability privately. Do not file a public issue.

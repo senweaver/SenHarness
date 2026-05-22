@@ -94,9 +94,7 @@ async def test_reserve_walks_to_third_suffix(db_session, identity):
 
 
 async def test_reserved_slug_jumps_to_random_suffix(db_session):
-    slug, used_random = await reserve_personal_workspace_slug(
-        db_session, email="admin@example.com"
-    )
+    slug, used_random = await reserve_personal_workspace_slug(db_session, email="admin@example.com")
     assert slug.startswith("admin-")
     assert used_random is True
     suffix = slug.split("-", 1)[1]

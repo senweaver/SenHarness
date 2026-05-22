@@ -42,9 +42,7 @@ async def upload_attachment(
     # Read the full body — chunked streaming isn't needed at 25MB ceiling.
     data = await file.read()
     if not data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="empty_file"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="empty_file")
 
     att = await svc.store_bytes(
         db,

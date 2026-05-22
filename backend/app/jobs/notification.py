@@ -47,9 +47,7 @@ log = logging.getLogger(__name__)
 _DEFAULT_RETENTION_DAYS = 90
 
 
-async def send_email_notification(
-    ctx: dict[str, Any], payload: dict[str, Any]
-) -> dict[str, Any]:
+async def send_email_notification(ctx: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
     """Dispatch one notification email through the platform transport.
 
     The payload ships from :func:`emit_event` and carries enough info
@@ -60,23 +58,15 @@ async def send_email_notification(
     event_key = str(payload.get("event_key") or "unknown")
     to_email = str(payload.get("to_email") or "").strip()
     if not to_email:
-        log.warning(
-            "send_email_notification: empty to_email for %s", event_key
-        )
+        log.warning("send_email_notification: empty to_email for %s", event_key)
         return {"status": "skipped_no_address", "event_key": event_key}
 
     transport = get_email_transport()
-    subject = str(
-        payload.get("subject_fallback") or payload.get("title_key") or event_key
-    )
-    body_text = str(
-        payload.get("body_fallback") or payload.get("message_key") or ""
-    )
+    subject = str(payload.get("subject_fallback") or payload.get("title_key") or event_key)
+    body_text = str(payload.get("body_fallback") or payload.get("message_key") or "")
     headers = {
         "X-SenHarness-Event-Key": event_key,
-        "X-SenHarness-Idempotency-Key": str(
-            payload.get("idempotency_key") or ""
-        ),
+        "X-SenHarness-Idempotency-Key": str(payload.get("idempotency_key") or ""),
         "X-SenHarness-Urgency": str(payload.get("urgency") or "info"),
     }
 
@@ -88,9 +78,7 @@ async def send_email_notification(
         headers=headers,
     )
     if not result.ok:
-        raise RuntimeError(
-            f"email transport {result.transport} returned ok=False: {result.error}"
-        )
+        raise RuntimeError(f"email transport {result.transport} returned ok=False: {result.error}")
     return {
         "status": "sent",
         "event_key": event_key,
@@ -111,14 +99,10 @@ async def cleanup_old_notifications(
     """
     factory = get_session_factory()
     async with factory() as db:
-        defaults = await get_system_setting(
-            db, SystemSettingKey.NOTIFICATION_DEFAULTS, default={}
-        )
+        defaults = await get_system_setting(db, SystemSettingKey.NOTIFICATION_DEFAULTS, default={})
         if not isinstance(defaults, dict):
             defaults = {}
-        retention_days = int(
-            defaults.get("in_app_retention_days") or _DEFAULT_RETENTION_DAYS
-        )
+        retention_days = int(defaults.get("in_app_retention_days") or _DEFAULT_RETENTION_DAYS)
         cutoff = utcnow_naive() - timedelta(days=retention_days)
         stmt = delete(Notification).where(Notification.created_at < cutoff)
         result = await db.execute(stmt)
@@ -131,8 +115,7 @@ async def cleanup_old_notifications(
             resource_type="notification",
             resource_id=None,
             summary=(
-                f"cleanup_old_notifications removed {deleted} rows "
-                f"older than {retention_days}d"
+                f"cleanup_old_notifications removed {deleted} rows older than {retention_days}d"
             ),
             metadata={
                 "deleted": deleted,
@@ -143,9 +126,7 @@ async def cleanup_old_notifications(
     return {"status": "swept", "deleted": deleted, "retention_days": retention_days}
 
 
-async def on_notification_job_failed_permanent(
-    ctx: dict[str, Any], exc: BaseException
-) -> None:
+async def on_notification_job_failed_permanent(ctx: dict[str, Any], exc: BaseException) -> None:
     """ARQ permanent-failure recorder for the notification email job.
 
     Mirrors :func:`app.jobs.judge.on_job_failed_permanent` so the
@@ -167,10 +148,7 @@ async def on_notification_job_failed_permanent(
                 workspace_id=None,
                 resource_type="job",
                 resource_id=None,
-                summary=(
-                    f"job {function_name} (event {event_key}) failed permanently: "
-                    f"{exc!r}"
-                ),
+                summary=(f"job {function_name} (event {event_key}) failed permanently: {exc!r}"),
                 metadata={
                     "function": function_name,
                     "event_key": event_key,

@@ -43,7 +43,6 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any
 
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -154,9 +153,7 @@ async def list_active_facts(
 ) -> dict[UserProfileDimension, UserProfileFact | None]:
     """Active fact per dimension (or ``None`` when nothing eligible)."""
     repo = UserProfileFactRepository(db)
-    return await repo.list_active_per_dimension(
-        workspace_id=workspace_id, identity_id=identity_id
-    )
+    return await repo.list_active_per_dimension(workspace_id=workspace_id, identity_id=identity_id)
 
 
 async def render_facts_for_injection(
@@ -184,9 +181,7 @@ async def render_facts_for_injection(
     bullet list. This function never raises; aux / DB failures upstream
     are handled at the call site.
     """
-    facts_by_dim = await list_active_facts(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    facts_by_dim = await list_active_facts(db, workspace_id=workspace_id, identity_id=identity_id)
 
     lines: list[str] = []
     for dim in UserProfileDimension:
@@ -234,14 +229,9 @@ async def render_facts_for_injection(
             workspace_id=workspace_id,
             resource_type="user_profile",
             resource_id=None,
-            summary=(
-                f"user_profile injection rendered: {len(lines)} dims, "
-                f"{len(rendered)} chars"
-            ),
+            summary=(f"user_profile injection rendered: {len(lines)} dims, {len(rendered)} chars"),
             metadata={
-                "identity_id_hash": uuid.uuid5(
-                    uuid.NAMESPACE_OID, str(identity_id)
-                ).hex[:16],
+                "identity_id_hash": uuid.uuid5(uuid.NAMESPACE_OID, str(identity_id)).hex[:16],
                 "dim_count": len(lines),
                 "rendered_chars": len(rendered),
                 "max_chars": int(max_chars),
@@ -304,9 +294,7 @@ async def extract_facts_from_runs(
         outcome.duration_ms = int((time.perf_counter() - started_perf) * 1000)
         return outcome
 
-    aux_config = await get_aux_model(
-        db, workspace_id=workspace_id, task=AuxiliaryTask.SUMMARIZE
-    )
+    aux_config = await get_aux_model(db, workspace_id=workspace_id, task=AuxiliaryTask.SUMMARIZE)
     if aux_config is None:
         outcome.aux_skipped = True
         outcome.aux_skip_reason = "no_aux_model"
@@ -368,9 +356,7 @@ async def extract_facts_from_runs(
                 workspace_id=workspace_id,
                 resource_type="user_profile",
                 resource_id=prior.id,
-                summary=(
-                    f"user_profile {dim.value} superseded by extraction"
-                ),
+                summary=(f"user_profile {dim.value} superseded by extraction"),
                 metadata={
                     "dimension": dim.value,
                     "old_fact_id": str(prior.id),
@@ -397,9 +383,7 @@ async def extract_facts_from_runs(
             f"{outcome.facts_unchanged} unchanged"
         ),
         metadata={
-            "identity_id_hash": uuid.uuid5(
-                uuid.NAMESPACE_OID, str(identity_id)
-            ).hex[:16],
+            "identity_id_hash": uuid.uuid5(uuid.NAMESPACE_OID, str(identity_id)).hex[:16],
             "invocation_kind": invocation_kind,
             "since_run_count": int(since_run_count),
             "artifacts_examined": int(outcome.artifacts_examined),
@@ -446,8 +430,8 @@ _EXTRACT_SYSTEM_PROMPT = (
     "0.0 and 1.0. Skip a dimension entirely when the runs do not "
     "support it; do NOT fabricate. Confidence ≥ 0.7 means 'I would "
     "stake the reputation of the system on this'. Reply as JSON "
-    "matching: {\"facts\":[{\"dimension\":\"...\",\"fact\":\"...\","
-    "\"confidence\":0.0}]}. Use only the listed dimension keys."
+    'matching: {"facts":[{"dimension":"...","fact":"...",'
+    '"confidence":0.0}]}. Use only the listed dimension keys.'
 )
 
 
@@ -612,13 +596,9 @@ async def identity_belongs_to_workspace(
     """
     from app.repositories.workspace import MembershipRepository
 
-    pairs = await MembershipRepository(db).list_with_workspace_for_identity(
-        identity_id
-    )
+    pairs = await MembershipRepository(db).list_with_workspace_for_identity(identity_id)
     return any(ws.id == workspace_id for _mem, ws in pairs)
 
 
-async def get_identity_or_none(
-    db: AsyncSession, *, identity_id: uuid.UUID
-) -> Identity | None:
+async def get_identity_or_none(db: AsyncSession, *, identity_id: uuid.UUID) -> Identity | None:
     return await db.get(Identity, identity_id)

@@ -46,12 +46,8 @@ async def _run(monkeypatch, *, platform: dict[str, Any], home: dict[str, Any]):
     def fake_repo_factory(_db):  # type: ignore[no-untyped-def]
         return _FakeWorkspaceRepo(fake_ws)
 
-    monkeypatch.setattr(
-        "app.services.logical_thread.get_system_setting", fake_get_setting
-    )
-    monkeypatch.setattr(
-        "app.services.logical_thread.WorkspaceRepository", fake_repo_factory
-    )
+    monkeypatch.setattr("app.services.logical_thread.get_system_setting", fake_get_setting)
+    monkeypatch.setattr("app.services.logical_thread.WorkspaceRepository", fake_repo_factory)
 
     return await get_routing_config(
         db=None,  # type: ignore[arg-type]
@@ -131,16 +127,12 @@ async def test_non_dict_platform_payload_is_ignored(monkeypatch) -> None:
     async def fake_get_setting(_db, _key, default=None):  # type: ignore[no-untyped-def]
         return ["not", "a", "dict"]
 
-    monkeypatch.setattr(
-        "app.services.logical_thread.get_system_setting", fake_get_setting
-    )
+    monkeypatch.setattr("app.services.logical_thread.get_system_setting", fake_get_setting)
 
     def fake_repo_factory(_db):  # type: ignore[no-untyped-def]
         return _FakeWorkspaceRepo(_FakeWorkspace(home_config_json={}))
 
-    monkeypatch.setattr(
-        "app.services.logical_thread.WorkspaceRepository", fake_repo_factory
-    )
+    monkeypatch.setattr("app.services.logical_thread.WorkspaceRepository", fake_repo_factory)
 
     cfg = await get_routing_config(
         db=None,  # type: ignore[arg-type]

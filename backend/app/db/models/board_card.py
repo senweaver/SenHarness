@@ -58,9 +58,7 @@ BOARD_CARD_COLUMN_VALUES: tuple[str, ...] = tuple(c.value for c in BoardCardColu
 BOARD_CARD_PRIORITY_VALUES: tuple[str, ...] = tuple(p.value for p in BoardCardPriority)
 
 
-class BoardCard(
-    UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base
-):
+class BoardCard(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "board_cards"
     __table_args__ = (
         Index(
@@ -119,9 +117,7 @@ class BoardCard(
         index=True,
     )
 
-    sort_order: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, server_default="0"
-    )
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
     due_at: Mapped[datetime | None] = mapped_column(nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(nullable=True)

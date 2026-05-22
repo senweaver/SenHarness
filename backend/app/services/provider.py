@@ -46,9 +46,7 @@ _DISCOVER_HTTP_TIMEOUT_S = 8.0
 _DISCOVER_MAX_MODELS = 200
 
 
-async def list_providers(
-    session: AsyncSession, *, workspace_id: uuid.UUID
-) -> list[ModelProvider]:
+async def list_providers(session: AsyncSession, *, workspace_id: uuid.UUID) -> list[ModelProvider]:
     repo = ModelProviderRepository(session)
     rows = await repo.list(workspace_id=workspace_id, limit=200)
     return sorted(rows, key=lambda p: (p.sort_order, p.created_at))
@@ -113,9 +111,7 @@ async def create_provider(
 ) -> ModelProvider:
     cleaned_kind = (kind or "").strip().lower()
     if not is_known_kind(cleaned_kind):
-        raise ValidationFailed(
-            f"unknown provider kind: {kind!r}", code="provider.unknown_kind"
-        )
+        raise ValidationFailed(f"unknown provider kind: {kind!r}", code="provider.unknown_kind")
 
     entry = get_entry(cleaned_kind)
     canonical = entry.kind if entry is not None else cleaned_kind
@@ -218,9 +214,7 @@ async def update_provider(
     return provider
 
 
-async def delete_provider(
-    session: AsyncSession, *, provider: ModelProvider
-) -> None:
+async def delete_provider(session: AsyncSession, *, provider: ModelProvider) -> None:
     await ModelProviderRepository(session).soft_delete(provider)
 
 
@@ -290,9 +284,7 @@ async def update_provider_model(
     return pm
 
 
-async def delete_provider_model(
-    session: AsyncSession, *, pm: ProviderModel
-) -> None:
+async def delete_provider_model(session: AsyncSession, *, pm: ProviderModel) -> None:
     """Delete a single provider_model row.
 
     Only operator-typed (`source="manual"`) rows can be deleted. Rows seeded
@@ -410,9 +402,7 @@ async def add_manual_model(
 # ─── Discover ────────────────────────────────────────────────────
 
 
-async def discover_models(
-    session: AsyncSession, *, provider: ModelProvider
-) -> dict:
+async def discover_models(session: AsyncSession, *, provider: ModelProvider) -> dict:
     """Return what models the upstream advertises plus what's already in DB.
 
     Strategy by family:
@@ -506,9 +496,7 @@ async def test_connectivity(
             )
             assert_safe_url(url, allow_private=True)
             async with httpx.AsyncClient(timeout=_DISCOVER_HTTP_TIMEOUT_S) as client:
-                resp = await client.get(
-                    url, headers={"Authorization": f"Bearer {api_key}"}
-                )
+                resp = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
             elapsed = int((time.monotonic() - start) * 1000)
             if resp.status_code >= 400:
                 return {
@@ -612,9 +600,7 @@ async def apply_discovered_models(
 # ─── Internals ──────────────────────────────────────────────────
 
 
-async def _provider_api_key(
-    session: AsyncSession, *, provider: ModelProvider
-) -> str | None:
+async def _provider_api_key(session: AsyncSession, *, provider: ModelProvider) -> str | None:
     """Return the plaintext default key for ``provider`` (or None)."""
     key_repo = ModelKeyRepository(session)
     key = await key_repo.get_by(provider_id=provider.id, name="default")
@@ -704,9 +690,7 @@ def _static_models_for(kind: str) -> list[dict]:
     return out
 
 
-def _merge_with_catalog(
-    kind: str, discovered: list[dict], existing_ids: list[str]
-) -> list[dict]:
+def _merge_with_catalog(kind: str, discovered: list[dict], existing_ids: list[str]) -> list[dict]:
     """Enrich raw discover rows with catalog metadata (family, recommended)."""
     catalog_index = {row.model: row for row in CATALOG.get(kind, [])}
     existing_set = set(existing_ids)

@@ -20,11 +20,7 @@ class InflightRunRepository(AsyncRepository[InflightRun]):
         super().__init__(session, InflightRun)
 
     async def get_by_run_id(self, *, run_id: uuid.UUID) -> InflightRun | None:
-        stmt = (
-            select(InflightRun)
-            .where(InflightRun.run_id == run_id)
-            .limit(1)
-        )
+        stmt = select(InflightRun).where(InflightRun.run_id == run_id).limit(1)
         return (await self.session.execute(stmt)).scalar_one_or_none()
 
     async def list_running(
@@ -103,11 +99,7 @@ class InflightRunRepository(AsyncRepository[InflightRun]):
         stmt = (
             select(InflightRun)
             .where(InflightRun.workspace_id == workspace_id)
-            .where(
-                InflightRun.state.in_(
-                    (InflightRunState.RUNNING, InflightRunState.PAUSED)
-                )
-            )
+            .where(InflightRun.state.in_((InflightRunState.RUNNING, InflightRunState.PAUSED)))
             .order_by(asc(InflightRun.started_at))
             .limit(limit)
         )
@@ -133,11 +125,7 @@ class InflightRunRepository(AsyncRepository[InflightRun]):
         stmt = (
             select(InflightRun)
             .where(InflightRun.workspace_id.in_(ids))
-            .where(
-                InflightRun.state.in_(
-                    (InflightRunState.RUNNING, InflightRunState.PAUSED)
-                )
-            )
+            .where(InflightRun.state.in_((InflightRunState.RUNNING, InflightRunState.PAUSED)))
             .order_by(asc(InflightRun.started_at))
             .limit(limit_per_workspace * max(len(ids), 1))
         )

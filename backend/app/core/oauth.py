@@ -66,7 +66,5 @@ if settings.OAUTH_MICROSOFT_CLIENT_ID and settings.OAUTH_MICROSOFT_CLIENT_SECRET
 def registered_providers() -> list[str]:
     """List of provider names currently wired in env."""
     return [
-        name
-        for name in ("google", "github", "microsoft")
-        if getattr(oauth, name, None) is not None
+        name for name in ("google", "github", "microsoft") if getattr(oauth, name, None) is not None
     ]

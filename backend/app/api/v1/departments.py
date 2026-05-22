@@ -1,4 +1,5 @@
 """Workspace department CRUD (admin-only)."""
+
 from __future__ import annotations
 
 import uuid
@@ -26,15 +27,11 @@ async def list_departments(
     identity_id: CurrentIdentityId,
 ) -> list[DepartmentRead]:
     # Any member can list departments (used in member edit dropdowns).
-    await ws_svc.ensure_member_access(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=workspace_id, identity_id=identity_id)
     from app.repositories.workspace import MembershipRepository
 
     rows = await DepartmentRepository(db).list_for_workspace(workspace_id)
-    counts = await MembershipRepository(db).count_by_department(
-        workspace_id=workspace_id
-    )
+    counts = await MembershipRepository(db).count_by_department(workspace_id=workspace_id)
     out: list[DepartmentRead] = []
     for d in rows:
         card = _read(d)
@@ -92,9 +89,7 @@ async def update_department(
     repo = DepartmentRepository(db)
     row = await repo.get(department_id)
     if row is None or row.workspace_id != workspace_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Department not found."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found.")
 
     # model_fields_set distinguishes "omitted" from "explicit null" — we need
     # that distinction to support move-to-root (``parent_id: null``).
@@ -152,8 +147,6 @@ async def delete_department(
     repo = DepartmentRepository(db)
     row = await repo.get(department_id)
     if row is None or row.workspace_id != workspace_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Department not found."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found.")
     await repo.soft_delete(row)
     await db.commit()

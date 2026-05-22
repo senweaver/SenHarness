@@ -54,9 +54,7 @@ async def test_create_pack_seeds_v1_and_list_returns_it(async_client) -> None:
     headers, _ = await _bootstrap(async_client)
     pid = await _create_pack(async_client, headers, body="hello v1 world")
 
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/versions", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/versions", headers=headers)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["pack_id"] == pid
@@ -70,9 +68,7 @@ async def test_active_version_endpoint_returns_content(async_client) -> None:
     headers, _ = await _bootstrap(async_client)
     pid = await _create_pack(async_client, headers, body="content for active")
 
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/versions/active", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/versions/active", headers=headers)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["state"] == "active"
@@ -83,9 +79,7 @@ async def test_get_version_by_number(async_client) -> None:
     headers, _ = await _bootstrap(async_client)
     pid = await _create_pack(async_client, headers)
 
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/versions/1", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/versions/1", headers=headers)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["version_no"] == 1
@@ -94,9 +88,7 @@ async def test_get_version_by_number(async_client) -> None:
 async def test_unknown_version_no_returns_404(async_client) -> None:
     headers, _ = await _bootstrap(async_client)
     pid = await _create_pack(async_client, headers)
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/versions/99", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/versions/99", headers=headers)
     assert r.status_code == 404
 
 
@@ -112,18 +104,14 @@ async def test_update_pack_creates_v2_and_activates(async_client) -> None:
     assert r.status_code == 200, r.text
     pack_after = r.json()
 
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/versions", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/versions", headers=headers)
     versions = r.json()["items"]
     assert {v["version_no"] for v in versions} == {1, 2}
     states = {v["version_no"]: v["state"] for v in versions}
     assert states[1] == "retired"
     assert states[2] == "active"
 
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/content", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/content", headers=headers)
     assert r.json()["content_md"] == "v2 body rewritten by user"
 
     assert pack_after["content_hash"] is not None
@@ -140,9 +128,7 @@ async def test_update_pack_with_identical_body_does_not_create_duplicate(
         json={"content_md": "same forever"},
     )
     assert r.status_code == 200
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/versions", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/versions", headers=headers)
     assert len(r.json()["items"]) == 1
 
 
@@ -154,9 +140,7 @@ async def test_activate_version_endpoint_swaps_active(async_client) -> None:
         headers=headers,
         json={"content_md": "v2 body"},
     )
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/versions", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/versions", headers=headers)
     versions = r.json()["items"]
     v1 = next(v for v in versions if v["version_no"] == 1)
 
@@ -168,9 +152,7 @@ async def test_activate_version_endpoint_swaps_active(async_client) -> None:
     assert r.status_code == 200, r.text
     assert r.json()["state"] == "active"
 
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/versions/active", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/versions/active", headers=headers)
     assert r.json()["version_no"] == 1
     assert r.json()["content_md"] == "v1 body"
 
@@ -183,9 +165,7 @@ async def test_transition_endpoint_drives_state_machine(async_client) -> None:
         headers=headers,
         json={"content_md": "intermediate body"},
     )
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/versions", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/versions", headers=headers)
     v_active = next(v for v in r.json()["items"] if v["state"] == "active")
     r = await async_client.post(
         f"/api/v1/skills/packs/{pid}/versions/{v_active['id']}/transition",
@@ -200,9 +180,7 @@ async def test_cross_workspace_version_lookup_returns_404(async_client) -> None:
     headers_a, _ = await _bootstrap(async_client)
     pid = await _create_pack(async_client, headers_a)
     headers_b, _ = await _bootstrap(async_client)
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/versions", headers=headers_b
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/versions", headers=headers_b)
     assert r.status_code == 404
 
 
@@ -214,9 +192,7 @@ async def test_admin_only_for_activate_route(async_client) -> None:
         headers=headers,
         json={"content_md": "v2 alt"},
     )
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/versions", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/versions", headers=headers)
     target = next(v for v in r.json()["items"] if v["version_no"] == 1)
 
     inv = await async_client.post(
@@ -248,9 +224,7 @@ async def test_admin_only_for_activate_route(async_client) -> None:
 async def test_invalid_transition_returns_409(async_client) -> None:
     headers, _ = await _bootstrap(async_client)
     pid = await _create_pack(async_client, headers)
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/versions", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/versions", headers=headers)
     v1 = r.json()["items"][0]
     r = await async_client.post(
         f"/api/v1/skills/packs/{pid}/versions/{v1['id']}/transition",

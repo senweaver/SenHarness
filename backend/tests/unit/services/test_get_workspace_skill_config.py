@@ -75,9 +75,7 @@ async def test_platform_default_change_visible_on_next_read(db_session, workspac
 
 
 async def test_invalid_strategy_falls_back_to_default(db_session, workspace):
-    workspace.home_config_json = {
-        "skills": {"selection_strategy": "not-a-real-strategy"}
-    }
+    workspace.home_config_json = {"skills": {"selection_strategy": "not-a-real-strategy"}}
     await db_session.flush()
 
     cfg = await get_workspace_skill_config(db_session, workspace_id=workspace.id)

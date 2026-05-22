@@ -25,9 +25,7 @@ async def _seed_session(db_session, workspace, identity):
     )
 
 
-async def test_capture_persists_row_with_folded_turns(
-    db_session, workspace, identity
-):
+async def test_capture_persists_row_with_folded_turns(db_session, workspace, identity):
     sess = await _seed_session(db_session, workspace, identity)
     run_id = uuid.uuid4()
     events = [
@@ -61,9 +59,7 @@ async def test_capture_persists_row_with_folded_turns(
     assert row.turns_json[0]["iteration"] == 0
 
 
-async def test_capture_is_idempotent_on_run_id(
-    db_session, workspace, identity
-):
+async def test_capture_is_idempotent_on_run_id(db_session, workspace, identity):
     sess = await _seed_session(db_session, workspace, identity)
     run_id = uuid.uuid4()
     args: dict = {
@@ -81,9 +77,7 @@ async def test_capture_is_idempotent_on_run_id(
     assert first.id == second.id
 
 
-async def test_capture_from_run_outcome_infers_success(
-    db_session, workspace, identity
-):
+async def test_capture_from_run_outcome_infers_success(db_session, workspace, identity):
     sess = await _seed_session(db_session, workspace, identity)
     events = [
         {"kind": "delta", "data": {"text": "ok"}},
@@ -105,9 +99,7 @@ async def test_capture_from_run_outcome_infers_success(
     assert row.error_kind is None
 
 
-async def test_capture_from_run_outcome_marks_cancelled(
-    db_session, workspace, identity
-):
+async def test_capture_from_run_outcome_marks_cancelled(db_session, workspace, identity):
     import asyncio
 
     sess = await _seed_session(db_session, workspace, identity)
@@ -153,9 +145,7 @@ async def test_capture_failure_returns_none_and_does_not_break(
     assert row is None
 
 
-async def test_get_artifact_by_id_rejects_cross_workspace(
-    db_session, workspace, identity
-):
+async def test_get_artifact_by_id_rejects_cross_workspace(db_session, workspace, identity):
     from app.core.errors import NotFound
 
     sess = await _seed_session(db_session, workspace, identity)
@@ -179,9 +169,7 @@ async def test_get_artifact_by_id_rejects_cross_workspace(
         )
 
 
-async def test_update_judge_score_persists_value(
-    db_session, workspace, identity
-):
+async def test_update_judge_score_persists_value(db_session, workspace, identity):
     sess = await _seed_session(db_session, workspace, identity)
     row = await artifact_svc.capture_artifact(
         db_session,
@@ -203,9 +191,7 @@ async def test_update_judge_score_persists_value(
     assert updated.judge_score == pytest.approx(0.42)
 
 
-async def test_update_judge_score_validates_range(
-    db_session, workspace, identity
-):
+async def test_update_judge_score_validates_range(db_session, workspace, identity):
     sess = await _seed_session(db_session, workspace, identity)
     row = await artifact_svc.capture_artifact(
         db_session,

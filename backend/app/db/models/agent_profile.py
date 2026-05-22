@@ -33,9 +33,7 @@ from app.db.base import Base
 from app.db.mixins import SoftDeleteMixin, TimestampMixin, UuidPkMixin, WorkspaceScopedMixin
 
 
-class AgentProfile(
-    UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base
-):
+class AgentProfile(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "agent_profiles"
     __table_args__ = (
         Index(
@@ -67,6 +65,4 @@ class AgentProfile(
     aggregated_run_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
-    sample_size: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, server_default="0"
-    )
+    sample_size: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")

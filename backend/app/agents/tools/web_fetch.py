@@ -21,8 +21,8 @@ from app.core.url_safety import UnsafeURLError, assert_safe_url
 
 log = logging.getLogger(__name__)
 
-MAX_BYTES = 2 * 1024 * 1024        # 2 MiB
-MAX_OUTPUT_CHARS = 40_000          # clamp markdown length so it doesn't blow context
+MAX_BYTES = 2 * 1024 * 1024  # 2 MiB
+MAX_OUTPUT_CHARS = 40_000  # clamp markdown length so it doesn't blow context
 DEFAULT_TIMEOUT = 20.0
 
 
@@ -69,9 +69,7 @@ async def run_web_fetch(args: WebFetchArgs) -> dict:
             # even if the initial URL was public).
             follow_redirects=False,
             headers={
-                "User-Agent": (
-                    "SenHarnessBot/0.1 (+https://senharness.app; web_fetch tool)"
-                ),
+                "User-Agent": ("SenHarnessBot/0.1 (+https://senharness.app; web_fetch tool)"),
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
             },
@@ -161,9 +159,7 @@ async def _follow_with_ssrf_check(
         return resp
     # Too many redirects; let httpx raise its standard error so the caller
     # sees a normal http_error branch.
-    raise httpx.TooManyRedirects(
-        "Exceeded SSRF-safe redirect cap", request=resp.request
-    )
+    raise httpx.TooManyRedirects("Exceeded SSRF-safe redirect cap", request=resp.request)
 
 
 def _decode_bytes(raw: bytes, encoding: str | None) -> str:

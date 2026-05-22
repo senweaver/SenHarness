@@ -71,7 +71,9 @@ async def create_workspace(
 async def ensure_member_access(
     session: AsyncSession, *, workspace_id: uuid.UUID, identity_id: uuid.UUID
 ) -> Membership:
-    mem = await MembershipRepository(session).get_by_identity_and_workspace(identity_id, workspace_id)
+    mem = await MembershipRepository(session).get_by_identity_and_workspace(
+        identity_id, workspace_id
+    )
     if mem is None or mem.status != MembershipStatus.ACTIVE:
         raise PermissionDenied("not_a_member", code="workspace.not_a_member")
     return mem
@@ -90,14 +92,8 @@ async def list_active_workspace_ids_for_identity(
     pathological membership counts. Hidden / deleted workspaces are
     filtered out via :meth:`MembershipRepository.list_with_workspace_for_identity`.
     """
-    pairs = await MembershipRepository(session).list_with_workspace_for_identity(
-        identity_id
-    )
-    active_pairs = [
-        (mem, ws)
-        for mem, ws in pairs
-        if mem.status == MembershipStatus.ACTIVE
-    ]
+    pairs = await MembershipRepository(session).list_with_workspace_for_identity(identity_id)
+    active_pairs = [(mem, ws) for mem, ws in pairs if mem.status == MembershipStatus.ACTIVE]
     active_pairs.sort(key=lambda pair: (pair[1].name or "").lower())
     return [ws.id for _, ws in active_pairs[:limit]]
 

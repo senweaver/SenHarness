@@ -84,9 +84,7 @@ async def test_squad_star_roundtrip(async_client, db_session, workspace, identit
     assert r3.status_code == 204
 
 
-async def test_squad_star_rejects_cross_workspace(
-    async_client, db_session, workspace, identity
-):
+async def test_squad_star_rejects_cross_workspace(async_client, db_session, workspace, identity):
     """Caller without membership in the squad's workspace gets 403."""
     from app.services import auth as auth_svc
     from app.services import squad as squad_svc
@@ -119,9 +117,7 @@ async def test_squad_star_rejects_cross_workspace(
 
 
 # ─── Session star ────────────────────────────────────────────
-async def test_session_star_roundtrip(
-    async_client, db_session, workspace, identity, agent
-):
+async def test_session_star_roundtrip(async_client, db_session, workspace, identity, agent):
     from app.services import session as session_svc
 
     sess = await session_svc.create_session(
@@ -229,13 +225,9 @@ async def test_sidebar_my_items_shape_and_order(
 
     # The explicitly-starred squad is pinned; the explicitly-unpinned
     # agent fixture is below it.
-    squad_row = next(
-        i for i in body["items"] if i["type"] == "squad" and i["id"] == str(squad.id)
-    )
+    squad_row = next(i for i in body["items"] if i["type"] == "squad" and i["id"] == str(squad.id))
     assert squad_row["pinned"] is True
-    agent_row = next(
-        i for i in body["items"] if i["type"] == "agent" and i["id"] == str(agent.id)
-    )
+    agent_row = next(i for i in body["items"] if i["type"] == "agent" and i["id"] == str(agent.id))
     assert agent_row["pinned"] is False
     # Pinned items must precede any unpinned items.
     pinned_idxs = [i for i, row in enumerate(body["items"]) if row["pinned"]]
@@ -325,9 +317,7 @@ async def test_accept_invitation_fans_out_existing_workspace_items(
         password="correct horse battery staple",
         create_personal_workspace=False,
     )
-    await ws_svc.accept_invitation(
-        db_session, code=invite.code, identity_id=joiner.identity.id
-    )
+    await ws_svc.accept_invitation(db_session, code=invite.code, identity_id=joiner.identity.id)
     await db_session.commit()
 
     headers = _bearer(joiner.identity.id, workspace_id=workspace.id)
@@ -423,9 +413,7 @@ async def test_fan_out_is_idempotent(db_session, workspace, identity, agent):
 
 
 # ─── Onboarding ─────────────────────────────────────────────
-async def test_onboarding_complete_is_idempotent(
-    async_client, db_session, identity
-):
+async def test_onboarding_complete_is_idempotent(async_client, db_session, identity):
     headers = _bearer(identity.id)
     r1 = await async_client.post(
         "/api/v1/onboarding/complete",
@@ -443,9 +431,7 @@ async def test_onboarding_complete_is_idempotent(
     assert r2.json()["onboarded_at"] == first
 
 
-async def test_me_exposes_onboarded_at(
-    async_client, db_session, identity, workspace
-):
+async def test_me_exposes_onboarded_at(async_client, db_session, identity, workspace):
     # ``identity`` fixture creates a fresh identity that starts with
     # ``onboarded_at = NULL`` (the migration backfill only affects rows
     # that existed at migration time).

@@ -33,9 +33,7 @@ async def _bootstrap_workspace(async_client) -> tuple[dict, str, str]:
         json={"email": email, "name": "Judge Job", "password": password},
     )
     assert r.status_code == 201, r.text
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -47,9 +45,7 @@ async def _bootstrap_workspace(async_client) -> tuple[dict, str, str]:
     assert r.status_code in (200, 201), r.text
     ws_id = r.json()["id"]
     headers["X-Workspace-Id"] = ws_id
-    r = await async_client.post(
-        "/api/v1/sessions", headers=headers, json={"kind": "p2p"}
-    )
+    r = await async_client.post("/api/v1/sessions", headers=headers, json={"kind": "p2p"})
     sid = r.json()["id"]
     return headers, ws_id, sid
 
@@ -200,9 +196,7 @@ async def test_judge_session_artifact_skips_already_judged(async_client):
     assert result["status"] == "skipped_already"
 
 
-async def test_judge_session_artifact_aux_failure_bumps_and_raises(
-    async_client, redis_available
-):
+async def test_judge_session_artifact_aux_failure_bumps_and_raises(async_client, redis_available):
     if not redis_available:
         pytest.skip("Redis required for breaker counter")
 
@@ -230,9 +224,7 @@ async def test_judge_session_artifact_aux_failure_bumps_and_raises(
         await judge_mod.judge_session_artifact({}, aid)
 
 
-async def test_judge_session_artifact_breaker_open_writes_degraded(
-    async_client, redis_available
-):
+async def test_judge_session_artifact_breaker_open_writes_degraded(async_client, redis_available):
     if not redis_available:
         pytest.skip("Redis required for breaker state")
 

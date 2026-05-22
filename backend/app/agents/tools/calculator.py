@@ -24,9 +24,7 @@ _MAX_NODES = 200
 
 
 class CalculatorArgs(BaseModel):
-    expression: str = Field(
-        ..., description="Arithmetic expression e.g. '(1+2)*3**4/5 - 6'"
-    )
+    expression: str = Field(..., description="Arithmetic expression e.g. '(1+2)*3**4/5 - 6'")
 
 
 def _eval(node: ast.AST, count: list[int]) -> float:

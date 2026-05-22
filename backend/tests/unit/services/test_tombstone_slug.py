@@ -39,10 +39,7 @@ async def test_is_slug_tombstoned_flips_after_delete(db_session, identity):
     assert await quota_svc.is_slug_tombstoned(db_session, slug=slug) is False
 
     await db_session.execute(
-        text(
-            "UPDATE workspaces SET deleted_at = now(), slug_tombstoned = TRUE "
-            "WHERE id = :id"
-        ),
+        text("UPDATE workspaces SET deleted_at = now(), slug_tombstoned = TRUE WHERE id = :id"),
         {"id": ws.id},
     )
     await db_session.flush()
@@ -63,10 +60,7 @@ async def test_personal_allocator_skips_tombstoned_base(db_session, identity):
 
     # Tombstone it.
     await db_session.execute(
-        text(
-            "UPDATE workspaces SET deleted_at = now(), slug_tombstoned = TRUE "
-            "WHERE id = :id"
-        ),
+        text("UPDATE workspaces SET deleted_at = now(), slug_tombstoned = TRUE WHERE id = :id"),
         {"id": ws.id},
     )
     await db_session.flush()
@@ -95,12 +89,14 @@ async def test_release_on_delete_marks_log_rows(db_session, identity):
     await db_session.flush()
 
     rows_before = (
-        await db_session.execute(
-            select(WorkspaceCreationLog).where(
-                WorkspaceCreationLog.workspace_id == ws.id
+        (
+            await db_session.execute(
+                select(WorkspaceCreationLog).where(WorkspaceCreationLog.workspace_id == ws.id)
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(rows_before) == 1
     assert rows_before[0].soft_deleted_workspace is False
 
@@ -111,10 +107,12 @@ async def test_release_on_delete_marks_log_rows(db_session, identity):
     assert affected == 1
 
     rows_after = (
-        await db_session.execute(
-            select(WorkspaceCreationLog).where(
-                WorkspaceCreationLog.workspace_id == ws.id
+        (
+            await db_session.execute(
+                select(WorkspaceCreationLog).where(WorkspaceCreationLog.workspace_id == ws.id)
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert rows_after[0].soft_deleted_workspace is True

@@ -42,11 +42,9 @@ from app.core.errors import (
     HubDisabled,
     HubInvalidStateTransition,
     HubScopePermissionDenied,
-    HubSlugTombstoned,
     HubTerminalState,
     NotFound,
 )
-from app.core.security import utcnow_naive
 from app.db.models.hub_skill_pack import HubScope, HubSkillPack, HubSkillPackState
 from app.db.models.identity import Identity, PlatformRole
 from app.db.models.workspace import Workspace
@@ -109,9 +107,7 @@ async def require_hub_enabled(db: AsyncSession) -> None:
 
 
 # ── Tenant resolution ────────────────────────────────────────
-async def resolve_caller_tenant(
-    db: AsyncSession, *, workspace_id: uuid.UUID
-) -> uuid.UUID | None:
+async def resolve_caller_tenant(db: AsyncSession, *, workspace_id: uuid.UUID) -> uuid.UUID | None:
     """Translate a workspace id into the tenant id for visibility.
 
     Order of preference:
@@ -189,9 +185,7 @@ async def list_hub_versions(
     """Version history for a hub pack, scoped through the visibility
     check on the parent.
     """
-    await get_hub_pack_visible(
-        db, hub_pack_id=hub_pack_id, workspace_id=workspace_id
-    )
+    await get_hub_pack_visible(db, hub_pack_id=hub_pack_id, workspace_id=workspace_id)
     return await HubSkillPackVersionRepository(db).list_for_pack(
         hub_pack_id=hub_pack_id, limit=limit, offset=offset
     )
@@ -203,12 +197,8 @@ async def get_active_version(
     hub_pack_id: uuid.UUID,
     workspace_id: uuid.UUID,
 ) -> Any:
-    await get_hub_pack_visible(
-        db, hub_pack_id=hub_pack_id, workspace_id=workspace_id
-    )
-    row = await HubSkillPackVersionRepository(db).get_active(
-        hub_pack_id=hub_pack_id
-    )
+    await get_hub_pack_visible(db, hub_pack_id=hub_pack_id, workspace_id=workspace_id)
+    row = await HubSkillPackVersionRepository(db).get_active(hub_pack_id=hub_pack_id)
     if row is None:
         raise NotFound(
             "hub_skill_pack_version_not_found",
@@ -241,18 +231,14 @@ async def is_hub_slug_tombstoned(
     The M3.3 promote verb consults this before allowing a new pack
     to claim the slug.
     """
-    pack = await HubSkillPackRepository(db).get_by_slug(
-        scope=scope, tenant_id=tenant_id, slug=slug
-    )
+    pack = await HubSkillPackRepository(db).get_by_slug(scope=scope, tenant_id=tenant_id, slug=slug)
     if pack is None:
         return False
     return pack.state == HubSkillPackState.TOMBSTONE
 
 
 # ── State machine ────────────────────────────────────────────
-def _check_edge(
-    current: HubSkillPackState, target: HubSkillPackState
-) -> None:
+def _check_edge(current: HubSkillPackState, target: HubSkillPackState) -> None:
     if current == HubSkillPackState.TOMBSTONE:
         raise HubTerminalState(
             "hub_pack_already_tombstoned",
@@ -272,9 +258,7 @@ def _check_edge(
         )
 
 
-def _ensure_platform_admin_for_scope(
-    actor: Identity, pack: HubSkillPack
-) -> None:
+def _ensure_platform_admin_for_scope(actor: Identity, pack: HubSkillPack) -> None:
     """PLATFORM-scope packs may only be transitioned by a platform
     admin. TENANT-scope packs flow through the workspace admin path.
     """
@@ -303,9 +287,7 @@ async def transition_hub_pack_state(
     PLATFORM_ADMIN``; TENANT-scope packs accept any caller (the route
     layer adds the tenant-admin gate). Caller commits.
     """
-    pack = await HubSkillPackRepository(db).get(
-        hub_pack_id, include_deleted=True
-    )
+    pack = await HubSkillPackRepository(db).get(hub_pack_id, include_deleted=True)
     if pack is None:
         raise NotFound("hub_skill_pack_not_found", code="hub.pack_not_found")
 
@@ -334,10 +316,7 @@ async def transition_hub_pack_state(
         workspace_id=None,
         resource_type="hub_skill_pack",
         resource_id=pack.id,
-        summary=(
-            f"hub skill pack {pack.slug!r} {current_state.value} -> "
-            f"{target_state.value}"
-        ),
+        summary=(f"hub skill pack {pack.slug!r} {current_state.value} -> {target_state.value}"),
         metadata=metadata,
         request=request,
     )
@@ -345,9 +324,7 @@ async def transition_hub_pack_state(
 
 
 # ── Promotion helper (M3.3 entry point) ──────────────────────
-async def is_caller_eligible_for_scope(
-    actor: Identity, scope: HubScope
-) -> bool:
+async def is_caller_eligible_for_scope(actor: Identity, scope: HubScope) -> bool:
     """Quick predicate the M3.3 promote verb will reuse.
 
     PLATFORM scope requires the platform admin role; TENANT scope is

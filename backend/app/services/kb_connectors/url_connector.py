@@ -49,9 +49,7 @@ class UrlConnector(KbConnector):
         except UnsafeURLError as exc:
             raise ValueError(f"unsafe_url: {exc}") from exc
 
-    async def sync(
-        self, *, config: dict
-    ) -> AsyncIterator[ConnectorDocument | SyncProgressEvent]:
+    async def sync(self, *, config: dict) -> AsyncIterator[ConnectorDocument | SyncProgressEvent]:
         url = str(config["url"]).strip()
         title = str(config.get("title") or url)[:255]
         yield SyncProgressEvent(level="info", msg=f"fetching {url}", data={"url": url})

@@ -48,9 +48,7 @@ async def _make_stale_pack(db, *, workspace_id):
     return pack
 
 
-async def test_propose_archive_creates_approval_with_correct_payload(
-    db_session, workspace
-):
+async def test_propose_archive_creates_approval_with_correct_payload(db_session, workspace):
     pack = await _make_stale_pack(db_session, workspace_id=workspace.id)
     started_at = utcnow_naive()
 
@@ -103,14 +101,18 @@ async def test_propose_archive_writes_audit_row(db_session, workspace):
     assert approval is not None
 
     audits = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.action == svc.CURATOR_ARCHIVE_PROPOSED,
-                AuditEvent.resource_type == "skill_pack",
-                AuditEvent.resource_id == pack.id,
+        (
+            await db_session.execute(
+                select(AuditEvent).where(
+                    AuditEvent.action == svc.CURATOR_ARCHIVE_PROPOSED,
+                    AuditEvent.resource_type == "skill_pack",
+                    AuditEvent.resource_id == pack.id,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(audits) == 1
     audit = audits[0]
     assert audit.workspace_id == workspace.id
@@ -139,12 +141,15 @@ async def test_propose_archive_is_idempotent_on_duplicate(db_session, workspace)
     assert second is None
 
     rows = (
-        await db_session.execute(
-            select(Approval).where(
-                Approval.resource_type
-                == ApprovalResourceType.SKILL_PACK_ARCHIVE.value,
-                Approval.resource_id == pack.id,
+        (
+            await db_session.execute(
+                select(Approval).where(
+                    Approval.resource_type == ApprovalResourceType.SKILL_PACK_ARCHIVE.value,
+                    Approval.resource_id == pack.id,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(rows) == 1

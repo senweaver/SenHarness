@@ -87,9 +87,7 @@ async def test_http_error_when_no_escalation(db_session, workspace, agent):
         patch.object(
             flow_svc,
             "_execute_http",
-            AsyncMock(
-                return_value=(FlowRunOutcome.HTTP_ERROR, 503, None, 90)
-            ),
+            AsyncMock(return_value=(FlowRunOutcome.HTTP_ERROR, 503, None, 90)),
         ),
     ):
         run_id = await flow_svc._run_http_flow(
@@ -142,9 +140,7 @@ async def test_escalation_to_agent(db_session, workspace, agent):
         patch.object(
             flow_svc,
             "_execute_http",
-            AsyncMock(
-                return_value=(FlowRunOutcome.ESCALATED_TO_AGENT, 503, None, 110)
-            ),
+            AsyncMock(return_value=(FlowRunOutcome.ESCALATED_TO_AGENT, 503, None, 110)),
         ),
         patch.object(flow_svc, "_spawn_agent_run_task") as m_spawn,
     ):

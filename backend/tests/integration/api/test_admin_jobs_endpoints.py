@@ -23,9 +23,7 @@ from app.db.models.job_run import JobRun, JobRunStatus
 pytestmark = pytest.mark.asyncio
 
 
-def _bearer(
-    identity_id: uuid.UUID, *, workspace_id: uuid.UUID | None = None
-) -> dict[str, str]:
+def _bearer(identity_id: uuid.UUID, *, workspace_id: uuid.UUID | None = None) -> dict[str, str]:
     token, _, _ = create_access_token(
         identity_id=str(identity_id),
         workspace_id=str(workspace_id) if workspace_id is not None else None,
@@ -64,9 +62,7 @@ async def test_queues_workspace_admin_returns_scoped_data(
 ):
     await _seed_failed_job(db_session, workspace)
     headers = _bearer(identity.id, workspace_id=workspace.id)
-    resp = await async_client.get(
-        "/api/v1/admin/jobs/queues", headers=headers
-    )
+    resp = await async_client.get("/api/v1/admin/jobs/queues", headers=headers)
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert "by_function" in body
@@ -75,9 +71,7 @@ async def test_queues_workspace_admin_returns_scoped_data(
     assert "curator_tick" in fn_names
 
 
-async def test_queues_rejects_member_without_admin_role(
-    async_client, db_session, workspace
-):
+async def test_queues_rejects_member_without_admin_role(async_client, db_session, workspace):
     """A non-admin workspace member must get 403 even with X-Workspace-Id."""
     from app.db.models.membership import Membership, MembershipStatus
     from app.db.models.role import BuiltinRole
@@ -102,16 +96,12 @@ async def test_queues_rejects_member_without_admin_role(
     await db_session.commit()
 
     headers = _bearer(member.identity.id, workspace_id=workspace.id)
-    resp = await async_client.get(
-        "/api/v1/admin/jobs/queues", headers=headers
-    )
+    resp = await async_client.get("/api/v1/admin/jobs/queues", headers=headers)
     assert resp.status_code == 403
 
 
 # ── /recent ───────────────────────────────────────────────────
-async def test_recent_filters_by_status(
-    async_client, db_session, workspace, identity
-):
+async def test_recent_filters_by_status(async_client, db_session, workspace, identity):
     failed_row = await _seed_failed_job(db_session, workspace)
 
     # And one success row that must NOT match a `status=failed_permanent` filter.
@@ -143,25 +133,17 @@ async def test_recent_filters_by_status(
         assert row["status"] == "failed_permanent"
 
 
-async def test_recent_invalid_status_returns_400(
-    async_client, db_session, workspace, identity
-):
+async def test_recent_invalid_status_returns_400(async_client, db_session, workspace, identity):
     headers = _bearer(identity.id, workspace_id=workspace.id)
-    resp = await async_client.get(
-        "/api/v1/admin/jobs/recent?status=bogus", headers=headers
-    )
+    resp = await async_client.get("/api/v1/admin/jobs/recent?status=bogus", headers=headers)
     assert resp.status_code == 400
 
 
 # ── /health ───────────────────────────────────────────────────
-async def test_health_returns_totals(
-    async_client, db_session, workspace, identity
-):
+async def test_health_returns_totals(async_client, db_session, workspace, identity):
     await _seed_failed_job(db_session, workspace)
     headers = _bearer(identity.id, workspace_id=workspace.id)
-    resp = await async_client.get(
-        "/api/v1/admin/jobs/health", headers=headers
-    )
+    resp = await async_client.get("/api/v1/admin/jobs/health", headers=headers)
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert "totals" in body
@@ -179,9 +161,7 @@ async def test_health_returns_totals(
 
 
 # ── /retry ────────────────────────────────────────────────────
-async def test_retry_workspace_admin_is_forbidden(
-    async_client, db_session, workspace, identity
-):
+async def test_retry_workspace_admin_is_forbidden(async_client, db_session, workspace, identity):
     """The retry endpoint is platform-admin-only per the M4.6 RBAC table."""
     failed_row = await _seed_failed_job(db_session, workspace)
     headers = _bearer(identity.id, workspace_id=workspace.id)
@@ -192,9 +172,7 @@ async def test_retry_workspace_admin_is_forbidden(
     assert resp.status_code == 403
 
 
-async def test_retry_platform_admin_re_enqueues(
-    async_client, db_session, workspace, monkeypatch
-):
+async def test_retry_platform_admin_re_enqueues(async_client, db_session, workspace, monkeypatch):
     from app.services import auth as auth_svc
 
     admin = await auth_svc.register(
@@ -216,14 +194,10 @@ async def test_retry_platform_admin_re_enqueues(
         captured["kwargs"] = kwargs
         return f"reissued-{uuid.uuid4().hex[:8]}"
 
-    monkeypatch.setattr(
-        "app.worker.queue.enqueue", _fake_enqueue
-    )
+    monkeypatch.setattr("app.worker.queue.enqueue", _fake_enqueue)
 
     headers = _bearer(admin.identity.id, workspace_id=workspace.id)
-    resp = await async_client.post(
-        f"/api/v1/admin/jobs/{failed_row.job_id}/retry", headers=headers
-    )
+    resp = await async_client.post(f"/api/v1/admin/jobs/{failed_row.job_id}/retry", headers=headers)
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["enqueued"] is True
@@ -231,9 +205,7 @@ async def test_retry_platform_admin_re_enqueues(
     assert captured["function_name"] == failed_row.function_name
 
 
-async def test_retry_for_unknown_job_returns_404(
-    async_client, db_session, workspace
-):
+async def test_retry_for_unknown_job_returns_404(async_client, db_session, workspace):
     from app.services import auth as auth_svc
 
     admin = await auth_svc.register(
@@ -247,7 +219,5 @@ async def test_retry_for_unknown_job_returns_404(
     await db_session.commit()
 
     headers = _bearer(admin.identity.id, workspace_id=workspace.id)
-    resp = await async_client.post(
-        "/api/v1/admin/jobs/no-such-job/retry", headers=headers
-    )
+    resp = await async_client.post("/api/v1/admin/jobs/no-such-job/retry", headers=headers)
     assert resp.status_code == 404

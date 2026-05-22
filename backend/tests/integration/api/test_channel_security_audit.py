@@ -33,9 +33,7 @@ async def _bootstrap(async_client) -> tuple[dict, str]:
         json={"email": email, "name": "Auditor", "password": password},
     )
     assert r.status_code == 201
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     headers = {"Authorization": f"Bearer {r.json()['access_token']}"}
     r = await async_client.post(
         "/api/v1/workspaces",
@@ -65,10 +63,14 @@ async def _audit_actions(db_session, ws_id: str) -> set[str]:
     from app.db.models import AuditEvent
 
     rows = (
-        await db_session.execute(
-            select(AuditEvent.action).where(AuditEvent.workspace_id == ws_id)
+        (
+            await db_session.execute(
+                select(AuditEvent.action).where(AuditEvent.workspace_id == ws_id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return set(rows)
 
 

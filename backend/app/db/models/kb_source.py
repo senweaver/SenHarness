@@ -102,9 +102,7 @@ class KbSource(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixi
 
 class KbSourceSync(UuidPkMixin, TimestampMixin, Base):
     __tablename__ = "kb_source_syncs"
-    __table_args__ = (
-        Index("ix_kb_source_syncs_source", "source_id", "created_at"),
-    )
+    __table_args__ = (Index("ix_kb_source_syncs_source", "source_id", "created_at"),)
 
     source_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

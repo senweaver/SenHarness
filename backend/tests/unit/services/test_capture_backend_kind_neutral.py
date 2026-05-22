@@ -43,23 +43,13 @@ class _BadlyTypedBackend:
 def test_remote_backend_yields_empty_list_via_sessions_helper() -> None:
     from app.api.v1 import sessions as sessions_mod
 
-    assert (
-        sessions_mod._read_injected_skill_ids(
-            _OpenClawLikeBackend(), uuid.uuid4()
-        )
-        == []
-    )
+    assert sessions_mod._read_injected_skill_ids(_OpenClawLikeBackend(), uuid.uuid4()) == []
 
 
 def test_remote_backend_yields_empty_list_via_agent_runner_helper() -> None:
     from app.services import agent_runner
 
-    assert (
-        agent_runner._read_injected_skill_ids(
-            _OpenClawLikeBackend(), uuid.uuid4()
-        )
-        == []
-    )
+    assert agent_runner._read_injected_skill_ids(_OpenClawLikeBackend(), uuid.uuid4()) == []
 
 
 def test_native_backend_with_no_match_yields_empty_list() -> None:

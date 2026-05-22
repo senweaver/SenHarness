@@ -100,9 +100,7 @@ async def test_single_propose_create_lands_approval(
         return AuxiliaryConfig(task=AuxiliaryTask.SKILL_REVIEW, model="test:test")
 
     monkeypatch.setattr(ev, "_resolve_aux_config", _stub_resolve)
-    monkeypatch.setattr(
-        ev, "_build_pydantic_ai_model_from_config", lambda _cfg: test_model
-    )
+    monkeypatch.setattr(ev, "_build_pydantic_ai_model_from_config", lambda _cfg: test_model)
     # The breaker check uses Redis; in the unit-friendly env it
     # silently fails open so we don't need to stub it.
 
@@ -128,10 +126,7 @@ async def test_single_propose_create_lands_approval(
         ).scalars()
     )
     assert len(approvals) >= 1
-    assert (
-        approvals[0].resource_type
-        == ApprovalResourceType.SKILL_PACK_CREATE.value
-    )
+    assert approvals[0].resource_type == ApprovalResourceType.SKILL_PACK_CREATE.value
 
     invoked = list(
         (
@@ -169,9 +164,7 @@ async def test_mark_skip_path_no_proposals(
 
     test_model = TestModel(
         call_tools=["mark_skip"],
-        custom_output_text=(
-            "No SkillPack proposals worth filing. The batch looks healthy."
-        ),
+        custom_output_text=("No SkillPack proposals worth filing. The batch looks healthy."),
     )
 
     async def _stub_resolve(**_kwargs):
@@ -180,9 +173,7 @@ async def test_mark_skip_path_no_proposals(
         return AuxiliaryConfig(task=AuxiliaryTask.SKILL_REVIEW, model="test:test")
 
     monkeypatch.setattr(ev, "_resolve_aux_config", _stub_resolve)
-    monkeypatch.setattr(
-        ev, "_build_pydantic_ai_model_from_config", lambda _cfg: test_model
-    )
+    monkeypatch.setattr(ev, "_build_pydantic_ai_model_from_config", lambda _cfg: test_model)
 
     result = await invoke_evolver_subagent(
         workspace_id=workspace.id,
@@ -249,9 +240,7 @@ async def test_timeout_path_audits_and_bumps_breaker(
         async def run(self, _prompt):
             await asyncio.sleep(60)
 
-    monkeypatch.setattr(
-        ev, "_build_pydantic_ai_model_from_config", lambda _cfg: object()
-    )
+    monkeypatch.setattr(ev, "_build_pydantic_ai_model_from_config", lambda _cfg: object())
     monkeypatch.setattr(ev, "build_evolver_agent", lambda *, model: _HangingAgent())
 
     bump_calls: list[dict] = []

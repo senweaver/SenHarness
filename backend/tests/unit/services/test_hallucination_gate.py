@@ -38,9 +38,7 @@ async def _make_child(db_session, workspace) -> svc.SubAgentRun:
     )
 
 
-async def test_gate_passes_when_score_above_threshold(
-    db_session, workspace, monkeypatch
-):
+async def test_gate_passes_when_score_above_threshold(db_session, workspace, monkeypatch):
     child = await _make_child(db_session, workspace)
 
     async def fake_evaluate(db, *, workspace_id, final_output, timeout_s=25.0):
@@ -71,9 +69,7 @@ async def test_gate_passes_when_score_above_threshold(
     assert audit is not None
 
 
-async def test_gate_files_approval_when_score_below_threshold(
-    db_session, workspace, monkeypatch
-):
+async def test_gate_files_approval_when_score_below_threshold(db_session, workspace, monkeypatch):
     child = await _make_child(db_session, workspace)
 
     async def fake_evaluate(db, *, workspace_id, final_output, timeout_s=25.0):
@@ -96,9 +92,7 @@ async def test_gate_files_approval_when_score_below_threshold(
 
     approval = (
         await db_session.execute(
-            select(Approval).where(
-                Approval.id == refreshed.hallucination_approval_id
-            )
+            select(Approval).where(Approval.id == refreshed.hallucination_approval_id)
         )
     ).scalar_one_or_none()
     assert approval is not None
@@ -110,9 +104,7 @@ async def test_gate_files_approval_when_score_below_threshold(
     assert body["score"] == pytest.approx(0.30)
 
 
-async def test_gate_fails_open_when_breaker_open(
-    db_session, workspace, monkeypatch
-):
+async def test_gate_fails_open_when_breaker_open(db_session, workspace, monkeypatch):
     child = await _make_child(db_session, workspace)
 
     async def fake_breaker_open(*, bucket, workspace_id, trip_at):
@@ -123,9 +115,7 @@ async def test_gate_fails_open_when_breaker_open(
     async def fake_evaluate(db, *, workspace_id, final_output, timeout_s=25.0):
         raise AssertionError("evaluate must not be called when breaker open")
 
-    monkeypatch.setattr(
-        "app.jobs._breaker.is_breaker_open", fake_breaker_open
-    )
+    monkeypatch.setattr("app.jobs._breaker.is_breaker_open", fake_breaker_open)
     monkeypatch.setattr(svc, "evaluate_hallucination", fake_evaluate)
 
     outcome = await svc.gate_hallucination_or_approve(
@@ -170,9 +160,7 @@ async def test_gate_fails_open_and_bumps_breaker_on_eval_exception(
         bumps.append((bucket, workspace_id))
         return 1
 
-    monkeypatch.setattr(
-        "app.jobs._breaker.is_breaker_open", fake_breaker_open
-    )
+    monkeypatch.setattr("app.jobs._breaker.is_breaker_open", fake_breaker_open)
     monkeypatch.setattr("app.jobs._breaker.bump_failure", fake_bump)
     monkeypatch.setattr(svc, "evaluate_hallucination", fake_evaluate)
 

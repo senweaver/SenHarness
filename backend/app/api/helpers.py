@@ -19,9 +19,7 @@ log = logging.getLogger(__name__)
 INGRESS_TOKEN_HEADER: Final[str] = "X-Senharness-Token"
 
 
-def resolve_ingress_token(
-    header_token: str | None, query_token: str | None
-) -> str:
+def resolve_ingress_token(header_token: str | None, query_token: str | None) -> str:
     """Webhook token resolver — prefer header, fall back to query.
 
     Tokens in the URL leak into proxy access logs, browser history and

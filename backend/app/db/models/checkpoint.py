@@ -29,9 +29,7 @@ from app.db.base import Base
 from app.db.mixins import TimestampMixin, UuidPkMixin, WorkspaceScopedMixin
 
 
-class SessionCheckpoint(
-    UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base
-):
+class SessionCheckpoint(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "session_checkpoints"
     __table_args__ = (
         Index(
@@ -50,9 +48,7 @@ class SessionCheckpoint(
     description: Mapped[str | None] = mapped_column(String(512), nullable=True)
     message_count: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    snapshot_json: Mapped[dict] = mapped_column(
-        JSONB, default=dict, nullable=False
-    )
+    snapshot_json: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
@@ -67,6 +63,4 @@ class SessionCheckpoint(
         index=True,
     )
 
-    pruned_at: Mapped[datetime | None] = mapped_column(
-        nullable=True, index=True
-    )
+    pruned_at: Mapped[datetime | None] = mapped_column(nullable=True, index=True)

@@ -27,7 +27,9 @@ class PassphraseKeyring(Keyring):
     _singleton_lock = Lock()
 
     def __init__(self, passphrase: str | None = None, *, salt: bytes | None = None) -> None:
-        passphrase = passphrase or os.environ.get("SENHARNESS_PASSPHRASE") or getpass.getpass("Passphrase: ")
+        passphrase = (
+            passphrase or os.environ.get("SENHARNESS_PASSPHRASE") or getpass.getpass("Passphrase: ")
+        )
         if not passphrase:
             raise KeyringError("Passphrase required for PassphraseKeyring")
         salt = salt or b"senharness-keyring-salt-v1"

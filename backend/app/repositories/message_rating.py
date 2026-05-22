@@ -18,9 +18,7 @@ class MessageRatingRepository(AsyncRepository[MessageRating]):
         self, *, message_id: uuid.UUID, identity_id: uuid.UUID
     ) -> MessageRating | None:
         """Fetch the calling user's rating on a single message, if any."""
-        return await self.get_by(
-            message_id=message_id, identity_id=identity_id
-        )
+        return await self.get_by(message_id=message_id, identity_id=identity_id)
 
     async def aggregate(
         self, *, message_ids: Sequence[uuid.UUID]
@@ -36,9 +34,7 @@ class MessageRatingRepository(AsyncRepository[MessageRating]):
             select(
                 MessageRating.message_id,
                 func.sum(case((MessageRating.rating == 1, 1), else_=0)).label("likes"),
-                func.sum(case((MessageRating.rating == -1, 1), else_=0)).label(
-                    "dislikes"
-                ),
+                func.sum(case((MessageRating.rating == -1, 1), else_=0)).label("dislikes"),
             )
             .where(MessageRating.message_id.in_(list(message_ids)))
             .group_by(MessageRating.message_id)
@@ -55,12 +51,9 @@ class MessageRatingRepository(AsyncRepository[MessageRating]):
         """``{message_id: rating}`` for messages the caller already rated."""
         if not message_ids:
             return {}
-        stmt = (
-            select(MessageRating.message_id, MessageRating.rating)
-            .where(
-                MessageRating.identity_id == identity_id,
-                MessageRating.message_id.in_(list(message_ids)),
-            )
+        stmt = select(MessageRating.message_id, MessageRating.rating).where(
+            MessageRating.identity_id == identity_id,
+            MessageRating.message_id.in_(list(message_ids)),
         )
         rows = (await self.session.execute(stmt)).all()
         return {row.message_id: int(row.rating) for row in rows}

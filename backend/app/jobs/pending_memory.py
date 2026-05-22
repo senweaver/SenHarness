@@ -64,9 +64,7 @@ async def pending_memory_workspace_sweep(
                 workspace_id=workspace_id, max_age_seconds=max_age_seconds
             )
         except Exception as exc:
-            log.exception(
-                "pending memory sweep failed for workspace %s", workspace_id
-            )
+            log.exception("pending memory sweep failed for workspace %s", workspace_id)
             await _audit_workspace_failure(workspace_id, exc=exc)
             continue
         visited += 1
@@ -82,9 +80,7 @@ async def pending_memory_workspace_sweep(
     }
 
 
-async def _sweep_one_workspace(
-    *, workspace_id: uuid.UUID, max_age_seconds: int
-) -> dict[str, int]:
+async def _sweep_one_workspace(*, workspace_id: uuid.UUID, max_age_seconds: int) -> dict[str, int]:
     factory = get_session_factory()
     async with factory() as db:
         counts = await pending_memory_svc.promote_pending_memories_workspace_sweep(
@@ -111,9 +107,7 @@ async def _sweep_one_workspace(
         return counts
 
 
-async def _audit_workspace_failure(
-    workspace_id: uuid.UUID, *, exc: BaseException
-) -> None:
+async def _audit_workspace_failure(workspace_id: uuid.UUID, *, exc: BaseException) -> None:
     factory = get_session_factory()
     try:
         async with factory() as db:
@@ -135,9 +129,7 @@ async def _audit_workspace_failure(
         log.exception("audit write for sweep failure failed (ws=%s)", workspace_id)
 
 
-async def on_pending_memory_job_failed_permanent(
-    ctx: dict[str, Any], exc: BaseException
-) -> None:
+async def on_pending_memory_job_failed_permanent(ctx: dict[str, Any], exc: BaseException) -> None:
     """Three-strike permanent-failure recorder for the sweep cron.
 
     Workspace-level audit only — the sweep returns aggregated counts,

@@ -180,8 +180,7 @@ async def run_with_failover(
         except ProviderFailoverHint as hint:
             outcome.failure_kind = hint.failure_kind
             log.info(
-                "provider_failover attempt %d/%d failed kind=%s "
-                "provider=%s model=%s",
+                "provider_failover attempt %d/%d failed kind=%s provider=%s model=%s",
                 idx + 1,
                 len(chain),
                 hint.failure_kind,
@@ -229,9 +228,7 @@ async def run_with_failover(
             cooldown_threshold=config.cooldown_threshold,
             cooldown_seconds=config.cooldown_seconds,
         )
-        outcome.cooldown_started = bool(
-            snapshot.extras.get("cooldown_just_started")
-        )
+        outcome.cooldown_started = bool(snapshot.extras.get("cooldown_just_started"))
         attempts.append(
             {
                 "provider_kind": entry.provider_kind,
@@ -335,9 +332,7 @@ async def _resolve_for_attempt(
     return resolved, model
 
 
-def build_pydantic_ai_model_from_entry(entry: ProviderChainEntry) -> tuple[
-    ResolvedModel, Any
-]:
+def build_pydantic_ai_model_from_entry(entry: ProviderChainEntry) -> tuple[ResolvedModel, Any]:
     """Synchronous helper for tests that don't need DB credentials.
 
     Returns ``(resolved, None)`` when the model build fails so callers
@@ -393,10 +388,7 @@ async def _audit_failover_exhausted(
     await _safe_audit(
         action="provider.failover_exhausted",
         req=req,
-        summary=(
-            f"all {len(attempts)} provider attempts failed for "
-            f"served={served_name}"
-        ),
+        summary=(f"all {len(attempts)} provider attempts failed for served={served_name}"),
         metadata={
             "run_id": str(req.run_id),
             "served_model_name": served_name,
@@ -446,10 +438,7 @@ async def _audit_cooldown_started(
     await _safe_audit(
         action="provider.cooldown_started",
         req=req,
-        summary=(
-            f"{entry.upstream_label} entered cooldown "
-            f"({cooldown_seconds}s)"
-        ),
+        summary=(f"{entry.upstream_label} entered cooldown ({cooldown_seconds}s)"),
         metadata={
             "run_id": str(req.run_id),
             "served_model_name": served_name,

@@ -26,9 +26,7 @@ async def _bootstrap(async_client) -> tuple[dict, str]:
         json={"email": email, "name": "Lineage Tester", "password": password},
     )
     assert r.status_code == 201, r.text
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -44,16 +42,12 @@ async def _bootstrap(async_client) -> tuple[dict, str]:
 
 
 async def _new_session(async_client, headers) -> str:
-    r = await async_client.post(
-        "/api/v1/sessions", headers=headers, json={"kind": "p2p"}
-    )
+    r = await async_client.post("/api/v1/sessions", headers=headers, json={"kind": "p2p"})
     assert r.status_code in (200, 201), r.text
     return r.json()["id"]
 
 
-async def _seed_compressed_summary(
-    *, workspace_id: str, session_id: str
-) -> tuple[str, list[str]]:
+async def _seed_compressed_summary(*, workspace_id: str, session_id: str) -> tuple[str, list[str]]:
     """Append 3 originals + 1 summary directly through the session
     service so we don't need a full agent run inside the test."""
     from app.db.session import get_session_factory
@@ -91,9 +85,7 @@ async def _seed_compressed_summary(
             role=session_svc.MessageRole.SYSTEM,
             content_json={"text": "compacted"},
         )
-        ref = lineage_svc.mark_message_as_compressed(
-            summary, [a, b, c], strategy="sliding_window"
-        )
+        ref = lineage_svc.mark_message_as_compressed(summary, [a, b, c], strategy="sliding_window")
         summary.original_turns_ref = ref
         for original in (a, b, c):
             original.compressed_into_summary_id = summary.id
@@ -106,9 +98,7 @@ async def _seed_compressed_summary(
 async def test_get_lineage_replay_happy_path(async_client):
     headers, ws_id = await _bootstrap(async_client)
     sid = await _new_session(async_client, headers)
-    summary_id, originals = await _seed_compressed_summary(
-        workspace_id=ws_id, session_id=sid
-    )
+    summary_id, originals = await _seed_compressed_summary(workspace_id=ws_id, session_id=sid)
 
     r = await async_client.get(
         f"/api/v1/sessions/{sid}/messages/{summary_id}/lineage",
@@ -128,13 +118,9 @@ async def test_get_lineage_replay_happy_path(async_client):
 async def test_list_lineage_summaries_happy_path(async_client):
     headers, ws_id = await _bootstrap(async_client)
     sid = await _new_session(async_client, headers)
-    summary_id, _ = await _seed_compressed_summary(
-        workspace_id=ws_id, session_id=sid
-    )
+    summary_id, _ = await _seed_compressed_summary(workspace_id=ws_id, session_id=sid)
 
-    r = await async_client.get(
-        f"/api/v1/sessions/{sid}/lineage-summaries", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/sessions/{sid}/lineage-summaries", headers=headers)
     assert r.status_code == 200, r.text
     rows = r.json()
     assert len(rows) == 1
@@ -177,9 +163,7 @@ async def test_get_lineage_replay_for_plain_message_404(async_client):
 async def test_get_lineage_replay_other_workspace_404(async_client):
     headers_a, ws_a = await _bootstrap(async_client)
     sid_a = await _new_session(async_client, headers_a)
-    summary_id, _ = await _seed_compressed_summary(
-        workspace_id=ws_a, session_id=sid_a
-    )
+    summary_id, _ = await _seed_compressed_summary(workspace_id=ws_a, session_id=sid_a)
 
     headers_b, _ = await _bootstrap(async_client)
     r = await async_client.get(
@@ -195,16 +179,12 @@ async def test_list_lineage_summaries_other_workspace_404(async_client):
     await _seed_compressed_summary(workspace_id=ws_a, session_id=sid_a)
 
     headers_b, _ = await _bootstrap(async_client)
-    r = await async_client.get(
-        f"/api/v1/sessions/{sid_a}/lineage-summaries", headers=headers_b
-    )
+    r = await async_client.get(f"/api/v1/sessions/{sid_a}/lineage-summaries", headers=headers_b)
     assert r.status_code in (403, 404)
 
 
 async def test_unauthenticated_lineage_read_blocked(async_client):
     sid = uuid.uuid4()
     mid = uuid.uuid4()
-    r = await async_client.get(
-        f"/api/v1/sessions/{sid}/messages/{mid}/lineage"
-    )
+    r = await async_client.get(f"/api/v1/sessions/{sid}/messages/{mid}/lineage")
     assert r.status_code in (401, 403)

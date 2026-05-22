@@ -62,9 +62,7 @@ class JudgeVerdictRepository(AsyncRepository[JudgeVerdict]):
         ``ON CONFLICT`` clause to keep the path portable across
         Postgres / SQLite test envs.
         """
-        existing = await self.get_by_artifact(
-            workspace_id=workspace_id, artifact_id=artifact_id
-        )
+        existing = await self.get_by_artifact(workspace_id=workspace_id, artifact_id=artifact_id)
         if existing is not None:
             for key, value in values.items():
                 setattr(existing, key, value)
@@ -76,12 +74,8 @@ class JudgeVerdictRepository(AsyncRepository[JudgeVerdict]):
             **values,
         )
 
-    async def delete_for_artifact(
-        self, *, workspace_id: uuid.UUID, artifact_id: uuid.UUID
-    ) -> bool:
-        existing = await self.get_by_artifact(
-            workspace_id=workspace_id, artifact_id=artifact_id
-        )
+    async def delete_for_artifact(self, *, workspace_id: uuid.UUID, artifact_id: uuid.UUID) -> bool:
+        existing = await self.get_by_artifact(workspace_id=workspace_id, artifact_id=artifact_id)
         if existing is None:
             return False
         await self.hard_delete(existing)

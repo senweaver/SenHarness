@@ -68,9 +68,7 @@ class _SdkCallToolResult:
 
 # ─── _wrap_tool_result ─────────────────────────────────────────
 def test_wrap_tool_result_text_only():
-    raw = _SdkCallToolResult(
-        content=[_SdkText(text="hello "), _SdkText(text="world")]
-    )
+    raw = _SdkCallToolResult(content=[_SdkText(text="hello "), _SdkText(text="world")])
     wrapped = _wrap_tool_result(raw)
     assert wrapped.text == "hello world"
     assert wrapped.media == []
@@ -156,9 +154,7 @@ def test_event_data_renders_media_parts():
             McpMediaPart(kind="file", mime="application/pdf", url="https://x/y.pdf"),
         ],
     )
-    data = tool_result_to_event_data(
-        call_id="abc", tool_name="capture", result=result
-    )
+    data = tool_result_to_event_data(call_id="abc", tool_name="capture", result=result)
     assert data["media"][0] == {
         "type": "image",
         "mime": "image/jpeg",
@@ -173,9 +169,7 @@ def test_event_data_renders_media_parts():
 
 def test_build_mcp_tool_result_event_kind_is_tool_result():
     result = McpToolResult(text="ok")
-    event = build_mcp_tool_result_event(
-        call_id="c", tool_name="t", result=result
-    )
+    event = build_mcp_tool_result_event(call_id="c", tool_name="t", result=result)
     assert event.kind == RunEventKind.TOOL_RESULT
     assert event.data["name"] == "t"
     assert event.data["result"] == "ok"

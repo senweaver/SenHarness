@@ -54,8 +54,7 @@ class TestVendoredTemplates:
             assert parsed is not None
             seen.add(parsed["category"])
         assert seen <= set(catalog.CATEGORY_BY_SLUG), (
-            f"templates reference uncatalogued categories: "
-            f"{seen - set(catalog.CATEGORY_BY_SLUG)}"
+            f"templates reference uncatalogued categories: {seen - set(catalog.CATEGORY_BY_SLUG)}"
         )
 
     def test_descriptions_within_db_limit(self):

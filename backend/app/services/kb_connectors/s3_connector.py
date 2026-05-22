@@ -60,9 +60,7 @@ class S3Connector(KbConnector):
             supports_incremental=True,
         )
 
-    async def sync(
-        self, *, config: dict
-    ) -> AsyncIterator[ConnectorDocument | SyncProgressEvent]:
+    async def sync(self, *, config: dict) -> AsyncIterator[ConnectorDocument | SyncProgressEvent]:
         try:
             import boto3
             from botocore.config import Config as BotoConfig
@@ -70,8 +68,7 @@ class S3Connector(KbConnector):
             yield SyncProgressEvent(
                 level="error",
                 msg=(
-                    "boto3 is not installed; add `boto3` to backend dependencies "
-                    "to ingest from S3."
+                    "boto3 is not installed; add `boto3` to backend dependencies to ingest from S3."
                 ),
                 data={"hint": "pip install boto3"},
             )

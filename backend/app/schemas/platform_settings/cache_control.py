@@ -33,6 +33,4 @@ class CacheControlDefaults(BaseModel):
     max_breakpoints_default: int = Field(ge=1, le=8, default=4)
     ttl_default: Literal["5m", "1h"] = "5m"
     adaptive_disable_threshold: int = Field(ge=1, le=20, default=5)
-    adaptive_disable_duration_seconds: int = Field(
-        ge=10, le=600, default=60
-    )
+    adaptive_disable_duration_seconds: int = Field(ge=10, le=600, default=60)

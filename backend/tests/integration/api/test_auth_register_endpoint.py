@@ -19,12 +19,8 @@ async def _reset_settings(async_client):
 
     factory = get_session_factory()
     async with factory() as db:
-        await set_system_setting(
-            db, SystemSettingKey.REGISTRATION_MODE, "open_personal"
-        )
-        await set_system_setting(
-            db, SystemSettingKey.AUTH_REQUIRE_EMAIL_VERIFICATION, False
-        )
+        await set_system_setting(db, SystemSettingKey.REGISTRATION_MODE, "open_personal")
+        await set_system_setting(db, SystemSettingKey.AUTH_REQUIRE_EMAIL_VERIFICATION, False)
         await db.commit()
 
 
@@ -60,9 +56,7 @@ async def test_register_invite_only_without_code_400(async_client):
 
     factory = get_session_factory()
     async with factory() as db:
-        await set_system_setting(
-            db, SystemSettingKey.REGISTRATION_MODE, "open_invite_only"
-        )
+        await set_system_setting(db, SystemSettingKey.REGISTRATION_MODE, "open_invite_only")
         await db.commit()
     try:
         body = {
@@ -110,9 +104,7 @@ async def test_register_with_email_verification_returns_pending(async_client):
 
     factory = get_session_factory()
     async with factory() as db:
-        await set_system_setting(
-            db, SystemSettingKey.AUTH_REQUIRE_EMAIL_VERIFICATION, True
-        )
+        await set_system_setting(db, SystemSettingKey.AUTH_REQUIRE_EMAIL_VERIFICATION, True)
         await db.commit()
     try:
         body = {

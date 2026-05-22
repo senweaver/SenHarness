@@ -53,9 +53,7 @@ async def _create_pack(async_client, headers, *, slug=None) -> str:
         "manifest_json": {},
         "content_md": "---\nname: x\ndescription: y\n---\n\nbody",
     }
-    r = await async_client.post(
-        "/api/v1/skills/packs", headers=headers, json=payload
-    )
+    r = await async_client.post("/api/v1/skills/packs", headers=headers, json=payload)
     assert r.status_code == 201, r.text
     return r.json()["id"]
 
@@ -98,9 +96,7 @@ async def test_graph_endpoint_returns_two_hop_neighbourhood(async_client):
         kind=SkillLineageEdgeKind.DERIVED_FROM,
     )
 
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{a}/graph?depth=2", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{a}/graph?depth=2", headers=headers)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["focus_pack_id"] == a
@@ -129,9 +125,7 @@ async def test_graph_endpoint_depth_one_does_not_reach_grandchild(async_client):
         kind=SkillLineageEdgeKind.DERIVED_FROM,
     )
 
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{a}/graph?depth=1", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{a}/graph?depth=1", headers=headers)
     body = r.json()
     node_ids = {n["node_id"] for n in body["nodes"]}
     assert a in node_ids and b in node_ids
@@ -141,9 +135,7 @@ async def test_graph_endpoint_depth_one_does_not_reach_grandchild(async_client):
 async def test_graph_endpoint_rejects_oversized_depth(async_client):
     headers, _ = await _bootstrap(async_client)
     a = await _create_pack(async_client, headers)
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{a}/graph?depth=42", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{a}/graph?depth=42", headers=headers)
     assert r.status_code == 422
 
 
@@ -152,9 +144,7 @@ async def test_graph_endpoint_cross_workspace_returns_404(async_client):
     a = await _create_pack(async_client, headers_a)
 
     headers_b, _ = await _bootstrap(async_client)
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{a}/graph", headers=headers_b
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{a}/graph", headers=headers_b)
     assert r.status_code == 404
 
 
@@ -176,9 +166,7 @@ async def test_lineage_endpoint_returns_one_step(async_client):
         kind=SkillLineageEdgeKind.DERIVED_FROM,
     )
 
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{b}/lineage", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{b}/lineage", headers=headers)
     assert r.status_code == 200
     body = r.json()
     assert body["focus_pack_id"] == b
@@ -199,9 +187,7 @@ async def test_graph_endpoint_synthesises_hub_external_node(async_client):
         hub_pack_slug="from-hub",
     )
 
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{a}/graph?depth=1", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{a}/graph?depth=1", headers=headers)
     body = r.json()
     external = [n for n in body["nodes"] if n["is_external"]]
     assert len(external) == 1
@@ -210,7 +196,5 @@ async def test_graph_endpoint_synthesises_hub_external_node(async_client):
 
 
 async def test_graph_requires_authentication(async_client):
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{uuid.uuid4()}/graph"
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{uuid.uuid4()}/graph")
     assert r.status_code == 401

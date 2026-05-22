@@ -71,19 +71,13 @@ async def test_spawn_depth_equal_to_cap_is_rejected(monkeypatch):
     assert result.rejected == 2
     assert result.completed == 0
     assert all(r.status == "rejected" for r in result.results.values())
-    assert all(
-        r.error_kind == "nesting_depth_exceeded"
-        for r in result.results.values()
-    )
+    assert all(r.error_kind == "nesting_depth_exceeded" for r in result.results.values())
     actions = [a for a, _ in audit_events]
     assert subagents_svc.AUDIT_NESTING_DEPTH_EXCEEDED in actions
     assert subagents_svc.AUDIT_BATCH_STARTED not in actions
     assert subagents_svc.AUDIT_BATCH_COMPLETED not in actions
 
-    metadata = next(
-        m for a, m in audit_events
-        if a == subagents_svc.AUDIT_NESTING_DEPTH_EXCEEDED
-    )
+    metadata = next(m for a, m in audit_events if a == subagents_svc.AUDIT_NESTING_DEPTH_EXCEEDED)
     assert metadata["spawn_depth"] == 3
     assert metadata["max_nesting_depth"] == 3
     assert metadata["task_count"] == 2

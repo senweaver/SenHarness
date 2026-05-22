@@ -65,59 +65,41 @@ async def _seed_old_artifact(
 
 
 async def test_dry_run_does_not_delete(db_session, workspace, identity):
-    artifact = await _seed_old_artifact(
-        db_session, workspace, identity, deleted_days_ago=60
-    )
+    artifact = await _seed_old_artifact(db_session, workspace, identity, deleted_days_ago=60)
 
-    report = await retention_svc.physically_purge_expired(
-        db_session, dry_run=True
-    )
+    report = await retention_svc.physically_purge_expired(db_session, dry_run=True)
     sess_artifact_rep = report["session_artifacts"]
     assert sess_artifact_rep.candidates >= 1
     assert sess_artifact_rep.deleted == 0
 
     surviving = (
-        await db_session.execute(
-            select(SessionArtifact).where(SessionArtifact.id == artifact.id)
-        )
+        await db_session.execute(select(SessionArtifact).where(SessionArtifact.id == artifact.id))
     ).scalar_one_or_none()
     assert surviving is not None
 
 
 async def test_enabled_purge_actually_deletes(db_session, workspace, identity):
-    artifact = await _seed_old_artifact(
-        db_session, workspace, identity, deleted_days_ago=60
-    )
-    fresh = await _seed_old_artifact(
-        db_session, workspace, identity, deleted_days_ago=1
-    )
+    artifact = await _seed_old_artifact(db_session, workspace, identity, deleted_days_ago=60)
+    fresh = await _seed_old_artifact(db_session, workspace, identity, deleted_days_ago=1)
 
-    report = await retention_svc.physically_purge_expired(
-        db_session, dry_run=False
-    )
+    report = await retention_svc.physically_purge_expired(db_session, dry_run=False)
     rep = report["session_artifacts"]
     assert rep.candidates >= 1
     assert rep.deleted >= 1
 
     expired = (
-        await db_session.execute(
-            select(SessionArtifact).where(SessionArtifact.id == artifact.id)
-        )
+        await db_session.execute(select(SessionArtifact).where(SessionArtifact.id == artifact.id))
     ).scalar_one_or_none()
     assert expired is None
 
     # Within retention → must not be touched.
     survivor = (
-        await db_session.execute(
-            select(SessionArtifact).where(SessionArtifact.id == fresh.id)
-        )
+        await db_session.execute(select(SessionArtifact).where(SessionArtifact.id == fresh.id))
     ).scalar_one()
     assert survivor.deleted_at is not None
 
 
-async def test_per_table_days_override_takes_effect(
-    db_session, workspace, identity
-):
+async def test_per_table_days_override_takes_effect(db_session, workspace, identity):
     """Override ``session_artifacts`` to 90 days and prove a 60-day-old
     soft-deleted row no longer purges.
     """
@@ -132,24 +114,16 @@ async def test_per_table_days_override_takes_effect(
     )
     await db_session.flush()
 
-    artifact = await _seed_old_artifact(
-        db_session, workspace, identity, deleted_days_ago=60
-    )
-    report = await retention_svc.physically_purge_expired(
-        db_session, dry_run=False
-    )
+    artifact = await _seed_old_artifact(db_session, workspace, identity, deleted_days_ago=60)
+    report = await retention_svc.physically_purge_expired(db_session, dry_run=False)
     assert report["session_artifacts"].candidates == 0
     surviving = (
-        await db_session.execute(
-            select(SessionArtifact).where(SessionArtifact.id == artifact.id)
-        )
+        await db_session.execute(select(SessionArtifact).where(SessionArtifact.id == artifact.id))
     ).scalar_one_or_none()
     assert surviving is not None
 
 
-async def test_default_days_apply_when_not_overridden(
-    db_session, workspace, identity
-):
+async def test_default_days_apply_when_not_overridden(db_session, workspace, identity):
     """Custom override leaves other tables on ``default_days = 30``."""
     await set_system_setting(
         db_session,
@@ -162,18 +136,12 @@ async def test_default_days_apply_when_not_overridden(
     )
     await db_session.flush()
 
-    artifact = await _seed_old_artifact(
-        db_session, workspace, identity, deleted_days_ago=45
-    )
-    report = await retention_svc.physically_purge_expired(
-        db_session, dry_run=False
-    )
+    artifact = await _seed_old_artifact(db_session, workspace, identity, deleted_days_ago=45)
+    report = await retention_svc.physically_purge_expired(db_session, dry_run=False)
     assert report["session_artifacts"].candidates >= 1
     assert report["session_artifacts"].deleted >= 1
     expired = (
-        await db_session.execute(
-            select(SessionArtifact).where(SessionArtifact.id == artifact.id)
-        )
+        await db_session.execute(select(SessionArtifact).where(SessionArtifact.id == artifact.id))
     ).scalar_one_or_none()
     assert expired is None
 
@@ -191,9 +159,7 @@ async def test_purge_skips_tables_without_soft_delete(db_session, identity):
     db_session.add(tok)
     await db_session.flush()
 
-    report = await retention_svc.physically_purge_expired(
-        db_session, dry_run=False
-    )
+    report = await retention_svc.physically_purge_expired(db_session, dry_run=False)
     rep = report["email_verification_tokens"]
     assert rep.skipped_reason == "no_soft_delete_column"
     assert rep.candidates == 0
@@ -201,9 +167,7 @@ async def test_purge_skips_tables_without_soft_delete(db_session, identity):
 
     surviving = (
         await db_session.execute(
-            select(EmailVerificationToken).where(
-                EmailVerificationToken.id == tok.id
-            )
+            select(EmailVerificationToken).where(EmailVerificationToken.id == tok.id)
         )
     ).scalar_one_or_none()
     assert surviving is not None

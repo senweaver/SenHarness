@@ -26,14 +26,14 @@ hang"):
 * The Redis breaker key ``evolver:fail:<workspace_id>`` is shared
   with the M2.1 / M2.7 propose verbs — when the propose pipeline
   itself misbehaves the breaker trips and the next admin invoke
-  short-circuits with ``EvolverBreakerOpen`` rather than spinning
+  short-circuits with ``EvolverBreakerOpenError`` rather than spinning
   another five-minute timeout window.
 * Aux model resolution falls through
   :data:`EvolverSettings.aux_model_evolver` →
   ``aux_model_skill_review`` →
   ``aux_model_judge`` → workspace's first enabled chat model. A
   workspace with zero providers configured fails fast with
-  ``EvolverAuxModelMissing``.
+  ``EvolverAuxModelMissingError``.
 
 The invoker returns an :class:`EvolverInvokeResult` regardless of
 outcome (success / skip / timeout / error) so callers can tee the
@@ -88,9 +88,9 @@ __all__ = [
     "EVOLVER_AGENT_TIMEOUT_SECONDS",
     "EVOLVER_BREAKER_BUCKET",
     "EVOLVER_TOOL_NAMES",
-    "EvolverAuxModelMissing",
-    "EvolverBreakerOpen",
-    "EvolverDisabled",
+    "EvolverAuxModelMissingError",
+    "EvolverBreakerOpenError",
+    "EvolverDisabledError",
     "EvolverError",
     "EvolverInvokeResult",
     "build_evolver_agent",
@@ -143,15 +143,15 @@ class EvolverError(RuntimeError):
             self.code = code
 
 
-class EvolverDisabled(EvolverError):
+class EvolverDisabledError(EvolverError):
     code = "evolver.disabled"
 
 
-class EvolverBreakerOpen(EvolverError):
+class EvolverBreakerOpenError(EvolverError):
     code = "evolver.breaker_tripped"
 
 
-class EvolverAuxModelMissing(EvolverError):
+class EvolverAuxModelMissingError(EvolverError):
     code = "evolver.aux_model_missing"
 
 
@@ -165,7 +165,7 @@ class EvolverInvokeResult:
     self-report — the source of truth is the persistence layer.
     ``error`` is set on every non-happy path (timeout, internal
     exception, missing aux model). When an exception is raised
-    pre-flight (``EvolverDisabled`` etc.) the caller never sees this
+    pre-flight (``EvolverDisabledError`` etc.) the caller never sees this
     struct; the result is reserved for "the agent ran" outcomes.
     """
 
@@ -216,7 +216,7 @@ async def _resolve_aux_config(
            chat model).
         3. ``aux_model_judge`` via :func:`get_aux_model` (covers
            operators who only configured the judge tier).
-        4. ``None`` — the caller raises :class:`EvolverAuxModelMissing`.
+        4. ``None`` — the caller raises :class:`EvolverAuxModelMissingError`.
     """
     factory = get_session_factory()
     async with factory() as db:
@@ -239,15 +239,11 @@ async def _resolve_aux_config(
                     extra={"_resolved": parsed, "_source": "evolver_pin"},
                 )
 
-        cfg = await get_aux_model(
-            db, workspace_id=workspace_id, task=AuxiliaryTask.SKILL_REVIEW
-        )
+        cfg = await get_aux_model(db, workspace_id=workspace_id, task=AuxiliaryTask.SKILL_REVIEW)
         if cfg is not None:
             return cfg
 
-        cfg = await get_aux_model(
-            db, workspace_id=workspace_id, task=AuxiliaryTask.JUDGE
-        )
+        cfg = await get_aux_model(db, workspace_id=workspace_id, task=AuxiliaryTask.JUDGE)
         return cfg
 
 
@@ -323,17 +319,13 @@ def build_evolver_agent(*, model: Any) -> Any:
         # Loud failure — the evolver cannot do its job with a partial
         # toolset, and a missing entry usually means a refactor broke
         # the registry import order.
-        raise RuntimeError(
-            f"Evolver tool registry incomplete; missing={missing!r}"
-        )
+        raise RuntimeError(f"Evolver tool registry incomplete; missing={missing!r}")
 
     return agent
 
 
 # ─── Helpers ─────────────────────────────────────────────────
-async def _count_proposals_for_run(
-    *, workspace_id: uuid.UUID, run_id: uuid.UUID
-) -> int:
+async def _count_proposals_for_run(*, workspace_id: uuid.UUID, run_id: uuid.UUID) -> int:
     factory = get_session_factory()
     async with factory() as db:
         repo = ApprovalRepository(db)
@@ -369,9 +361,7 @@ async def _record_audit(
         await db.commit()
 
 
-async def _bump_breaker(
-    *, workspace_id: uuid.UUID, evolver_config: EvolverSettings
-) -> None:
+async def _bump_breaker(*, workspace_id: uuid.UUID, evolver_config: EvolverSettings) -> None:
     await bump_failure(
         bucket=EVOLVER_BREAKER_BUCKET,
         workspace_id=str(workspace_id),
@@ -430,13 +420,10 @@ async def invoke_evolver_subagent(
 
     factory = get_session_factory()
     async with factory() as db:
-        evolver_config = await get_workspace_evolver_config(
-            db, workspace_id=workspace_id
-        )
+        evolver_config = await get_workspace_evolver_config(db, workspace_id=workspace_id)
     if not evolver_config.enabled:
-        raise EvolverDisabled(
-            "Workspace has the evolver disabled; admin must opt in via "
-            "/admin/settings/evolver."
+        raise EvolverDisabledError(
+            "Workspace has the evolver disabled; admin must opt in via /admin/settings/evolver."
         )
 
     breaker_open = await is_breaker_open(
@@ -445,21 +432,19 @@ async def invoke_evolver_subagent(
         trip_at=int(evolver_config.evolver_breaker_strikes),
     )
     if breaker_open:
-        raise EvolverBreakerOpen(
+        raise EvolverBreakerOpenError(
             "Evolver breaker is open; back off and retry after the cooldown."
         )
 
-    aux_config = await _resolve_aux_config(
-        workspace_id=workspace_id, evolver_config=evolver_config
-    )
+    aux_config = await _resolve_aux_config(workspace_id=workspace_id, evolver_config=evolver_config)
     if aux_config is None:
-        raise EvolverAuxModelMissing(
+        raise EvolverAuxModelMissingError(
             "No aux model resolved for the evolver; configure aux_model_evolver "
             "or enable a workspace chat provider."
         )
     model = _build_pydantic_ai_model_from_config(aux_config)
     if model is None:
-        raise EvolverAuxModelMissing(
+        raise EvolverAuxModelMissingError(
             f"Failed to instantiate pydantic-ai model {aux_config.model!r}; "
             "check the workspace provider config."
         )
@@ -522,16 +507,14 @@ async def invoke_evolver_subagent(
             result = await asyncio.wait_for(agent.run(user_prompt), timeout=timeout)
         except TimeoutError:
             timed_out = True
-            error_message = (
-                f"evolver run exceeded {timeout}s wall clock and was aborted."
-            )
+            error_message = f"evolver run exceeded {timeout}s wall clock and was aborted."
             log.warning(
                 "evolver subagent timeout workspace=%s run=%s timeout=%ss",
                 workspace_id,
                 run_id,
                 timeout,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             error_message = f"{type(exc).__name__}: {exc}"
             log.exception(
                 "evolver subagent failed workspace=%s run=%s",
@@ -543,18 +526,14 @@ async def invoke_evolver_subagent(
             if output is None:
                 output = getattr(result, "data", None)
             final_message = (
-                output
-                if isinstance(output, str)
-                else (str(output) if output is not None else None)
+                output if isinstance(output, str) else (str(output) if output is not None else None)
             )
             if final_message and "no SkillPack proposals" in final_message.lower():
                 skipped = True
     finally:
         set_context(None)
 
-    proposals_created = await _count_proposals_for_run(
-        workspace_id=workspace_id, run_id=run_id
-    )
+    proposals_created = await _count_proposals_for_run(workspace_id=workspace_id, run_id=run_id)
 
     # mark_skip writes its own ``evolver.marked_skip`` audit row, so we
     # only need to detect "skipped" here for the result struct.
@@ -602,8 +581,7 @@ async def invoke_evolver_subagent(
             actor_identity_id=actor_identity_id,
             action=AUDIT_SUBAGENT_COMPLETED,
             summary=(
-                f"evolver subagent completed (proposals={proposals_created}, "
-                f"skipped={skipped})"
+                f"evolver subagent completed (proposals={proposals_created}, skipped={skipped})"
             ),
             metadata={
                 "run_id": str(run_id),

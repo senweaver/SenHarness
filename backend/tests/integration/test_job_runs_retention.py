@@ -100,9 +100,7 @@ async def test_failure_rows_kept_indefinitely(db_session, workspace):
 
     repo = JobRunRepository(db_session)
     assert await repo.get_by_job_id(job_id=very_old_failed.job_id) is not None
-    assert (
-        await repo.get_by_job_id(job_id=very_old_perm.job_id) is not None
-    )
+    assert await repo.get_by_job_id(job_id=very_old_perm.job_id) is not None
 
 
 async def test_dry_run_counts_without_deleting(db_session, workspace):

@@ -19,9 +19,9 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
 from app.agents.builtin.evolver_agent import (
-    EvolverAuxModelMissing,
-    EvolverBreakerOpen,
-    EvolverDisabled,
+    EvolverAuxModelMissingError,
+    EvolverBreakerOpenError,
+    EvolverDisabledError,
     EvolverInvokeResult,
     invoke_evolver_subagent,
 )
@@ -105,9 +105,7 @@ async def admin_invoke_evolver(
     identity_id: CurrentIdentityId,
     request: Request,
 ) -> EvolverInvokeOut:
-    actor = await _require_evolver_admin(
-        workspace_id=workspace_id, db=db, identity_id=identity_id
-    )
+    actor = await _require_evolver_admin(workspace_id=workspace_id, db=db, identity_id=identity_id)
     _ = request
 
     try:
@@ -117,11 +115,11 @@ async def admin_invoke_evolver(
             invocation_kind="manual",
             actor_identity_id=actor.id,
         )
-    except EvolverDisabled as exc:
+    except EvolverDisabledError as exc:
         raise _EvolverDisabledHttp(str(exc)) from exc
-    except EvolverBreakerOpen as exc:
+    except EvolverBreakerOpenError as exc:
         raise _EvolverBreakerHttp(str(exc)) from exc
-    except EvolverAuxModelMissing as exc:
+    except EvolverAuxModelMissingError as exc:
         raise _EvolverAuxMissingHttp(str(exc)) from exc
 
     # ``invoke_evolver_subagent`` opens its own short-lived sessions

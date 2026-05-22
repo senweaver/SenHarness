@@ -9,7 +9,7 @@ sliding-window module.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
 import pytest
@@ -25,9 +25,7 @@ def test_helper_returns_full_schema():
     summary = _fake_message()
     originals = [_fake_message(), _fake_message(), _fake_message()]
 
-    ref = lineage_svc.mark_message_as_compressed(
-        summary, originals, strategy="sliding_window"
-    )
+    ref = lineage_svc.mark_message_as_compressed(summary, originals, strategy="sliding_window")
 
     assert set(ref.keys()) == {
         "turn_message_ids",
@@ -45,9 +43,7 @@ def test_helper_preserves_original_order():
     originals = [_fake_message() for _ in range(5)]
     expected = [str(m.id) for m in originals]
 
-    ref = lineage_svc.mark_message_as_compressed(
-        _fake_message(), originals, strategy="manual"
-    )
+    ref = lineage_svc.mark_message_as_compressed(_fake_message(), originals, strategy="manual")
     assert ref["turn_message_ids"] == expected
 
 
@@ -60,14 +56,12 @@ def test_helper_rejects_unknown_strategy():
 
 def test_helper_accepts_known_strategies():
     for s in ("sliding_window", "manual", "evolver"):
-        ref = lineage_svc.mark_message_as_compressed(
-            _fake_message(), [_fake_message()], strategy=s
-        )
+        ref = lineage_svc.mark_message_as_compressed(_fake_message(), [_fake_message()], strategy=s)
         assert ref["compaction_strategy"] == s
 
 
 def test_helper_uses_explicit_compressed_at_when_provided():
-    when = datetime(2026, 5, 10, 12, 0, 0, tzinfo=timezone.utc)
+    when = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
     ref = lineage_svc.mark_message_as_compressed(
         _fake_message(),
         [_fake_message()],
@@ -78,8 +72,6 @@ def test_helper_uses_explicit_compressed_at_when_provided():
 
 
 def test_helper_handles_empty_original_list():
-    ref = lineage_svc.mark_message_as_compressed(
-        _fake_message(), [], strategy="manual"
-    )
+    ref = lineage_svc.mark_message_as_compressed(_fake_message(), [], strategy="manual")
     assert ref["turn_count"] == 0
     assert ref["turn_message_ids"] == []

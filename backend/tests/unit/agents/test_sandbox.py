@@ -104,9 +104,7 @@ class TestProductionGuard:
         monkeypatch.setattr(sandbox.settings, "SANDBOX_LOCAL_EXECUTE_PROD", False)
 
         try:
-            build_sandbox(
-                policy={"sandbox": {"kind": "docker", "execute": True}}
-            )
+            build_sandbox(policy={"sandbox": {"kind": "docker", "execute": True}})
         except SandboxMisconfiguredError:
             pytest.fail("docker kind must not trigger the local-exec guard")
         except Exception:
@@ -166,4 +164,3 @@ class TestDisabledSandbox:
 
     def test_sandbox_false_returns_none_none(self):
         assert build_sandbox(policy={"sandbox": False}) == (None, None)
-

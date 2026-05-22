@@ -109,12 +109,16 @@ async def test_capture_hook_promotes_pending_memories(
     from sqlalchemy import select
 
     rows = (
-        await db_session.execute(
-            select(Memory).where(
-                Memory.workspace_id == workspace.id,
-                Memory.scope == MemoryScope.USER,
-                Memory.key == "preferred_editor",
+        (
+            await db_session.execute(
+                select(Memory).where(
+                    Memory.workspace_id == workspace.id,
+                    Memory.scope == MemoryScope.USER,
+                    Memory.key == "preferred_editor",
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert any(r.content == "user prefers vim" for r in rows)

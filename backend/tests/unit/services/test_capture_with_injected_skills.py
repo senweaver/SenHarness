@@ -105,8 +105,5 @@ def test_agent_runner_read_helper_mirrors_sessions() -> None:
 
     assert agent_runner._read_injected_skill_ids(backend, run_id) == [pack]
     assert agent_runner._read_injected_skill_ids(None, run_id) == []
-    assert (
-        agent_runner._read_injected_skill_ids(_OpenClawLikeBackend(), run_id)
-        == []
-    )
+    assert agent_runner._read_injected_skill_ids(_OpenClawLikeBackend(), run_id) == []
     assert agent_runner._read_injected_skill_ids(_RaisingBackend(), run_id) == []

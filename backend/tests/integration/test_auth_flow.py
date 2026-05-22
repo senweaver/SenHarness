@@ -29,9 +29,7 @@ async def test_register_then_login_returns_access_token(async_client):
     assert body["email"] == email
 
     # Login with the same credentials.
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     assert r.status_code == 200, r.text
     body = r.json()
     assert "access_token" in body

@@ -62,9 +62,7 @@ async def _create_pack_with_two_versions(async_client, headers) -> str:
 async def test_diff_two_versions_by_number(async_client) -> None:
     headers, _ = await _bootstrap(async_client)
     pid = await _create_pack_with_two_versions(async_client, headers)
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/versions/1/diff/2", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/versions/1/diff/2", headers=headers)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["truncated"] is False
@@ -97,9 +95,7 @@ async def test_diff_with_latest_label(async_client) -> None:
 async def test_diff_unknown_version_returns_404_not_501(async_client) -> None:
     headers, _ = await _bootstrap(async_client)
     pid = await _create_pack_with_two_versions(async_client, headers)
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/versions/1/diff/99", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/versions/1/diff/99", headers=headers)
     assert r.status_code == 404
     detail = r.json().get("detail") or {}
     assert detail.get("code") == "skill_version.not_found"
@@ -108,7 +104,5 @@ async def test_diff_unknown_version_returns_404_not_501(async_client) -> None:
 async def test_diff_unknown_pack_returns_404(async_client) -> None:
     headers, _ = await _bootstrap(async_client)
     bogus = uuid.uuid4()
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{bogus}/versions/1/diff/2", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{bogus}/versions/1/diff/2", headers=headers)
     assert r.status_code == 404

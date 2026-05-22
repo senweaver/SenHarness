@@ -34,9 +34,7 @@ class WebSearchArgs(BaseModel):
     max_results: int = Field(
         default=5, ge=1, le=MAX_RESULTS_CAP, description="How many results to return."
     )
-    site: str | None = Field(
-        default=None, description="Restrict to a site (e.g. 'github.com')."
-    )
+    site: str | None = Field(default=None, description="Restrict to a site (e.g. 'github.com').")
     time_range: str | None = Field(
         default=None, description="One of 'day'|'week'|'month'|'year' (best-effort)."
     )
@@ -136,16 +134,12 @@ async def _ordered_candidates() -> list[tuple[str, str | None, str | None]]:
                     from app.db.repository import AsyncRepository
                     from app.services.vault import reveal_secret
 
-                    vault_repo: AsyncRepository[VaultItem] = AsyncRepository(
-                        session, VaultItem
-                    )
+                    vault_repo: AsyncRepository[VaultItem] = AsyncRepository(session, VaultItem)
                     item = await vault_repo.get(row.vault_item_id)
                     if item is not None:
                         api_key = await reveal_secret(item)
                 except Exception as e:  # pragma: no cover
-                    log.warning(
-                        "vault reveal failed for search_provider %s: %s", row.id, e
-                    )
+                    log.warning("vault reveal failed for search_provider %s: %s", row.id, e)
             out.append((row.kind, api_key, row.base_url))
 
     return out

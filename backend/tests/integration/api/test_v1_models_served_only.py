@@ -45,9 +45,7 @@ async def _bootstrap(async_client) -> tuple[dict, str]:
 
 async def test_v1_models_empty_workspace(async_client):
     headers, _ = await _bootstrap(async_client)
-    r = await async_client.get(
-        "/api/v1/openai/v1/models", headers=headers
-    )
+    r = await async_client.get("/api/v1/openai/v1/models", headers=headers)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["object"] == "list"

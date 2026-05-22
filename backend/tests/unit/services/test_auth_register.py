@@ -31,9 +31,7 @@ async def _set_mode(db, mode: RegistrationMode) -> None:
 
 
 async def _set_verify(db, *, on: bool) -> None:
-    await set_system_setting(
-        db, SystemSettingKey.AUTH_REQUIRE_EMAIL_VERIFICATION, on
-    )
+    await set_system_setting(db, SystemSettingKey.AUTH_REQUIRE_EMAIL_VERIFICATION, on)
     await db.flush()
 
 
@@ -72,9 +70,7 @@ async def test_invite_only_without_code_raises(db_session):
         )
 
 
-async def test_invite_only_with_code_joins_existing_workspace(
-    db_session, workspace, identity
-):
+async def test_invite_only_with_code_joins_existing_workspace(db_session, workspace, identity):
     await _set_mode(db_session, RegistrationMode.OPEN_INVITE_ONLY)
     await _set_verify(db_session, on=False)
 
@@ -129,12 +125,16 @@ async def test_email_verification_gate_marks_pending_and_issues_token(db_session
     assert result.verification_token is not None
 
     rows = (
-        await db_session.execute(
-            select(EmailVerificationToken).where(
-                EmailVerificationToken.identity_id == result.identity.id
+        (
+            await db_session.execute(
+                select(EmailVerificationToken).where(
+                    EmailVerificationToken.identity_id == result.identity.id
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(rows) == 1
     assert rows[0].consumed_at is None
 
@@ -156,9 +156,7 @@ async def test_audit_rows_emitted(db_session):
     actions = (
         (
             await db_session.execute(
-                select(AuditEvent.action).where(
-                    AuditEvent.actor_identity_id == result.identity.id
-                )
+                select(AuditEvent.action).where(AuditEvent.actor_identity_id == result.identity.id)
             )
         )
         .scalars()

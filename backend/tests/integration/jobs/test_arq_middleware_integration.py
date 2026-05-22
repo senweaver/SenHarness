@@ -124,13 +124,8 @@ async def test_args_kwargs_are_redacted_before_persisting(db_session, workspace)
     # The whole payload may collapse to a sentinel when oversized; for
     # this small body it should stay structured + redacted.
     assert persisted.get("kwargs", {}).get("api_key") == "***"
-    assert (
-        persisted.get("kwargs", {}).get("config", {}).get("client_secret")
-        == "***"
-    )
-    assert (
-        persisted.get("kwargs", {}).get("config", {}).get("name") == "ok"
-    )
+    assert persisted.get("kwargs", {}).get("config", {}).get("client_secret") == "***"
+    assert persisted.get("kwargs", {}).get("config", {}).get("name") == "ok"
 
 
 async def test_end_without_start_does_not_raise(db_session):

@@ -178,8 +178,7 @@ def test_openai_wire_sequence_has_no_system_between_tool_calls_and_returns() -> 
         ModelRequest(parts=[UserPromptPart(content="predict stock")]),
         ModelResponse(
             parts=[
-                ToolCallPart(tool_name=f"t_{cid}", args={}, tool_call_id=cid)
-                for cid in call_ids
+                ToolCallPart(tool_name=f"t_{cid}", args={}, tool_call_id=cid) for cid in call_ids
             ]
         ),
         ModelRequest(

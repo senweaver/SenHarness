@@ -88,15 +88,13 @@ class _Counter:
 class _Histogram:
     buckets: tuple[float, ...]
     # { label_tuple -> (bucket_counts[list], sum, count) }
-    values: dict[
-        tuple[tuple[str, str], ...], tuple[list[int], float, int]
-    ] = field(default_factory=dict)
+    values: dict[tuple[tuple[str, str], ...], tuple[list[int], float, int]] = field(
+        default_factory=dict
+    )
 
     def observe(self, labels: dict[str, str], value: float) -> None:
         key = tuple(sorted(labels.items()))
-        counts, total, n = self.values.get(
-            key, ([0] * len(self.buckets), 0.0, 0)
-        )
+        counts, total, n = self.values.get(key, ([0] * len(self.buckets), 0.0, 0))
         counts = list(counts)
         for i, boundary in enumerate(self.buckets):
             if value <= boundary:
@@ -135,9 +133,7 @@ def record_run(
     try:
         with _LOCK:
             _runs.inc({"provider": provider, "model": model, "status": status})
-            _run_latency.observe(
-                {"provider": provider, "model": model}, duration_s
-            )
+            _run_latency.observe({"provider": provider, "model": model}, duration_s)
             _tokens.inc(
                 {"provider": provider, "model": model, "direction": "input"},
                 float(input_tokens),
@@ -170,9 +166,7 @@ def record_eval(verdict: str) -> None:
 def record_http(method: str, path: str, status: int, duration_s: float) -> None:
     try:
         with _LOCK:
-            _http_requests.inc(
-                {"method": method, "path": path, "status": str(status)}
-            )
+            _http_requests.inc({"method": method, "path": path, "status": str(status)})
             _http_latency.observe({"method": method, "path": path}, duration_s)
     except Exception:  # pragma: no cover
         pass
@@ -199,9 +193,7 @@ def record_web_vital(name: str, value: float, path: str = "/") -> None:
             return
         safe_path = (path or "/")[:128]
         with _LOCK:
-            _web_vitals.observe(
-                {"metric": upper, "path": safe_path}, float(value)
-            )
+            _web_vitals.observe({"metric": upper, "path": safe_path}, float(value))
     except Exception:  # pragma: no cover
         pass
 
@@ -239,11 +231,7 @@ def _render_histogram(name: str, help_text: str, hist: _Histogram) -> list[str]:
                 + f" {cumulative}"
             )
         inf_labels = dict(key) | {"le": "+Inf"}
-        out.append(
-            f"{name}_bucket"
-            + _fmt_labels(tuple(sorted(inf_labels.items())))
-            + f" {n}"
-        )
+        out.append(f"{name}_bucket" + _fmt_labels(tuple(sorted(inf_labels.items()))) + f" {n}")
         out.append(f"{name}_sum{label_str} {total}")
         out.append(f"{name}_count{label_str} {n}")
     return out
@@ -252,9 +240,7 @@ def _render_histogram(name: str, help_text: str, hist: _Histogram) -> list[str]:
 def render_exposition() -> str:
     with _LOCK:
         lines: list[str] = []
-        lines += _render_counter(
-            "senharness_agent_runs_total", "Total agent runs", _runs
-        )
+        lines += _render_counter("senharness_agent_runs_total", "Total agent runs", _runs)
         lines += _render_histogram(
             "senharness_agent_run_duration_seconds",
             "Agent run duration in seconds",

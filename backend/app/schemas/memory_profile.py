@@ -21,8 +21,7 @@ class MemoryProfileUpsert(ORMModel):
     soul_dims_json: dict | None = Field(
         default=None,
         description=(
-            "SOUL kind only: 12-dimension user-model fragments keyed by "
-            "canonical dimension name."
+            "SOUL kind only: 12-dimension user-model fragments keyed by canonical dimension name."
         ),
     )
     metadata_json: dict | None = None

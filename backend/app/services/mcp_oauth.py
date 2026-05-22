@@ -98,7 +98,7 @@ class _TokenEnvelope:
         )
 
     @classmethod
-    def from_json(cls, blob: str) -> "_TokenEnvelope":
+    def from_json(cls, blob: str) -> _TokenEnvelope:
         payload = json.loads(blob)
         return cls(
             access_token=str(payload.get("access_token") or ""),
@@ -149,9 +149,7 @@ async def _http_token_request(
     if resp.status_code == 401:
         raise McpOAuthUnauthorized(f"401 from {config.token_url}: {resp.text[:200]}")
     if resp.status_code >= 400:
-        raise McpOAuthBadRequest(
-            f"token endpoint returned {resp.status_code}: {resp.text[:200]}"
-        )
+        raise McpOAuthBadRequest(f"token endpoint returned {resp.status_code}: {resp.text[:200]}")
     try:
         payload: dict[str, Any] = resp.json()
     except (ValueError, json.JSONDecodeError) as e:
@@ -183,18 +181,14 @@ async def _store_envelope(
         # Reveal indirectly to avoid a second round-trip — we only
         # need to know whether a row exists, the contents are
         # immaterial because we are about to overwrite them.
-        await vault_svc.reveal_workspace_secret(
-            db, workspace_id=workspace_id, name=name
-        )
+        await vault_svc.reveal_workspace_secret(db, workspace_id=workspace_id, name=name)
         existing = True
     except vault_svc.VaultKeyNotFoundError:
         existing = False
     if existing:
         # `reveal_workspace_secret` does not return the row; fetch it
         # via the private lookup so we can reuse `replace_secret`.
-        item = await vault_svc._lookup_workspace_secret(
-            db, workspace_id=workspace_id, name=name
-        )
+        item = await vault_svc._lookup_workspace_secret(db, workspace_id=workspace_id, name=name)
         if item is not None:
             await vault_svc.replace_secret(db, item=item, plaintext=envelope.as_json())
             return
@@ -222,9 +216,7 @@ async def _load_envelope(
 ) -> _TokenEnvelope | None:
     name = config.vault_name(server_id)
     try:
-        blob = await vault_svc.reveal_workspace_secret(
-            db, workspace_id=workspace_id, name=name
-        )
+        blob = await vault_svc.reveal_workspace_secret(db, workspace_id=workspace_id, name=name)
     except vault_svc.VaultKeyNotFoundError:
         return None
     try:

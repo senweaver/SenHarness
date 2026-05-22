@@ -3,6 +3,7 @@
 Distinct from ``provider.py`` (model API keys wired into LLM providers). These
 are workspace-scope arbitrary secrets an agent can reference at runtime.
 """
+
 from __future__ import annotations
 
 import uuid

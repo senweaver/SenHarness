@@ -90,9 +90,7 @@ async def read_me(
     # first membership when no specific workspace is requested.
     active_ws = out.current_workspace_id
     if active_ws is not None:
-        active_mem = next(
-            (m for m, _ws in pairs if m.workspace_id == active_ws), None
-        )
+        active_mem = next((m for m, _ws in pairs if m.workspace_id == active_ws), None)
         if active_mem is not None:
             out.current_role = active_mem.role
             out.current_department_id = active_mem.department_id
@@ -110,7 +108,9 @@ async def update_me(
     identity = await repo.get(identity_id)
     if identity is None:
         raise NotFound("identity_not_found", code="identity.not_found")
-    updated = await repo.update(identity, **{k: v for k, v in body.model_dump(exclude_none=True).items()})
+    updated = await repo.update(
+        identity, **{k: v for k, v in body.model_dump(exclude_none=True).items()}
+    )
     await db.commit()
     return IdentityRead.model_validate(updated)
 
@@ -167,9 +167,7 @@ class ChatModelPrefUpdate(BaseModel):
         Depends(rate_limit("workspace_quota_read", limit=30, period_seconds=60)),
     ],
 )
-async def read_workspace_quota(
-    db: DBSession, identity_id: CurrentIdentityId
-) -> WorkspaceQuotaOut:
+async def read_workspace_quota(db: DBSession, identity_id: CurrentIdentityId) -> WorkspaceQuotaOut:
     """Return the caller's effective workspace creation budget."""
     snapshot = await quota_svc.get_quota(db, identity_id=identity_id)
     return WorkspaceQuotaOut(
@@ -250,9 +248,7 @@ class NotificationPrefsRead(BaseModel):
     """Effective preferences plus the catalog the UI renders against."""
 
     prefs: dict[str, NotificationPrefEntry] = Field(default_factory=dict)
-    global_: NotificationGlobalPref = Field(
-        default_factory=NotificationGlobalPref, alias="_global"
-    )
+    global_: NotificationGlobalPref = Field(default_factory=NotificationGlobalPref, alias="_global")
     catalog: list[NotificationEventDescriptorOut] = Field(default_factory=list)
 
     model_config = {"populate_by_name": True}
@@ -262,9 +258,7 @@ class NotificationPrefsUpdate(BaseModel):
     """Replace-style write — merge happens server-side, validated here."""
 
     prefs: dict[str, NotificationPrefEntry] = Field(default_factory=dict)
-    global_: NotificationGlobalPref = Field(
-        default_factory=NotificationGlobalPref, alias="_global"
-    )
+    global_: NotificationGlobalPref = Field(default_factory=NotificationGlobalPref, alias="_global")
 
     model_config = {"populate_by_name": True}
 
@@ -297,11 +291,7 @@ def _filter_catalog_for(identity) -> list[NotificationEventDescriptorOut]:
 @router.get(
     "/notification-prefs",
     response_model=NotificationPrefsRead,
-    dependencies=[
-        Depends(
-            rate_limit("notification_prefs_read", limit=30, period_seconds=60)
-        )
-    ],
+    dependencies=[Depends(rate_limit("notification_prefs_read", limit=30, period_seconds=60))],
 )
 async def read_notification_prefs(
     db: DBSession, identity_id: CurrentIdentityId
@@ -336,11 +326,7 @@ async def read_notification_prefs(
 @router.put(
     "/notification-prefs",
     response_model=NotificationPrefsRead,
-    dependencies=[
-        Depends(
-            rate_limit("notification_prefs_write", limit=10, period_seconds=60)
-        )
-    ],
+    dependencies=[Depends(rate_limit("notification_prefs_write", limit=10, period_seconds=60))],
 )
 async def update_notification_prefs(
     body: NotificationPrefsUpdate,
@@ -353,9 +339,7 @@ async def update_notification_prefs(
     if identity is None:
         raise NotFound("identity_not_found", code="identity.not_found")
 
-    is_platform_admin = (
-        str(getattr(identity, "platform_role", "")) == "platform_admin"
-    )
+    is_platform_admin = str(getattr(identity, "platform_role", "")) == "platform_admin"
     valid_channels = {"in_app", "email"}
     cleaned: dict[str, dict] = {}
     fields_changed: list[str] = []
@@ -363,10 +347,7 @@ async def update_notification_prefs(
         descriptor = notif_events.EVENT_REGISTRY.get(key)
         if descriptor is None:
             continue
-        if (
-            descriptor.target_audience == "platform_admins"
-            and not is_platform_admin
-        ):
+        if descriptor.target_audience == "platform_admins" and not is_platform_admin:
             continue
         chans: list[str] = []
         for c in entry.channels:
@@ -394,9 +375,7 @@ async def update_notification_prefs(
         resource_id=identity_id,
         summary="notification preferences updated",
         metadata={
-            "identity_id_hash": uuid.uuid5(
-                uuid.NAMESPACE_OID, str(identity_id)
-            ).hex[:16],
+            "identity_id_hash": uuid.uuid5(uuid.NAMESPACE_OID, str(identity_id)).hex[:16],
             "fields_changed": fields_changed,
         },
     )
@@ -434,8 +413,7 @@ def _build_dimension_view(
         and not r.user_rejected
         and (
             r.user_confirmed
-            or float(r.confidence)
-            >= user_profile_svc.AUTO_INJECT_CONFIDENCE_THRESHOLD
+            or float(r.confidence) >= user_profile_svc.AUTO_INJECT_CONFIDENCE_THRESHOLD
         )
     ]
     eligible.sort(
@@ -454,8 +432,7 @@ def _build_dimension_view(
         for r in history
         if not r.user_confirmed
         and not r.user_rejected
-        and float(r.confidence)
-        < user_profile_svc.AUTO_INJECT_CONFIDENCE_THRESHOLD
+        and float(r.confidence) < user_profile_svc.AUTO_INJECT_CONFIDENCE_THRESHOLD
     )
     rejected = sum(1 for r in history if r.user_rejected)
 
@@ -482,9 +459,7 @@ async def read_user_profile(
 ) -> UserProfileBundle:
     """Active fact + history for every dimension in the active workspace."""
     if workspace_id is None:
-        raise NotFound(
-            "workspace_required", code="workspace.required"
-        )
+        raise NotFound("workspace_required", code="workspace.required")
     repo = UserProfileFactRepository(db)
     rows = list(
         await repo.list_for_identity(
@@ -503,9 +478,7 @@ async def read_user_profile(
         workspace_id=workspace_id,
         identity_id=identity_id,
     )
-    last_extracted = (
-        max((r.created_at for r in rows), default=None) if rows else None
-    )
+    last_extracted = max((r.created_at for r in rows), default=None) if rows else None
 
     return UserProfileBundle(
         workspace_id=workspace_id,

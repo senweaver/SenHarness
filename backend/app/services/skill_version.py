@@ -111,9 +111,7 @@ def compute_content_hash(content_md: str, files: Mapping[str, str] | None) -> st
     return h.hexdigest()
 
 
-async def _load_pack(
-    db: AsyncSession, *, workspace_id: uuid.UUID, pack_id: uuid.UUID
-) -> SkillPack:
+async def _load_pack(db: AsyncSession, *, workspace_id: uuid.UUID, pack_id: uuid.UUID) -> SkillPack:
     pack = await SkillPackRepository(db).get(pack_id, include_deleted=True)
     if pack is None or pack.workspace_id != workspace_id:
         raise NotFound("skill_pack_not_found", code="skill_pack.not_found")
@@ -132,9 +130,7 @@ async def _load_version(
     return version
 
 
-def _check_edge(
-    current: SkillPackVersionState, target: SkillPackVersionState
-) -> None:
+def _check_edge(current: SkillPackVersionState, target: SkillPackVersionState) -> None:
     allowed = ALLOWED_VERSION_TRANSITIONS.get(current, set())
     if target not in allowed:
         raise SkillPackVersionTransitionError(
@@ -210,9 +206,7 @@ async def create_version(
         workspace_id=workspace_id,
         resource_type="skill_pack_version",
         resource_id=version.id,
-        summary=(
-            f"created v{version.version_no} for skill pack {pack.slug!r}"
-        ),
+        summary=(f"created v{version.version_no} for skill pack {pack.slug!r}"),
         metadata={
             "pack_id": str(pack.id),
             "slug": pack.slug,
@@ -253,9 +247,7 @@ async def _retire_current_active(
         workspace_id=workspace_id,
         resource_type="skill_pack_version",
         resource_id=current.id,
-        summary=(
-            f"retired v{current.version_no} (superseded by v{superseded_by.version_no})"
-        ),
+        summary=(f"retired v{current.version_no} (superseded by v{superseded_by.version_no})"),
         metadata={
             "pack_id": str(pack_id),
             "version_no": current.version_no,
@@ -273,9 +265,7 @@ async def _mirror_pack_to_version(
     """Sync the pack's cache columns to the version about to go ACTIVE."""
     pack.content_hash = version.content_hash
     file_repo = SkillFileRepository(db)
-    files = await file_repo.list_for_pack(
-        workspace_id=pack.workspace_id, skill_pack_id=pack.id
-    )
+    files = await file_repo.list_for_pack(workspace_id=pack.workspace_id, skill_pack_id=pack.id)
     skill_md = next((f for f in files if f.path == "SKILL.md"), None)
     if skill_md is None:
         await file_repo.create(
@@ -348,20 +338,14 @@ async def activate_version(
         workspace_id=workspace_id,
         resource_type="skill_pack_version",
         resource_id=version.id,
-        summary=(
-            f"activated v{version.version_no} for skill pack {pack.slug!r}"
-        ),
+        summary=(f"activated v{version.version_no} for skill pack {pack.slug!r}"),
         metadata={
             "pack_id": str(pack.id),
             "slug": pack.slug,
             "version_no": version.version_no,
             "content_hash": version.content_hash,
-            "previous_active_version_id": (
-                str(retired.id) if retired is not None else None
-            ),
-            "previous_active_version_no": (
-                retired.version_no if retired is not None else None
-            ),
+            "previous_active_version_id": (str(retired.id) if retired is not None else None),
+            "previous_active_version_no": (retired.version_no if retired is not None else None),
             "reason": reason,
         },
         request=request,
@@ -466,9 +450,7 @@ async def rollback_to_version(
     last week's version back" rollback. M1.6 wires the verb endpoint;
     the service is callable from any service-layer caller today.
     """
-    target = await _load_version(
-        db, workspace_id=workspace_id, version_id=target_version_id
-    )
+    target = await _load_version(db, workspace_id=workspace_id, version_id=target_version_id)
     if target.pack_id != pack_id:
         raise NotFound(
             "skill_pack_version_not_found",

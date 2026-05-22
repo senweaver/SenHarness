@@ -88,9 +88,7 @@ def get_catalog() -> list[dict]:
 # ─── CRUD ────────────────────────────────────────────────
 
 
-async def list_providers(
-    session: AsyncSession, *, workspace_id: uuid.UUID
-) -> list[SearchProvider]:
+async def list_providers(session: AsyncSession, *, workspace_id: uuid.UUID) -> list[SearchProvider]:
     repo = SearchProviderRepository(session)
     return list(
         await repo.list(
@@ -182,9 +180,7 @@ async def update_provider(
             vault_repo: AsyncRepository[VaultItem] = AsyncRepository(session, VaultItem)
             existing_item = await vault_repo.get(provider.vault_item_id)
             if existing_item is not None:
-                await vault_svc.replace_secret(
-                    session, item=existing_item, plaintext=api_key
-                )
+                await vault_svc.replace_secret(session, item=existing_item, plaintext=api_key)
         else:
             vault_item = await vault_svc.create_secret(
                 session,
@@ -198,15 +194,11 @@ async def update_provider(
     return provider
 
 
-async def delete_provider(
-    session: AsyncSession, *, provider: SearchProvider
-) -> None:
+async def delete_provider(session: AsyncSession, *, provider: SearchProvider) -> None:
     await SearchProviderRepository(session).soft_delete(provider)
 
 
-async def provider_has_key(
-    session: AsyncSession, *, provider: SearchProvider
-) -> bool:
+async def provider_has_key(session: AsyncSession, *, provider: SearchProvider) -> bool:
     return provider.vault_item_id is not None
 
 

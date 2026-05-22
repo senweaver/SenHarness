@@ -28,7 +28,7 @@ class _StubDDGS:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         _StubDDGS.last_ctor_kwargs = kwargs
 
-    def __enter__(self) -> "_StubDDGS":
+    def __enter__(self) -> _StubDDGS:
         return self
 
     def __exit__(self, *exc: Any) -> None:
@@ -77,9 +77,7 @@ def test_ddgs_fallback_pins_per_engine_timeout(stub_ddgs: type[_StubDDGS]) -> No
 
     timeout = stub_ddgs.last_ctor_kwargs.get("timeout")
     assert isinstance(timeout, int)
-    assert 1 <= timeout <= 4, (
-        f"expected a tight per-engine timeout (<=4s), got {timeout}s"
-    )
+    assert 1 <= timeout <= 4, f"expected a tight per-engine timeout (<=4s), got {timeout}s"
 
 
 def test_ddgs_fallback_propagates_time_range(stub_ddgs: type[_StubDDGS]) -> None:

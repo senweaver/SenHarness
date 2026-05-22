@@ -46,9 +46,7 @@ async def _bootstrap_workspace(async_client) -> tuple[dict, str, str, str]:
         json={"email": email, "name": "Insights WS", "password": password},
     )
     assert r.status_code == 201, r.text
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     r = await async_client.post(
@@ -59,9 +57,7 @@ async def _bootstrap_workspace(async_client) -> tuple[dict, str, str, str]:
     assert r.status_code in (200, 201), r.text
     ws_id = r.json()["id"]
     headers["X-Workspace-Id"] = ws_id
-    r = await async_client.post(
-        "/api/v1/sessions", headers=headers, json={"kind": "p2p"}
-    )
+    r = await async_client.post("/api/v1/sessions", headers=headers, json={"kind": "p2p"})
     sid = r.json()["id"]
     from app.core.security import decode_token
 
@@ -109,10 +105,7 @@ async def test_insights_slash_command_bypasses_agent_loop(async_client):
     # The WS surface received the system confirmation; no kernel
     # frames (delta / final / tool_call) were emitted because the
     # agent loop was bypassed.
-    kinds = [
-        (frame.get("type"), (frame.get("data") or {}).get("kind"))
-        for frame in fake_ws.sent
-    ]
+    kinds = [(frame.get("type"), (frame.get("data") or {}).get("kind")) for frame in fake_ws.sent]
     assert ("system", "insights_queued") in kinds
     assert all(t != "delta" for (t, _k) in kinds)
     assert all(t != "tool_call" for (t, _k) in kinds)
@@ -148,9 +141,7 @@ async def test_insights_slash_command_with_days_flag(async_client):
         )
 
     assert captured["days"] == 14
-    confirm = next(
-        f for f in fake_ws.sent if f.get("type") == "system"
-    )
+    confirm = next(f for f in fake_ws.sent if f.get("type") == "system")
     assert confirm["data"]["kind"] == "insights_queued"
     assert confirm["data"]["days"] == 14
 
@@ -180,9 +171,7 @@ async def test_insights_slash_command_breaker_open_emits_error_frame(
             text="/insights",
         )
 
-    error_frames = [
-        f for f in fake_ws.sent if f.get("type") == "error"
-    ]
+    error_frames = [f for f in fake_ws.sent if f.get("type") == "error"]
     assert len(error_frames) == 1
     assert error_frames[0]["data"]["code"] == "insights.breaker_open"
     assert error_frames[0]["data"]["retryable"] is True

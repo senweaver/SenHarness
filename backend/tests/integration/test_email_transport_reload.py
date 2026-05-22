@@ -19,9 +19,7 @@ pytestmark = pytest.mark.asyncio
 async def test_log_transport_when_smtp_disabled(db_session):
     ps.invalidate_local()
     # Reset to defaults to ensure ``enabled=False``.
-    await ps._delete_section_rows(
-        db_session, section=PlatformSettingsSection.EMAIL_SMTP
-    )
+    await ps._delete_section_rows(db_session, section=PlatformSettingsSection.EMAIL_SMTP)
     await db_session.commit()
     kind = await reload_email_transport_from_settings(db_session)
     assert kind == "log"
@@ -51,9 +49,7 @@ async def test_smtp_transport_swap_in(db_session, identity):
     assert isinstance(email_transport.get_email_transport(), SmtpEmailTransport)
 
 
-async def test_smtp_transport_falls_back_when_required_field_missing(
-    db_session, identity
-):
+async def test_smtp_transport_falls_back_when_required_field_missing(db_session, identity):
     ps.invalidate_local()
     await ps.update_section(
         db_session,

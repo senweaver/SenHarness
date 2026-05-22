@@ -112,9 +112,7 @@ def _serialize_section(meta: svc.SectionMeta) -> SectionRead:
         Depends(rate_limit("platform_settings_read", limit=30, period_seconds=60)),
     ],
 )
-async def list_sections(
-    db: DBSession, _admin: Identity = AdminGate
-) -> SectionListOut:
+async def list_sections(db: DBSession, _admin: Identity = AdminGate) -> SectionListOut:
     sections: list[SectionRead] = []
     for sec in svc.list_sections():
         meta = await svc.get_section_with_meta(db, section=sec)
@@ -142,9 +140,7 @@ async def get_section(
 @router.get(
     "/{section}/schema",
     dependencies=[
-        Depends(
-            rate_limit("platform_settings_schema_read", limit=60, period_seconds=60)
-        ),
+        Depends(rate_limit("platform_settings_schema_read", limit=60, period_seconds=60)),
     ],
 )
 async def get_section_schema(
@@ -212,9 +208,7 @@ async def reset_section(
     "/email.smtp/test",
     response_model=SmtpTestOut,
     dependencies=[
-        Depends(
-            rate_limit("platform_settings_smtp_test", limit=5, period_seconds=300)
-        ),
+        Depends(rate_limit("platform_settings_smtp_test", limit=5, period_seconds=300)),
     ],
 )
 async def test_smtp(
@@ -287,9 +281,7 @@ _OAUTH_METADATA_ENDPOINTS = {
     "/auth.oauth/{provider}/test",
     response_model=OAuthTestOut,
     dependencies=[
-        Depends(
-            rate_limit("platform_settings_oauth_test", limit=5, period_seconds=300)
-        ),
+        Depends(rate_limit("platform_settings_oauth_test", limit=5, period_seconds=300)),
     ],
 )
 async def test_oauth(
@@ -334,6 +326,4 @@ async def test_oauth(
         request=request,
     )
     await db.commit()
-    return OAuthTestOut(
-        ok=ok, provider=provider, metadata_url=endpoint, error=error
-    )
+    return OAuthTestOut(ok=ok, provider=provider, metadata_url=endpoint, error=error)

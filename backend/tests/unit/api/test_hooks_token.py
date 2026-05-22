@@ -26,9 +26,7 @@ class TestTokenResolver:
     def test_query_only_works_with_warning(self, caplog):
         with caplog.at_level(logging.WARNING):
             assert _resolve_ingress_token(None, "query-token") == "query-token"
-        assert any(
-            "query string" in record.message.lower() for record in caplog.records
-        )
+        assert any("query string" in record.message.lower() for record in caplog.records)
 
     def test_neither_is_401(self):
         with pytest.raises(HTTPException) as exc:

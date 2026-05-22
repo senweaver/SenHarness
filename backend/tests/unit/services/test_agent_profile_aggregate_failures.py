@@ -89,12 +89,8 @@ async def _seed_failing_artifact(
     return art
 
 
-async def test_aux_clusters_are_stitched(
-    db_session, workspace, agent, identity, monkeypatch
-):
-    sess = await _ensure_session(
-        db_session, workspace_id=workspace.id, identity_id=identity.id
-    )
+async def test_aux_clusters_are_stitched(db_session, workspace, agent, identity, monkeypatch):
+    sess = await _ensure_session(db_session, workspace_id=workspace.id, identity_id=identity.id)
     now = utcnow_naive()
     for i in range(4):
         await _seed_failing_artifact(
@@ -130,6 +126,7 @@ async def test_aux_clusters_are_stitched(
 
     monkeypatch.setattr(svc, "get_aux_model", fake_get_aux_model)
     monkeypatch.setattr(svc, "call_aux_chat", fake_call_aux_chat)
+
     # is_breaker_open is module-level — patch so this case never trips.
     async def fake_breaker(**_):
         return False
@@ -148,18 +145,12 @@ async def test_aux_clusters_are_stitched(
     fm = out.failure_modes
     assert fm["hallucination_kinds"][0]["kind"] == "tool_arg_invented"
     assert fm["common_errors"][0]["error_kind"] == "rate_limit"
-    assert fm["error_patterns"][0]["pattern_summary"].startswith(
-        "Forgets to back off"
-    )
+    assert fm["error_patterns"][0]["pattern_summary"].startswith("Forgets to back off")
     assert "rate_limit" in captured["user"]
 
 
-async def test_breaker_open_skips_aux(
-    db_session, workspace, agent, identity, monkeypatch
-):
-    sess = await _ensure_session(
-        db_session, workspace_id=workspace.id, identity_id=identity.id
-    )
+async def test_breaker_open_skips_aux(db_session, workspace, agent, identity, monkeypatch):
+    sess = await _ensure_session(db_session, workspace_id=workspace.id, identity_id=identity.id)
     now = utcnow_naive()
     for i in range(3):
         await _seed_failing_artifact(
@@ -200,20 +191,13 @@ async def test_breaker_open_skips_aux(
     assert aux_calls["count"] == 0
     # Heuristic baseline still produced ``common_errors`` from the
     # raw artifacts, so the row stays useful even on degrade.
-    assert any(
-        entry["error_kind"] == "auth"
-        for entry in out.failure_modes["common_errors"]
-    )
+    assert any(entry["error_kind"] == "auth" for entry in out.failure_modes["common_errors"])
     assert out.failure_modes["hallucination_kinds"] == []
     assert out.failure_modes["error_patterns"] == []
 
 
-async def test_no_aux_model_falls_through(
-    db_session, workspace, agent, identity, monkeypatch
-):
-    sess = await _ensure_session(
-        db_session, workspace_id=workspace.id, identity_id=identity.id
-    )
+async def test_no_aux_model_falls_through(db_session, workspace, agent, identity, monkeypatch):
+    sess = await _ensure_session(db_session, workspace_id=workspace.id, identity_id=identity.id)
     now = utcnow_naive()
     for i in range(2):
         await _seed_failing_artifact(

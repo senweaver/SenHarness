@@ -55,9 +55,7 @@ def test_fire_invokes_registered_callback():
         seen.append(payload)
 
     plugin_host_mod.plugin_host.register_hook("pre_tool_call", _cb)
-    asyncio.run(
-        plugin_host_mod.plugin_host.fire("pre_tool_call", tool_name="echo", x=1)
-    )
+    asyncio.run(plugin_host_mod.plugin_host.fire("pre_tool_call", tool_name="echo", x=1))
 
     assert seen == [{"tool_name": "echo", "x": 1}]
 
@@ -72,9 +70,7 @@ def test_fire_supports_sync_callbacks():
         seen.append(tool_name)
 
     plugin_host_mod.plugin_host.register_hook("post_tool_call", _cb)
-    asyncio.run(
-        plugin_host_mod.plugin_host.fire("post_tool_call", tool_name="echo")
-    )
+    asyncio.run(plugin_host_mod.plugin_host.fire("post_tool_call", tool_name="echo"))
     assert seen == ["echo"]
 
 

@@ -65,9 +65,7 @@ async def _require_workspace_admin(
     if identity is None:
         raise Unauthorized("identity_missing", code="auth.no_identity")
     if identity.platform_role != PlatformRole.PLATFORM_ADMIN:
-        await ws_svc.ensure_admin(
-            db, workspace_id=workspace_id, identity_id=identity_id
-        )
+        await ws_svc.ensure_admin(db, workspace_id=workspace_id, identity_id=identity_id)
     return identity, workspace_id
 
 
@@ -168,8 +166,7 @@ async def list_inflight_runs(
         str | None,
         Query(
             description=(
-                "Comma-separated bucket filter "
-                "(running / paused / lost / zombie / killed)."
+                "Comma-separated bucket filter (running / paused / lost / zombie / killed)."
             ),
         ),
     ] = None,
@@ -224,9 +221,7 @@ async def runtime_stats(
     "/inflight-runs/{run_id}/force-recycle",
     response_model=ForceRecycleResult,
     dependencies=[
-        Depends(
-            rate_limit("runtime_console_recycle", limit=5, period_seconds=60)
-        ),
+        Depends(rate_limit("runtime_console_recycle", limit=5, period_seconds=60)),
     ],
 )
 async def force_recycle_inflight_run(

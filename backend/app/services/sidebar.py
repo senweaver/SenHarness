@@ -206,19 +206,9 @@ async def list_my_items(
     The total count reflects pre-truncation size so the UI can decide
     whether to surface the inline search (>=12 items).
     """
-    bucket = await _agent_items(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
-    bucket.extend(
-        await _squad_items(
-            db, workspace_id=workspace_id, identity_id=identity_id
-        )
-    )
-    bucket.extend(
-        await _session_items(
-            db, workspace_id=workspace_id, identity_id=identity_id
-        )
-    )
+    bucket = await _agent_items(db, workspace_id=workspace_id, identity_id=identity_id)
+    bucket.extend(await _squad_items(db, workspace_id=workspace_id, identity_id=identity_id))
+    bucket.extend(await _session_items(db, workspace_id=workspace_id, identity_id=identity_id))
 
     bucket.sort(
         key=lambda item: (

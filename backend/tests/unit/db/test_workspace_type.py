@@ -35,6 +35,6 @@ class TestWorkspaceType:
 
     def test_membership_check(self):
         """Operators comparing a free-form string to the constants."""
-        assert "company" == WorkspaceType.COMPANY
-        assert "tenant" == WorkspaceType.TENANT
-        assert "unknown-future" != WorkspaceType.COMPANY
+        assert WorkspaceType.COMPANY == "company"
+        assert WorkspaceType.TENANT == "tenant"
+        assert WorkspaceType.COMPANY != "unknown-future"

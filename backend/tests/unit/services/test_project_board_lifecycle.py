@@ -55,9 +55,7 @@ async def test_create_board_rejects_duplicate_name(db_session, workspace, identi
     assert exc.value.code == "board.name_taken"
 
 
-async def test_create_board_requires_non_empty_name(
-    db_session, workspace, identity
-):
+async def test_create_board_requires_non_empty_name(db_session, workspace, identity):
     with pytest.raises(ValidationFailed):
         await svc.create_board(
             db_session,
@@ -69,9 +67,7 @@ async def test_create_board_requires_non_empty_name(
         )
 
 
-async def test_update_board_changes_name_and_description(
-    db_session, workspace, identity
-):
+async def test_update_board_changes_name_and_description(db_session, workspace, identity):
     board = await svc.create_board(
         db_session,
         workspace_id=workspace.id,
@@ -91,9 +87,7 @@ async def test_update_board_changes_name_and_description(
     assert updated.description == "now with notes"
 
 
-async def test_update_board_blocks_name_collision(
-    db_session, workspace, identity
-):
+async def test_update_board_blocks_name_collision(db_session, workspace, identity):
     a = await svc.create_board(
         db_session,
         workspace_id=workspace.id,
@@ -137,14 +131,10 @@ async def test_archive_board_marks_deleted(db_session, workspace, identity):
     assert archived.deleted_at is not None
     # Subsequent get_board call should 404 because the row is soft-deleted.
     with pytest.raises(NotFound):
-        await svc.get_board(
-            db_session, workspace_id=workspace.id, board_id=board.id
-        )
+        await svc.get_board(db_session, workspace_id=workspace.id, board_id=board.id)
 
 
-async def test_create_card_lands_in_correct_column(
-    db_session, workspace, identity, agent
-):
+async def test_create_card_lands_in_correct_column(db_session, workspace, identity, agent):
     board = await svc.create_board(
         db_session,
         workspace_id=workspace.id,
@@ -172,9 +162,7 @@ async def test_create_card_lands_in_correct_column(
     assert card.sort_order == 0
 
 
-async def test_create_card_appends_with_sort_order(
-    db_session, workspace, identity
-):
+async def test_create_card_appends_with_sort_order(db_session, workspace, identity):
     board = await svc.create_board(
         db_session,
         workspace_id=workspace.id,
@@ -209,9 +197,7 @@ async def test_create_card_appends_with_sort_order(
     assert third.sort_order == 2
 
 
-async def test_update_card_changes_priority_and_due(
-    db_session, workspace, identity
-):
+async def test_update_card_changes_priority_and_due(db_session, workspace, identity):
     board = await svc.create_board(
         db_session,
         workspace_id=workspace.id,
@@ -264,14 +250,10 @@ async def test_archive_card_soft_deletes(db_session, workspace, identity):
         actor_identity_id=identity.id,
     )
     with pytest.raises(NotFound):
-        await svc.get_card(
-            db_session, workspace_id=workspace.id, card_id=card.id
-        )
+        await svc.get_card(db_session, workspace_id=workspace.id, card_id=card.id)
 
 
-async def test_complete_card_moves_to_done_and_stamps_completed_at(
-    db_session, workspace, identity
-):
+async def test_complete_card_moves_to_done_and_stamps_completed_at(db_session, workspace, identity):
     board = await svc.create_board(
         db_session,
         workspace_id=workspace.id,
@@ -329,9 +311,7 @@ async def test_complete_card_is_idempotent(db_session, workspace, identity):
     assert first.completed_at == second.completed_at
 
 
-async def test_create_card_rejects_cross_workspace_agent(
-    db_session, workspace, identity
-):
+async def test_create_card_rejects_cross_workspace_agent(db_session, workspace, identity):
     board = await svc.create_board(
         db_session,
         workspace_id=workspace.id,
@@ -352,9 +332,7 @@ async def test_create_card_rejects_cross_workspace_agent(
         )
 
 
-async def test_get_board_rejects_cross_workspace_caller(
-    db_session, workspace, identity
-):
+async def test_get_board_rejects_cross_workspace_caller(db_session, workspace, identity):
     board = await svc.create_board(
         db_session,
         workspace_id=workspace.id,
@@ -365,14 +343,10 @@ async def test_get_board_rejects_cross_workspace_caller(
     )
     other_ws_id = uuid.uuid4()
     with pytest.raises(NotFound):
-        await svc.get_board(
-            db_session, workspace_id=other_ws_id, board_id=board.id
-        )
+        await svc.get_board(db_session, workspace_id=other_ws_id, board_id=board.id)
 
 
-async def test_list_cards_for_agent_skips_done(
-    db_session, workspace, identity, agent
-):
+async def test_list_cards_for_agent_skips_done(db_session, workspace, identity, agent):
     board = await svc.create_board(
         db_session,
         workspace_id=workspace.id,
@@ -399,9 +373,7 @@ async def test_list_cards_for_agent_skips_done(
         assignee_agent_id=agent.id,
         actor_identity_id=identity.id,
     )
-    rows = await svc.list_cards_for_agent(
-        db_session, workspace_id=workspace.id, agent_id=agent.id
-    )
+    rows = await svc.list_cards_for_agent(db_session, workspace_id=workspace.id, agent_id=agent.id)
     ids = [r.id for r in rows]
     assert open_card.id in ids
     assert done_card.id not in ids

@@ -39,12 +39,12 @@ log = logging.getLogger(__name__)
 class ResolvedModel:
     """Lightweight descriptor with everything needed to build a pydantic-ai Model."""
 
-    provider_kind: str         # "openai" | "anthropic" | ... | "mock"
-    model_name: str            # e.g. "gpt-4o-mini"
-    api_key: str | None        # plaintext (in-memory only)
+    provider_kind: str  # "openai" | "anthropic" | ... | "mock"
+    model_name: str  # e.g. "gpt-4o-mini"
+    api_key: str | None  # plaintext (in-memory only)
     base_url: str | None = None
     extra: dict | None = None
-    source: str = "db"         # "db" | "override" | "mock"
+    source: str = "db"  # "db" | "override" | "mock"
 
 
 def parse_override(override: str) -> ResolvedModel | None:
@@ -130,9 +130,7 @@ async def _read_agent_default_model(agent_id: uuid.UUID) -> str | None:
 
     factory = get_session_factory()
     async with factory() as session:
-        result = await session.execute(
-            select(Agent.default_model).where(Agent.id == agent_id)
-        )
+        result = await session.execute(select(Agent.default_model).where(Agent.id == agent_id))
         row = result.first()
     if row is None:
         return None
@@ -165,9 +163,7 @@ class ResolvedEmbedder:
     base_url: str | None
 
 
-async def resolve_embedder_for_workspace(
-    *, workspace_id: uuid.UUID
-) -> ResolvedEmbedder | None:
+async def resolve_embedder_for_workspace(*, workspace_id: uuid.UUID) -> ResolvedEmbedder | None:
     """Pick the first enabled workspace provider whose catalog declares
     embedding support.
 
@@ -226,11 +222,7 @@ async def resolve_embedder_for_workspace(
         chosen = None
         for row in rows:
             provider = row[0]
-            kind = (
-                provider.kind.value
-                if hasattr(provider.kind, "value")
-                else str(provider.kind)
-            )
+            kind = provider.kind.value if hasattr(provider.kind, "value") else str(provider.kind)
             if provider_supports_embeddings(kind):
                 chosen = row
                 break
@@ -264,11 +256,7 @@ async def resolve_embedder_for_workspace(
             )
             return None
 
-    kind = (
-        provider.kind.value
-        if hasattr(provider.kind, "value")
-        else str(provider.kind)
-    )
+    kind = provider.kind.value if hasattr(provider.kind, "value") else str(provider.kind)
     override = ""
     md = provider.metadata_json or {}
     if isinstance(md, dict):
@@ -348,9 +336,7 @@ async def _resolve_from_db(
             log.warning("vault reveal failed for provider %s: %s", provider.id, e)
             return None
 
-    kind = (
-        provider.kind.value if hasattr(provider.kind, "value") else str(provider.kind)
-    )
+    kind = provider.kind.value if hasattr(provider.kind, "value") else str(provider.kind)
     default_model = provider.default_model or _first_builtin_model(kind) or kind
     base_url = provider.base_url or default_base_url_for(kind)
     return ResolvedModel(
@@ -398,6 +384,7 @@ _MODEL_BUILD_CACHE: dict[tuple, object] = {}
 
 def _model_cache_key(resolved: ResolvedModel) -> tuple:
     import hashlib
+
     key_hash = (
         hashlib.sha1((resolved.api_key or "").encode("utf-8")).hexdigest()[:16]
         if resolved.api_key
@@ -451,9 +438,7 @@ def build_pydantic_ai_model(resolved: ResolvedModel):
             )
             return None
     except Exception as e:  # pragma: no cover - defensive: any provider import / build error
-        log.warning(
-            "Failed to build pydantic-ai model kind=%s family=%s: %s", kind, family, e
-        )
+        log.warning("Failed to build pydantic-ai model kind=%s family=%s: %s", kind, family, e)
         return None
 
     if built is not None:

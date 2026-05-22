@@ -33,9 +33,7 @@ class SearchProviderKind(StrEnum):
     DUCKDUCKGO = "duckduckgo"  # no key needed; row exists for enable/disable
 
 
-class SearchProvider(
-    UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base
-):
+class SearchProvider(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "search_providers"
 
     kind: Mapped[str] = mapped_column(String(32), nullable=False)

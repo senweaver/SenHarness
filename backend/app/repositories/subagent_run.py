@@ -19,14 +19,8 @@ class SubAgentRunRepository(AsyncRepository[SubAgentRun]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, SubAgentRun)
 
-    async def get_by_child_run_id(
-        self, *, child_run_id: uuid.UUID
-    ) -> SubAgentRun | None:
-        stmt = (
-            select(SubAgentRun)
-            .where(SubAgentRun.child_run_id == child_run_id)
-            .limit(1)
-        )
+    async def get_by_child_run_id(self, *, child_run_id: uuid.UUID) -> SubAgentRun | None:
+        stmt = select(SubAgentRun).where(SubAgentRun.child_run_id == child_run_id).limit(1)
         return (await self.session.execute(stmt)).scalar_one_or_none()
 
     async def list_by_parent_run_id(

@@ -19,12 +19,12 @@ from typing import Any
 import pytest
 
 from app.services import plugin_signing
+from app.services.plugin_loader import PluginManifest
 from app.services.plugin_signing import (
     PluginSigningError,
     evaluate_plugin_for_load,
     verify_signature,
 )
-from app.services.plugin_loader import PluginManifest
 
 pynacl = pytest.importorskip("nacl.signing")
 
@@ -118,9 +118,7 @@ class _StubRegistryRow:
         self.approved_by_platform_admin = approved
 
 
-def _patch_settings(
-    monkeypatch: pytest.MonkeyPatch, settings: _StubSettings
-) -> None:
+def _patch_settings(monkeypatch: pytest.MonkeyPatch, settings: _StubSettings) -> None:
     """Wire ``platform_settings.get_section`` to our stub.
 
     We bypass the real DB read so the unit tests don't need pg.
@@ -134,9 +132,7 @@ def _patch_settings(
     monkeypatch.setattr(ps, "get_section", _get_section)
 
 
-def _patch_registry(
-    monkeypatch: pytest.MonkeyPatch, row: _StubRegistryRow | None
-) -> None:
+def _patch_registry(monkeypatch: pytest.MonkeyPatch, row: _StubRegistryRow | None) -> None:
     """Wire :class:`PluginRegistryRepository.get_by` to return ``row``."""
 
     class _StubRepo:
@@ -157,9 +153,7 @@ def _patch_registry(
 def test_evaluate_disabled_returns_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _patch_settings(
-        monkeypatch, _StubSettings(allow_user_plugins=False)
-    )
+    _patch_settings(monkeypatch, _StubSettings(allow_user_plugins=False))
     _patch_registry(monkeypatch, None)
     allowed, reason = asyncio.run(
         evaluate_plugin_for_load(

@@ -73,9 +73,9 @@ class Settings(BaseSettings):
     # Desktop's port-proxy tears the probe socket down mid-handshake, which
     # surfaces as ``ConnectionError: unexpected connection_lost()``; set this
     # to ``disable`` for local host-mode dev against the dockerised Postgres.
-    DB_SSL_MODE: Literal[
-        "disable", "allow", "prefer", "require", "verify-ca", "verify-full"
-    ] = "prefer"
+    DB_SSL_MODE: Literal["disable", "allow", "prefer", "require", "verify-ca", "verify-full"] = (
+        "prefer"
+    )
 
     # ─── Redis ─────────────────────────────────────────────
     REDIS_HOST: str = "localhost"

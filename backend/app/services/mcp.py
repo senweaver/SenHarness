@@ -168,9 +168,7 @@ async def _resolve_oauth_secret(
     """
     ref = auth_json.get("client_secret_ref")
     if isinstance(ref, str) and ref.strip():
-        return await vault_svc.resolve_vault_template(
-            db, workspace_id=workspace_id, template=ref
-        )
+        return await vault_svc.resolve_vault_template(db, workspace_id=workspace_id, template=ref)
     inline = auth_json.get("client_secret")
     if isinstance(inline, str) and inline.strip():
         return inline.strip()
@@ -256,9 +254,7 @@ async def build_mcp_client_for_server(
 
     if auth_json.get("type") == "oauth":
         if transport == McpTransport.STDIO:
-            raise McpConfigInvalid(
-                "OAuth is only meaningful for sse / streamable_http transports"
-            )
+            raise McpConfigInvalid("OAuth is only meaningful for sse / streamable_http transports")
         client_secret = await _resolve_oauth_secret(
             db, workspace_id=workspace_id, auth_json=auth_json
         )

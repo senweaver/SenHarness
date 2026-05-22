@@ -91,13 +91,17 @@ async def _list_target_workspaces() -> list[Any]:
     factory = get_session_factory()
     async with factory() as db:
         rows = (
-            await db.execute(
-                select(Workspace.id)
-                .where(Workspace.deleted_at.is_(None))
-                .order_by(Workspace.created_at.asc())
-                .limit(_MAX_WORKSPACES_PER_SWEEP)
+            (
+                await db.execute(
+                    select(Workspace.id)
+                    .where(Workspace.deleted_at.is_(None))
+                    .order_by(Workspace.created_at.asc())
+                    .limit(_MAX_WORKSPACES_PER_SWEEP)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
     return list(rows)
 
 
@@ -141,9 +145,7 @@ async def verify_proposed_versions_sweep(ctx: dict[str, Any]) -> dict[str, Any]:
         # Per-workspace gate 1: evolver auto_verifier on?
         async with factory() as db:
             try:
-                config = await get_workspace_evolver_config(
-                    db, workspace_id=workspace_id
-                )
+                config = await get_workspace_evolver_config(db, workspace_id=workspace_id)
             except Exception:  # pragma: no cover
                 log.exception(
                     "verifier sweep failed to read evolver config for ws=%s",
@@ -296,9 +298,7 @@ async def verify_proposed_versions_sweep(ctx: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-async def on_skill_verify_job_failed_permanent(
-    ctx: dict[str, Any], exc: BaseException
-) -> None:
+async def on_skill_verify_job_failed_permanent(ctx: dict[str, Any], exc: BaseException) -> None:
     """ARQ permanent-failure hook for the verifier sweep.
 
     Mirrors the pending-memory backstop: workspace-level audit is

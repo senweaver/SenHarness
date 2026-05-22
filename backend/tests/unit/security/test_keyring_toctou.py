@@ -23,9 +23,7 @@ def _write_keyring(path: Path) -> None:
         os.chmod(path, 0o600)
 
 
-def test_keyring_open_emits_audit_log(
-    tmp_path: Path, caplog: pytest.LogCaptureFixture
-) -> None:
+def test_keyring_open_emits_audit_log(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     target = tmp_path / "kek.json"
     _write_keyring(target)
     caplog.set_level(logging.INFO, logger="senharness.audit")

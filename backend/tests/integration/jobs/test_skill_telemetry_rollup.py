@@ -147,20 +147,22 @@ async def test_rollup_writes_last_used_at_and_effectiveness(async_client):
 
     factory = get_session_factory()
     async with factory() as db:
-        pack = (
-            await db.execute(select(SkillPack).where(SkillPack.id == pid))
-        ).scalar_one()
+        pack = (await db.execute(select(SkillPack).where(SkillPack.id == pid))).scalar_one()
         assert pack.last_used_at is not None
         assert pack.effectiveness_avg == pytest.approx(0.7, rel=1e-3)
 
         audits = (
-            await db.execute(
-                select(AuditEvent).where(
-                    AuditEvent.action == "skill.stats_rolled_up",
-                    AuditEvent.resource_id == pid,
+            (
+                await db.execute(
+                    select(AuditEvent).where(
+                        AuditEvent.action == "skill.stats_rolled_up",
+                        AuditEvent.resource_id == pid,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(audits) >= 1
 
 
@@ -168,9 +170,7 @@ async def test_rollup_isolates_workspaces(async_client):
     _headers_a, ws_a, ident_a = await _bootstrap(async_client)
     sid_a = await _seed_session(ws_a, ident_a)
     pid_a = await _seed_pack(ws_a)
-    await _seed_usage_rows(
-        ws_id=ws_a, pack_id=pid_a, sid=sid_a, identity_id=ident_a
-    )
+    await _seed_usage_rows(ws_id=ws_a, pack_id=pid_a, sid=sid_a, identity_id=ident_a)
     await _force_pack_stale(pid_a)
 
     _headers_b, ws_b, _ident_b = await _bootstrap(async_client)
@@ -183,12 +183,8 @@ async def test_rollup_isolates_workspaces(async_client):
 
     factory = get_session_factory()
     async with factory() as db:
-        pack_a = (
-            await db.execute(select(SkillPack).where(SkillPack.id == pid_a))
-        ).scalar_one()
+        pack_a = (await db.execute(select(SkillPack).where(SkillPack.id == pid_a))).scalar_one()
         assert pack_a.last_used_at is not None
-        pack_b = (
-            await db.execute(select(SkillPack).where(SkillPack.id == pid_b))
-        ).scalar_one()
+        pack_b = (await db.execute(select(SkillPack).where(SkillPack.id == pid_b))).scalar_one()
         assert pack_b.last_used_at is None
         assert pack_b.effectiveness_avg is None

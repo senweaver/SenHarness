@@ -58,9 +58,7 @@ async def _register_and_park(
         return False
 
     monkeypatch.setattr(subagent_svc, "evaluate_hallucination", fake_evaluate)
-    monkeypatch.setattr(
-        "app.jobs._breaker.is_breaker_open", fake_breaker_open
-    )
+    monkeypatch.setattr("app.jobs._breaker.is_breaker_open", fake_breaker_open)
 
     factory = get_session_factory()
     async with factory() as db:
@@ -81,13 +79,9 @@ async def _register_and_park(
     return child.id, outcome
 
 
-async def test_hallucination_below_threshold_then_admin_rejects(
-    async_client, monkeypatch
-):
+async def test_hallucination_below_threshold_then_admin_rejects(async_client, monkeypatch):
     ws_id = await _make_workspace(async_client)
-    spine_id, outcome = await _register_and_park(
-        ws_id=ws_id, score=0.30, monkeypatch=monkeypatch
-    )
+    spine_id, outcome = await _register_and_park(ws_id=ws_id, score=0.30, monkeypatch=monkeypatch)
     assert outcome == "approval_required"
 
     factory = get_session_factory()
@@ -115,31 +109,28 @@ async def test_hallucination_below_threshold_then_admin_rejects(
         assert spine is not None
         assert spine.state == SubAgentRunState.KILLED
         approval = (
-            await db.execute(
-                select(Approval).where(Approval.id == approval_id)
-            )
+            await db.execute(select(Approval).where(Approval.id == approval_id))
         ).scalar_one_or_none()
         assert approval is not None
         assert approval.status == ApprovalStatus.DENIED
 
         audit = (
-            await db.execute(
-                select(AuditEvent).where(
-                    AuditEvent.action
-                    == subagent_svc.AUDIT_HALLUCINATION_REJECTED
+            (
+                await db.execute(
+                    select(AuditEvent).where(
+                        AuditEvent.action == subagent_svc.AUDIT_HALLUCINATION_REJECTED
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert any(a.resource_id == spine_id for a in audit)
 
 
-async def test_hallucination_below_threshold_then_admin_approves(
-    async_client, monkeypatch
-):
+async def test_hallucination_below_threshold_then_admin_approves(async_client, monkeypatch):
     ws_id = await _make_workspace(async_client)
-    spine_id, outcome = await _register_and_park(
-        ws_id=ws_id, score=0.20, monkeypatch=monkeypatch
-    )
+    spine_id, outcome = await _register_and_park(ws_id=ws_id, score=0.20, monkeypatch=monkeypatch)
     assert outcome == "approval_required"
 
     factory = get_session_factory()
@@ -163,19 +154,20 @@ async def test_hallucination_below_threshold_then_admin_approves(
         assert spine is not None
         assert spine.state == SubAgentRunState.COMPLETED
         approval = (
-            await db.execute(
-                select(Approval).where(Approval.id == approval_id)
-            )
+            await db.execute(select(Approval).where(Approval.id == approval_id))
         ).scalar_one_or_none()
         assert approval is not None
         assert approval.status == ApprovalStatus.APPROVED
 
         audit = (
-            await db.execute(
-                select(AuditEvent).where(
-                    AuditEvent.action
-                    == subagent_svc.AUDIT_HALLUCINATION_APPROVED
+            (
+                await db.execute(
+                    select(AuditEvent).where(
+                        AuditEvent.action == subagent_svc.AUDIT_HALLUCINATION_APPROVED
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert any(a.resource_id == spine_id for a in audit)

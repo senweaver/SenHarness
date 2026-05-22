@@ -20,7 +20,9 @@ def _settings(**overrides) -> Settings:
 
 class TestDbHostResolution:
     def test_dev_falls_back_to_localhost_when_db_alias_unresolvable(self, monkeypatch):
-        monkeypatch.setattr("socket.getaddrinfo", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("no dns")))
+        monkeypatch.setattr(
+            "socket.getaddrinfo", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("no dns"))
+        )
         s = _settings(APP_ENV="development", DB_HOST="db")
         assert "@localhost:5432/" in s.async_database_url
 
@@ -30,11 +32,15 @@ class TestDbHostResolution:
         assert "@db:5432/" in s.async_database_url
 
     def test_production_never_fallbacks(self, monkeypatch):
-        monkeypatch.setattr("socket.getaddrinfo", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("no dns")))
+        monkeypatch.setattr(
+            "socket.getaddrinfo", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("no dns"))
+        )
         s = _settings(APP_ENV="production", DB_HOST="db")
         assert "@db:5432/" in s.async_database_url
 
     def test_non_alias_host_kept_as_is(self, monkeypatch):
-        monkeypatch.setattr("socket.getaddrinfo", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("no dns")))
+        monkeypatch.setattr(
+            "socket.getaddrinfo", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("no dns"))
+        )
         s = _settings(DB_HOST="127.0.0.1")
         assert "@127.0.0.1:5432/" in s.async_database_url

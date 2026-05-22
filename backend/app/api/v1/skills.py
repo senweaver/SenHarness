@@ -155,9 +155,7 @@ async def list_skills(
 ) -> list[SkillRead]:
     if workspace_id is None:
         raise Unauthorized("no_active_workspace", code="auth.no_active_workspace")
-    await ws_svc.ensure_member_access(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=workspace_id, identity_id=identity_id)
     rows: list[SkillRead] = []
     rows.extend(_scan(BUNDLED_SKILLS_DIR, source="bundled"))
     rows.extend(_scan(_workspace_skills_dir(workspace_id), source="workspace"))
@@ -175,14 +173,10 @@ async def get_skill(
 ) -> SkillDetail:
     if workspace_id is None:
         raise Unauthorized("no_active_workspace", code="auth.no_active_workspace")
-    await ws_svc.ensure_member_access(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=workspace_id, identity_id=identity_id)
     md = _resolve_skill_path(source, slug, workspace_id)
     if md is None or not md.exists():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="skill_not_found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="skill_not_found")
     text = md.read_text(encoding="utf-8", errors="replace")
     base = _read_skill(md, source=source, slug=slug)
     return SkillDetail(
@@ -261,14 +255,10 @@ async def delete_workspace_skill(
 
     skill_dir = _workspace_skills_dir(workspace_id) / slug
     if not skill_dir.exists():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="skill_not_found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="skill_not_found")
     # Safety: only allow deletion of directories inside the workspace skills
     # tree. The ``relative_to`` call throws if skill_dir escaped via ../.
-    skill_dir.resolve().relative_to(
-        _workspace_skills_dir(workspace_id).resolve()
-    )
+    skill_dir.resolve().relative_to(_workspace_skills_dir(workspace_id).resolve())
     shutil.rmtree(skill_dir)
 
     await audit_svc.record(
@@ -426,16 +416,12 @@ async def import_skill_from_url(
         ) from exc
 
     if len(content) > 200_000:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="content_too_large"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="content_too_large")
 
     fallback = body.slug or _safe_filename_to_slug(raw_url)
     slug = _slug_from_front_matter_or_default(content, fallback)
     if not _SLUG_RE.match(slug):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_slug"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_slug")
 
     if not content.lstrip().startswith("---"):
         first_line = content.splitlines()[0] if content.strip() else slug
@@ -500,9 +486,7 @@ async def import_skill_bundle(
 
     raw = await file.read()
     if not raw:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="empty_bundle"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="empty_bundle")
     if len(raw) > _MAX_BUNDLE_BYTES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -512,19 +496,13 @@ async def import_skill_bundle(
     try:
         zf = zipfile.ZipFile(io.BytesIO(raw))
     except zipfile.BadZipFile as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_zip"
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_zip") from exc
 
     members = [m for m in zf.namelist() if not m.endswith("/")]
     if len(members) == 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="empty_bundle"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="empty_bundle")
     if len(members) > _MAX_FILES_PER_BUNDLE:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="too_many_files"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="too_many_files")
 
     cleaned: list[tuple[str, str]] = []  # (cleaned_path, original_name)
     for name in members:
@@ -536,9 +514,7 @@ async def import_skill_bundle(
 
     skill_md_paths = [c for c, _ in cleaned if c.lower().endswith("skill.md")]
     if not skill_md_paths:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="missing_skill_md"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="missing_skill_md")
     skill_md_paths.sort(key=lambda p: p.count("/"))
     skill_md_path = skill_md_paths[0]
     if "/" in skill_md_path:
@@ -560,9 +536,7 @@ async def import_skill_bundle(
     fallback = (slug or "").strip().lower() or _safe_filename_to_slug(file.filename or "skill")
     final_slug = _slug_from_front_matter_or_default(skill_md_text, fallback)
     if not _SLUG_RE.match(final_slug):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_slug"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_slug")
 
     # Synthesize front-matter if author forgot — same convention as
     # ``upload_skill`` so listing/runtime stay consistent.
@@ -593,15 +567,11 @@ async def import_skill_bundle(
         info = zf.getinfo(orig)
         if info.file_size > _MAX_UNCOMPRESSED_BYTES:
             shutil.rmtree(skill_dir, ignore_errors=True)
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="bundle_too_large"
-            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="bundle_too_large")
         total_uncompressed += info.file_size
         if total_uncompressed > _MAX_UNCOMPRESSED_BYTES:
             shutil.rmtree(skill_dir, ignore_errors=True)
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="bundle_too_large"
-            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="bundle_too_large")
 
         target = skill_dir / cleaned_path
         try:

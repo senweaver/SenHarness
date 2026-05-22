@@ -93,7 +93,11 @@ def capabilities_for(role: str | None) -> set[str]:
 def has_capability(membership: Membership | None, capability: str) -> bool:
     if membership is None:
         return False
-    role = membership.role if isinstance(membership.role, str) else getattr(membership.role, "value", None)
+    role = (
+        membership.role
+        if isinstance(membership.role, str)
+        else getattr(membership.role, "value", None)
+    )
     return capability in capabilities_for(role)
 
 
@@ -103,8 +107,8 @@ def has_capability(membership: Membership | None, capability: str) -> bool:
 @dataclass(slots=True)
 class ApprovalDecisionPermission:
     allowed: bool
-    reason: str          # short i18n-able token, "" when allowed
-    matched_rule: str    # which rule granted it: all|department|own|none
+    reason: str  # short i18n-able token, "" when allowed
+    matched_rule: str  # which rule granted it: all|department|own|none
 
 
 async def evaluate_approval_decision(
@@ -128,10 +132,7 @@ async def evaluate_approval_decision(
         approval_dept_id = await _session_owner_department_id(
             db, approval.session_id, approval.workspace_id
         )
-        if (
-            approval_dept_id is not None
-            and actor_membership.department_id == approval_dept_id
-        ):
+        if approval_dept_id is not None and actor_membership.department_id == approval_dept_id:
             return ApprovalDecisionPermission(True, "", "department")
 
     if "approvals.decide_own" in caps:
@@ -142,9 +143,7 @@ async def evaluate_approval_decision(
         ):
             return ApprovalDecisionPermission(True, "", "own")
         # Or if they own the session.
-        owner_id = await _session_owner_identity_id(
-            db, approval.session_id, approval.workspace_id
-        )
+        owner_id = await _session_owner_identity_id(db, approval.session_id, approval.workspace_id)
         if owner_id is not None and owner_id == actor_membership.identity_id:
             return ApprovalDecisionPermission(True, "", "own")
 

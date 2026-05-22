@@ -44,27 +44,21 @@ async def _append(db_session, session_obj, *, role, text):
 
 async def _seed_compressed_pair(db_session, sess):
     """Seed three originals + one summary; return (summary, originals)."""
-    a = await _append(
-        db_session, sess, role=session_svc.MessageRole.USER, text="first user"
-    )
+    a = await _append(db_session, sess, role=session_svc.MessageRole.USER, text="first user")
     b = await _append(
         db_session,
         sess,
         role=session_svc.MessageRole.ASSISTANT,
         text="first assistant " * 20,
     )
-    c = await _append(
-        db_session, sess, role=session_svc.MessageRole.USER, text="second user"
-    )
+    c = await _append(db_session, sess, role=session_svc.MessageRole.USER, text="second user")
     summary = await _append(
         db_session,
         sess,
         role=session_svc.MessageRole.SYSTEM,
         text="compacted summary text",
     )
-    ref = lineage_svc.mark_message_as_compressed(
-        summary, [a, b, c], strategy="sliding_window"
-    )
+    ref = lineage_svc.mark_message_as_compressed(summary, [a, b, c], strategy="sliding_window")
     summary.original_turns_ref = ref
     for original in (a, b, c):
         original.compressed_into_summary_id = summary.id
@@ -87,25 +81,15 @@ async def test_get_lineage_replay_happy_path(db_session, workspace, identity):
     assert replay.original_turn_count == 3
     assert replay.compaction_strategy == "sliding_window"
     assert isinstance(replay.compressed_at, datetime)
-    assert {n.message_id for n in replay.original_turns} == {
-        m.id for m in originals
-    }
-    long_excerpt = next(
-        n
-        for n in replay.original_turns
-        if str(n.role) == "assistant"
-    ).text_excerpt
+    assert {n.message_id for n in replay.original_turns} == {m.id for m in originals}
+    long_excerpt = next(n for n in replay.original_turns if str(n.role) == "assistant").text_excerpt
     # Excerpts must respect the 200-char cap.
     assert len(long_excerpt) <= 200
 
 
-async def test_get_lineage_replay_returns_none_when_not_a_summary(
-    db_session, workspace, identity
-):
+async def test_get_lineage_replay_returns_none_when_not_a_summary(db_session, workspace, identity):
     sess = await _seed_session(db_session, workspace, identity)
-    plain = await _append(
-        db_session, sess, role=session_svc.MessageRole.USER, text="plain"
-    )
+    plain = await _append(db_session, sess, role=session_svc.MessageRole.USER, text="plain")
 
     replay = await lineage_svc.get_lineage_replay(
         db_session,
@@ -116,9 +100,7 @@ async def test_get_lineage_replay_returns_none_when_not_a_summary(
     assert replay is None
 
 
-async def test_get_lineage_replay_cross_workspace_blocked(
-    db_session, workspace, identity
-):
+async def test_get_lineage_replay_cross_workspace_blocked(db_session, workspace, identity):
     sess = await _seed_session(db_session, workspace, identity)
     summary, _ = await _seed_compressed_pair(db_session, sess)
 
@@ -132,9 +114,7 @@ async def test_get_lineage_replay_cross_workspace_blocked(
         )
 
 
-async def test_list_compressed_summaries_in_session(
-    db_session, workspace, identity
-):
+async def test_list_compressed_summaries_in_session(db_session, workspace, identity):
     sess = await _seed_session(db_session, workspace, identity)
     summary, _ = await _seed_compressed_pair(db_session, sess)
 

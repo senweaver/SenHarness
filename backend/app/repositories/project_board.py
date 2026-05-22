@@ -47,15 +47,9 @@ class ProjectBoardRepository(AsyncRepository[ProjectBoard]):
             stmt = stmt.where(ProjectBoard.squad_id == squad_id)
         return (await self.session.execute(stmt)).scalars().all()
 
-    async def get_or_404(
-        self, *, workspace_id: uuid.UUID, board_id: uuid.UUID
-    ) -> ProjectBoard:
+    async def get_or_404(self, *, workspace_id: uuid.UUID, board_id: uuid.UUID) -> ProjectBoard:
         row = await self.get(board_id)
-        if (
-            row is None
-            or row.workspace_id != workspace_id
-            or row.deleted_at is not None
-        ):
+        if row is None or row.workspace_id != workspace_id or row.deleted_at is not None:
             raise NotFound("board not found", code="board.not_found")
         return row
 
@@ -86,15 +80,9 @@ class BoardCardRepository(AsyncRepository[BoardCard]):
             stmt = stmt.where(BoardCard.column == column)
         return (await self.session.execute(stmt)).scalars().all()
 
-    async def get_or_404(
-        self, *, workspace_id: uuid.UUID, card_id: uuid.UUID
-    ) -> BoardCard:
+    async def get_or_404(self, *, workspace_id: uuid.UUID, card_id: uuid.UUID) -> BoardCard:
         row = await self.get(card_id)
-        if (
-            row is None
-            or row.workspace_id != workspace_id
-            or row.deleted_at is not None
-        ):
+        if row is None or row.workspace_id != workspace_id or row.deleted_at is not None:
             raise NotFound("card not found", code="card.not_found")
         return row
 
@@ -109,9 +97,7 @@ class BoardCardRepository(AsyncRepository[BoardCard]):
         Used by ``create_card`` so a freshly created card lands at the
         bottom of its column without having to re-pack neighbours.
         """
-        rows = await self.list_cards_in_column(
-            board_id=board_id, column=column
-        )
+        rows = await self.list_cards_in_column(board_id=board_id, column=column)
         if not rows:
             return 0
         return int(rows[-1].sort_order) + 1
@@ -149,9 +135,7 @@ class BoardCardRepository(AsyncRepository[BoardCard]):
         renumbering is dense (0, 1, 2, ...) so the next ``create_card``
         can append cheaply via :meth:`next_sort_order`.
         """
-        existing = await self.list_cards_in_column(
-            board_id=board_id, column=column
-        )
+        existing = await self.list_cards_in_column(board_id=board_id, column=column)
 
         positioned = sorted(
             ((card_id_to_position[c.id], c) for c in existing if c.id in card_id_to_position),

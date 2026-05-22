@@ -45,7 +45,7 @@ class TestComputeSign:
         here means the bot's inbound requests start to fail."""
         ts = "1700000000000"
         secret = "SEC-test-secret"
-        expected_payload = f"{ts}\n{secret}".encode("utf-8")
+        expected_payload = f"{ts}\n{secret}".encode()
         expected = base64.b64encode(
             hmac.new(
                 secret.encode("utf-8"),
@@ -326,6 +326,7 @@ def _clear_openapi_token_cache():
 
 def _install_fake_client(monkeypatch: pytest.MonkeyPatch, client: _RecordingClient) -> None:
     """Patch :class:`httpx.AsyncClient` so the provider's ``with httpx.AsyncClient()`` block returns our recorder."""
+
     def factory(*args: Any, **kwargs: Any) -> _RecordingClient:
         return client
 
@@ -427,13 +428,8 @@ class TestPostReplyStreamMode:
             )
 
         urls = [c["url"] for c in client.calls]
-        assert urls.count(
-            "https://api.dingtalk.com/v1.0/oauth2/accessToken"
-        ) == 1
-        assert (
-            urls.count("https://api.dingtalk.com/v1.0/robot/oToMessages/batchSend")
-            == 2
-        )
+        assert urls.count("https://api.dingtalk.com/v1.0/oauth2/accessToken") == 1
+        assert urls.count("https://api.dingtalk.com/v1.0/robot/oToMessages/batchSend") == 2
 
     async def test_malformed_thread_key_skips_send(self, monkeypatch, caplog):
         """A thread_key without our prefix can't be routed — we log
@@ -454,9 +450,7 @@ class TestPostReplyStreamMode:
             )
 
         assert client.calls == []
-        assert any(
-            "malformed thread_key" in rec.message for rec in caplog.records
-        )
+        assert any("malformed thread_key" in rec.message for rec in caplog.records)
 
     async def test_token_failure_drops_reply(self, monkeypatch, caplog):
         provider = DingTalkProvider()
@@ -502,9 +496,7 @@ class TestPostReplyWebhookMode:
 
         assert len(client.calls) == 1
         url = client.calls[0]["url"]
-        assert url.startswith(
-            "https://oapi.dingtalk.com/robot/send?access_token=AT&timestamp="
-        )
+        assert url.startswith("https://oapi.dingtalk.com/robot/send?access_token=AT&timestamp=")
         assert "&sign=" in url
 
     async def test_drops_when_neither_credential_set(self, monkeypatch, caplog):
@@ -521,6 +513,5 @@ class TestPostReplyWebhookMode:
 
         assert client.calls == []
         assert any(
-            "neither client_id/secret nor webhook_url" in rec.message
-            for rec in caplog.records
+            "neither client_id/secret nor webhook_url" in rec.message for rec in caplog.records
         )

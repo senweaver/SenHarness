@@ -68,9 +68,7 @@ async def get_workspace_memory_settings(
     ``home_config_json["memory"]`` block for tenant overrides. Missing
     keys fall back to the platform default; never raises.
     """
-    platform = await get_system_setting(
-        db, SystemSettingKey.MEMORY_DEFAULTS, default={}
-    )
+    platform = await get_system_setting(db, SystemSettingKey.MEMORY_DEFAULTS, default={})
     if not isinstance(platform, dict):
         platform = {}
 
@@ -104,12 +102,8 @@ async def get_workspace_memory_settings(
         ),
         always_on_max_chars=int(_merged("always_on_max_chars", 4000)),
         permitted_scopes=scopes,
-        promotion_max_per_session=int(
-            platform.get("promotion_max_per_session", 50)
-        ),
-        max_failure_count_before_skip=int(
-            platform.get("max_failure_count_before_skip", 3)
-        ),
+        promotion_max_per_session=int(platform.get("promotion_max_per_session", 50)),
+        max_failure_count_before_skip=int(platform.get("max_failure_count_before_skip", 3)),
     )
 
 
@@ -144,25 +138,17 @@ async def apply_payload(
     """
     content = (payload or {}).get("content")
     if not isinstance(content, str) or not content.strip():
-        raise ValidationFailed(
-            "memory_payload_missing_content", code="memory.payload_invalid"
-        )
+        raise ValidationFailed("memory_payload_missing_content", code="memory.payload_invalid")
 
     scope_raw = (payload.get("scope") or "user").lower()
     if scope_raw not in {"user", "assistant", "workspace"}:
-        raise ValidationFailed(
-            "memory_payload_invalid_scope", code="memory.payload_invalid"
-        )
+        raise ValidationFailed("memory_payload_invalid_scope", code="memory.payload_invalid")
 
     kind_raw = (payload.get("kind") or "semantic").lower()
     if kind_raw not in {"kv", "episodic", "semantic"}:
-        raise ValidationFailed(
-            "memory_payload_invalid_kind", code="memory.payload_invalid"
-        )
+        raise ValidationFailed("memory_payload_invalid_kind", code="memory.payload_invalid")
 
-    settings = await get_workspace_memory_settings(
-        db, workspace_id=workspace_id
-    )
+    settings = await get_workspace_memory_settings(db, workspace_id=workspace_id)
     if scope_raw not in settings.permitted_scopes:
         raise ValidationFailed(
             "memory_scope_not_permitted",
@@ -173,13 +159,9 @@ async def apply_payload(
     kind = MemoryKind(kind_raw)
     key = payload.get("key")
     if kind == MemoryKind.KV and not key:
-        raise ValidationFailed(
-            "memory_kv_requires_key", code="memory.kv_requires_key"
-        )
+        raise ValidationFailed("memory_kv_requires_key", code="memory.kv_requires_key")
 
-    scope_id = _resolve_scope_id(
-        scope=scope, identity_id=identity_id, agent_id=agent_id
-    )
+    scope_id = _resolve_scope_id(scope=scope, identity_id=identity_id, agent_id=agent_id)
 
     await _enforce_hard_cap(
         db,
@@ -264,9 +246,7 @@ async def _enforce_hard_cap(
     else:
         existing_len_q = existing_len_q.where(Memory.scope_id == scope_id)
 
-    current_total = int(
-        (await db.execute(existing_len_q)).scalar() or 0
-    )
+    current_total = int((await db.execute(existing_len_q)).scalar() or 0)
 
     replaced_len = 0
     if existing_key:
@@ -281,9 +261,7 @@ async def _enforce_hard_cap(
             replaced_len_q = replaced_len_q.where(Memory.scope_id.is_(None))
         else:
             replaced_len_q = replaced_len_q.where(Memory.scope_id == scope_id)
-        replaced_len = int(
-            (await db.execute(replaced_len_q)).scalar() or 0
-        )
+        replaced_len = int((await db.execute(replaced_len_q)).scalar() or 0)
 
     projected = current_total - replaced_len + len(new_content)
     if projected > max_chars:
@@ -476,9 +454,7 @@ def _tokenize(text: str) -> set[str]:
     return {w for w in words if len(w) >= 2 or (len(w) == 1 and 0x4E00 <= ord(w[0]) <= 0x9FFF)}
 
 
-async def forget(
-    session: AsyncSession, *, workspace_id: uuid.UUID, memory_id: uuid.UUID
-) -> None:
+async def forget(session: AsyncSession, *, workspace_id: uuid.UUID, memory_id: uuid.UUID) -> None:
     repo = MemoryRepository(session)
     mem = await repo.get(memory_id)
     if mem is None or mem.workspace_id != workspace_id:

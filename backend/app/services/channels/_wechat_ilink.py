@@ -98,6 +98,7 @@ async def _get_outbound_client() -> httpx.AsyncClient:
             _OUTBOUND_CLIENT = httpx.AsyncClient(timeout=httpx.Timeout(20.0))
         return _OUTBOUND_CLIENT
 
+
 # iLink's typing-indicator endpoints: one ``typing_ticket`` per bot_token,
 # nominally valid 24h. We cap our cache an hour below that so a tail-of-day
 # turn never re-uses a ticket the server already retired.
@@ -113,6 +114,7 @@ _TYPING_KEEPALIVE_SEC = 5.0  # iLink loses the indicator after ~7s idle
 # the agent processes the same turn twice and the user receives duplicate
 # replies. Keyed by channel id so two channels can't poison each other.
 from collections import deque as _deque
+
 _PROCESSED_MSG_IDS: dict[uuid_pkg.UUID, _deque] = {}
 _PROCESSED_MSG_DEDUP_WINDOW = 256
 
@@ -168,18 +170,11 @@ async def start_qr_login(*, channel: Channel) -> dict[str, Any]:
         }
 
     qr_id = (
-        data.get("qrcode")
-        or data.get("qrcode_id")
-        or (data.get("data") or {}).get("qrcode")
-        or ""
+        data.get("qrcode") or data.get("qrcode_id") or (data.get("data") or {}).get("qrcode") or ""
     )
-    img_url = (
-        str(
-            data.get("qrcode_img_content")
-            or (data.get("data") or {}).get("qrcode_img_content")
-            or ""
-        ).strip()
-    )
+    img_url = str(
+        data.get("qrcode_img_content") or (data.get("data") or {}).get("qrcode_img_content") or ""
+    ).strip()
     if not qr_id or not img_url:
         return {
             "qr_id": qr_id,
@@ -291,9 +286,7 @@ async def run_long_poll(
         bot_self_id or "<unknown>",
     )
 
-    async with httpx.AsyncClient(
-        timeout=httpx.Timeout(_LONG_POLL_TIMEOUT + 15)
-    ) as cli:
+    async with httpx.AsyncClient(timeout=httpx.Timeout(_LONG_POLL_TIMEOUT + 15)) as cli:
         round_no = 0
         while not stop.is_set():
             payload: dict[str, Any] = {
@@ -302,9 +295,7 @@ async def run_long_poll(
             }
 
             try:
-                resp = await cli.post(
-                    url, json=payload, headers=_build_auth_headers(bot_token)
-                )
+                resp = await cli.post(url, json=payload, headers=_build_auth_headers(bot_token))
             except httpx.HTTPError as e:
                 # Surface so runtime backs off; the close-then-reopen
                 # behaviour matches what iLink expects when its edge
@@ -350,10 +341,7 @@ async def run_long_poll(
 
             for msg in messages:
                 from_id = str(
-                    msg.get("from_user_id")
-                    or msg.get("from_user")
-                    or msg.get("from")
-                    or ""
+                    msg.get("from_user_id") or msg.get("from_user") or msg.get("from") or ""
                 ).strip()
                 # iLink echoes the bot's own outbound sends back through
                 # ``getupdates`` — agent-replies hitting our own dispatch
@@ -384,7 +372,8 @@ async def run_long_poll(
                     if msg_id in seen:
                         log.info(
                             "wechat channel %s dropping retransmit msg_id=%s",
-                            channel.id, msg_id,
+                            channel.id,
+                            msg_id,
                         )
                         continue
                     seen.append(msg_id)
@@ -428,12 +417,7 @@ def _parse_ilink_message(msg: dict[str, Any]) -> InboundMessage | None:
         return None
 
     text = "\n".join(text_parts).strip()
-    from_user = (
-        msg.get("from_user_id")
-        or msg.get("from_user")
-        or msg.get("from")
-        or ""
-    )
+    from_user = msg.get("from_user_id") or msg.get("from_user") or msg.get("from") or ""
     if not from_user:
         return None
     context_token = str(msg.get("context_token") or "").strip()
@@ -476,9 +460,7 @@ def _split_wechat_text(text: str, limit: int = _WECHAT_TEXT_LIMIT) -> list[str]:
 
 
 # ─── Typing indicator ────────────────────────────────────
-async def fetch_typing_ticket(
-    *, bot_token: str, base_url: str, ilink_user_id: str
-) -> str | None:
+async def fetch_typing_ticket(*, bot_token: str, base_url: str, ilink_user_id: str) -> str | None:
     """Return a usable typing ticket for ``bot_token``.
 
     iLink exposes the indicator behind two calls: ``getconfig`` returns a
@@ -574,9 +556,7 @@ async def send_typing_status(
         timeout=10.0,
     )
     if resp.status_code >= 400:
-        raise RuntimeError(
-            f"wechat sendtyping HTTP {resp.status_code}: {resp.text[:200]}"
-        )
+        raise RuntimeError(f"wechat sendtyping HTTP {resp.status_code}: {resp.text[:200]}")
     data = resp.json() if resp.content else {}
     ret = data.get("ret", 0) or 0
     errcode = data.get("errcode", 0) or 0
@@ -587,8 +567,7 @@ async def send_typing_status(
         raise RuntimeError("wechat sendtyping session expired (errcode=-14)")
     if (ret not in (0, None)) or (errcode not in (0, None)):
         raise RuntimeError(
-            f"wechat sendtyping failed: ret={ret} errcode={errcode} "
-            f"errmsg={data.get('errmsg')!r}"
+            f"wechat sendtyping failed: ret={ret} errcode={errcode} errmsg={data.get('errmsg')!r}"
         )
 
 
@@ -658,8 +637,7 @@ async def send_reply(
                 "from_user_id": "",
                 "to_user_id": to_user_id,
                 "client_id": (
-                    f"senharness-wechat:{int(time.time() * 1000)}-"
-                    f"{uuid_pkg.uuid4().hex[:8]}"
+                    f"senharness-wechat:{int(time.time() * 1000)}-{uuid_pkg.uuid4().hex[:8]}"
                 ),
                 "message_type": 2,
                 "message_state": 2,
@@ -679,6 +657,4 @@ async def send_reply(
             headers=_build_auth_headers(bot_token),
         )
         if resp.status_code >= 400:
-            raise RuntimeError(
-                f"wechat sendmessage HTTP {resp.status_code}: {resp.text[:300]}"
-            )
+            raise RuntimeError(f"wechat sendmessage HTTP {resp.status_code}: {resp.text[:300]}")

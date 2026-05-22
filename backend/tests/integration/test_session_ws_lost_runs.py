@@ -59,9 +59,7 @@ async def _seed_running_row(
     return row
 
 
-def _build_system_frame(
-    *, session_id: uuid.UUID, lost_rows: list[InflightRun]
-) -> dict:
+def _build_system_frame(*, session_id: uuid.UUID, lost_rows: list[InflightRun]) -> dict:
     """Mirror of the ``session_ws`` handshake payload."""
     return {
         "type": "system",
@@ -79,9 +77,7 @@ def _build_system_frame(
     }
 
 
-async def test_recover_marks_stale_run_lost_and_emits_notification(
-    db_session, workspace, identity
-):
+async def test_recover_marks_stale_run_lost_and_emits_notification(db_session, workspace, identity):
     """Backend-restart simulation: stale row → LOST + audit + notification."""
     from app.services import session as session_svc
 
@@ -112,29 +108,29 @@ async def test_recover_marks_stale_run_lost_and_emits_notification(
     assert refreshed.error_kind == svc.ERROR_KIND_BACKEND_RESTART
 
     audit_actions = (
-        await db_session.execute(
-            select(AuditEvent.action).where(
-                AuditEvent.workspace_id == workspace.id
+        (
+            await db_session.execute(
+                select(AuditEvent.action).where(AuditEvent.workspace_id == workspace.id)
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert "inflight_run.recovered_lost" in audit_actions
 
     notifications = (
-        await db_session.execute(
-            select(Notification).where(
-                Notification.recipient_identity_id == identity.id
+        (
+            await db_session.execute(
+                select(Notification).where(Notification.recipient_identity_id == identity.id)
             )
         )
-    ).scalars().all()
-    assert any(
-        n.kind == "inflight_run.lost_detected" for n in notifications
+        .scalars()
+        .all()
     )
+    assert any(n.kind == "inflight_run.lost_detected" for n in notifications)
 
 
-async def test_list_lost_for_session_drives_ws_handshake_payload(
-    db_session, workspace, identity
-):
+async def test_list_lost_for_session_drives_ws_handshake_payload(db_session, workspace, identity):
     """``list_lost_for_session`` returns the rows the WS frame must surface."""
     from app.services import session as session_svc
 
@@ -184,9 +180,7 @@ async def test_list_lost_for_session_drives_ws_handshake_payload(
     assert str(fresh.run_id) not in frame["data"]["run_ids"]
 
 
-async def test_completed_run_does_not_show_up_as_lost(
-    db_session, workspace, identity
-):
+async def test_completed_run_does_not_show_up_as_lost(db_session, workspace, identity):
     """A row that finishes normally must never appear in the LOST list."""
     from app.services import session as session_svc
 

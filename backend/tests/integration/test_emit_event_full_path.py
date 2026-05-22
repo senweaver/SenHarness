@@ -28,29 +28,27 @@ pytestmark = pytest.mark.asyncio
 
 async def _audit_actions_in_workspace(db, *, workspace_id):
     rows = (
-        await db.execute(
-            select(AuditEvent.action).where(
-                AuditEvent.workspace_id == workspace_id
-            )
-        )
-    ).scalars().all()
+        (await db.execute(select(AuditEvent.action).where(AuditEvent.workspace_id == workspace_id)))
+        .scalars()
+        .all()
+    )
     return list(rows)
 
 
 async def _notifications_for(db, *, identity_id):
     rows = (
-        await db.execute(
-            select(Notification).where(
-                Notification.recipient_identity_id == identity_id
+        (
+            await db.execute(
+                select(Notification).where(Notification.recipient_identity_id == identity_id)
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return list(rows)
 
 
-async def test_workspace_provisioned_emits_in_app_for_actor(
-    db_session, identity, workspace
-):
+async def test_workspace_provisioned_emits_in_app_for_actor(db_session, identity, workspace):
     """``actor`` audience → exactly one in-app row, audit logged."""
     counters = await ne.emit_event(
         db_session,
@@ -72,15 +70,11 @@ async def test_workspace_provisioned_emits_in_app_for_actor(
     assert counters["in_app_sent"] == 1
     rows = await _notifications_for(db_session, identity_id=identity.id)
     assert any(n.kind == "auth.workspace_provisioned" for n in rows)
-    actions = await _audit_actions_in_workspace(
-        db_session, workspace_id=workspace.id
-    )
+    actions = await _audit_actions_in_workspace(db_session, workspace_id=workspace.id)
     assert "notification.emitted" in actions
 
 
-async def test_judge_score_negative_emits_to_owner(
-    db_session, identity, workspace
-):
+async def test_judge_score_negative_emits_to_owner(db_session, identity, workspace):
     """Owner audience resolves the workspace owner — exactly one row."""
     counters = await ne.emit_event(
         db_session,
@@ -100,9 +94,7 @@ async def test_judge_score_negative_emits_to_owner(
     assert any(n.kind == "judge.score_negative" for n in rows)
 
 
-async def test_channel_sender_blocked_targets_workspace_admins(
-    db_session, identity, workspace
-):
+async def test_channel_sender_blocked_targets_workspace_admins(db_session, identity, workspace):
     """Owner counts as workspace_admins → still receives the notification."""
     counters = await ne.emit_event(
         db_session,
@@ -125,9 +117,7 @@ async def test_channel_sender_blocked_targets_workspace_admins(
     assert any(n.kind == "channel.sender_blocked" for n in rows)
 
 
-async def test_unknown_event_key_returns_zero_counters(
-    db_session, workspace
-):
+async def test_unknown_event_key_returns_zero_counters(db_session, workspace):
     """Unknown event keys are a no-op (logged, no audit)."""
     counters = await ne.emit_event(
         db_session,

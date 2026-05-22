@@ -78,9 +78,7 @@ class FlowRunOutcome(StrEnum):
 
 class Flow(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "flows"
-    __table_args__ = (
-        Index("ix_flows_workspace_enabled", "workspace_id", "enabled"),
-    )
+    __table_args__ = (Index("ix_flows_workspace_enabled", "workspace_id", "enabled"),)
 
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     description: Mapped[str | None] = mapped_column(String(512), nullable=True)
@@ -134,9 +132,7 @@ class Flow(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, B
 
 class FlowRun(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "flow_runs"
-    __table_args__ = (
-        Index("ix_flow_runs_flow_created", "flow_id", "created_at"),
-    )
+    __table_args__ = (Index("ix_flow_runs_flow_created", "flow_id", "created_at"),)
 
     flow_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -149,9 +145,7 @@ class FlowRun(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
         nullable=True,
     )
     trigger_kind: Mapped[FlowTriggerKind] = mapped_column(String(16), nullable=False)
-    trigger_payload_json: Mapped[dict] = mapped_column(
-        JSONB, default=dict, nullable=False
-    )
+    trigger_payload_json: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
     status: Mapped[FlowRunStatus] = mapped_column(
         String(16), default=FlowRunStatus.PENDING, nullable=False

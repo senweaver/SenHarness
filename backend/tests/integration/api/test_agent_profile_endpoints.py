@@ -43,6 +43,7 @@ def _bearer(
 
 async def _stub_aux_off(monkeypatch):
     """Force the aux LLM path off so refresh tests stay deterministic."""
+
     async def fake_breaker(**_):
         return False
 
@@ -53,9 +54,7 @@ async def _stub_aux_off(monkeypatch):
     monkeypatch.setattr(svc, "get_aux_model", fake_get_aux)
 
 
-async def test_get_profile_404_when_missing(
-    async_client, db_session, workspace, identity, agent
-):
+async def test_get_profile_404_when_missing(async_client, db_session, workspace, identity, agent):
     _ = db_session
     headers = _bearer(identity.id, workspace_id=workspace.id)
     r = await async_client.get(

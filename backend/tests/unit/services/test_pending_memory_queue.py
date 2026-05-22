@@ -10,6 +10,7 @@ from __future__ import annotations
 import uuid
 
 import pytest
+from sqlalchemy import select
 
 from app.core.errors import ImmediateMemoryNotPermitted, MemoryHardCapExceeded
 from app.db.models.audit import AuditEvent
@@ -21,7 +22,6 @@ from app.db.models.pending_memory import (
 from app.services import memory as memory_svc
 from app.services import pending_memory as pending_memory_svc
 from app.services import session as session_svc
-from sqlalchemy import select
 
 pytestmark = pytest.mark.asyncio
 
@@ -36,18 +36,18 @@ async def _ensure_session(db_session, workspace, identity):
 
 async def _audit_actions(db_session, workspace_id) -> list[str]:
     rows = (
-        await db_session.execute(
-            select(AuditEvent.action).where(
-                AuditEvent.workspace_id == workspace_id
+        (
+            await db_session.execute(
+                select(AuditEvent.action).where(AuditEvent.workspace_id == workspace_id)
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return list(rows)
 
 
-async def test_queue_pending_memory_writes_row_and_audits(
-    db_session, workspace, identity
-):
+async def test_queue_pending_memory_writes_row_and_audits(db_session, workspace, identity):
     sess = await _ensure_session(db_session, workspace, identity)
     row = await pending_memory_svc.queue_pending_memory(
         db_session,
@@ -68,9 +68,7 @@ async def test_queue_pending_memory_writes_row_and_audits(
     assert "pending_memory.queued" in actions
 
 
-async def test_queue_immediate_or_pending_defaults_to_deferred(
-    db_session, workspace, identity
-):
+async def test_queue_immediate_or_pending_defaults_to_deferred(db_session, workspace, identity):
     sess = await _ensure_session(db_session, workspace, identity)
     pending, applied = await pending_memory_svc.queue_immediate_or_pending(
         db_session,
@@ -88,9 +86,7 @@ async def test_queue_immediate_or_pending_defaults_to_deferred(
     assert "memory.deferred_to_next_session" in actions
 
 
-async def test_immediate_blocked_when_workspace_gate_closed(
-    db_session, workspace, identity
-):
+async def test_immediate_blocked_when_workspace_gate_closed(db_session, workspace, identity):
     sess = await _ensure_session(db_session, workspace, identity)
     workspace.home_config_json = {"memory": {"allow_immediate": False}}
     await db_session.flush()
@@ -111,9 +107,7 @@ async def test_immediate_blocked_when_workspace_gate_closed(
     assert "memory.immediate_not_permitted" in actions
 
 
-async def test_immediate_succeeds_when_workspace_opts_in(
-    db_session, workspace, identity
-):
+async def test_immediate_succeeds_when_workspace_opts_in(db_session, workspace, identity):
     sess = await _ensure_session(db_session, workspace, identity)
     workspace.home_config_json = {"memory": {"allow_immediate": True}}
     await db_session.flush()
@@ -139,9 +133,7 @@ async def test_immediate_succeeds_when_workspace_opts_in(
     assert "memory.applied_immediate" in actions
 
 
-async def test_apply_payload_enforces_hard_cap(
-    db_session, workspace, identity
-):
+async def test_apply_payload_enforces_hard_cap(db_session, workspace, identity):
     workspace.home_config_json = {"memory": {"always_on_max_chars": 100}}
     await db_session.flush()
 
@@ -172,9 +164,7 @@ async def test_apply_payload_enforces_hard_cap(
     assert exc_info.value.code == "memory.hard_cap_exceeded"
 
 
-async def test_kv_upsert_subtracts_existing_when_checking_cap(
-    db_session, workspace, identity
-):
+async def test_kv_upsert_subtracts_existing_when_checking_cap(db_session, workspace, identity):
     workspace.home_config_json = {"memory": {"always_on_max_chars": 100}}
     await db_session.flush()
 
@@ -209,9 +199,7 @@ async def test_kv_upsert_subtracts_existing_when_checking_cap(
     assert row.key == "preferred_editor"
 
 
-async def test_apply_payload_rejects_disallowed_scope(
-    db_session, workspace, identity
-):
+async def test_apply_payload_rejects_disallowed_scope(db_session, workspace, identity):
     workspace.home_config_json = {"memory": {"permitted_scopes": ["user"]}}
     await db_session.flush()
 
@@ -230,20 +218,14 @@ async def test_apply_payload_rejects_disallowed_scope(
     assert getattr(exc_info.value, "code", "").startswith("memory.")
 
 
-async def test_workspace_settings_merge_with_platform_defaults(
-    db_session, workspace
-):
-    settings = await memory_svc.get_workspace_memory_settings(
-        db_session, workspace_id=workspace.id
-    )
+async def test_workspace_settings_merge_with_platform_defaults(db_session, workspace):
+    settings = await memory_svc.get_workspace_memory_settings(db_session, workspace_id=workspace.id)
     assert settings.always_on_max_chars == 4000
     assert settings.allow_immediate is False
     assert "user" in settings.permitted_scopes
 
 
 async def test_unknown_workspace_falls_back_to_defaults(db_session):
-    settings = await memory_svc.get_workspace_memory_settings(
-        db_session, workspace_id=uuid.uuid4()
-    )
+    settings = await memory_svc.get_workspace_memory_settings(db_session, workspace_id=uuid.uuid4())
     assert settings.always_on_max_chars > 0
     assert settings.allow_immediate is False

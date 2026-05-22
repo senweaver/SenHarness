@@ -101,13 +101,9 @@ class TestParseInbound:
         assert msg.thread_key.startswith("wechat:u1::")
 
     def test_missing_text_returns_none(self):
-        msg = WeChatProvider().parse_inbound(
-            {"from_user_id": "u1"}, headers={}
-        )
+        msg = WeChatProvider().parse_inbound({"from_user_id": "u1"}, headers={})
         assert msg is None
 
     def test_missing_from_returns_none(self):
-        msg = WeChatProvider().parse_inbound(
-            {"text": "hello"}, headers={}
-        )
+        msg = WeChatProvider().parse_inbound({"text": "hello"}, headers={})
         assert msg is None

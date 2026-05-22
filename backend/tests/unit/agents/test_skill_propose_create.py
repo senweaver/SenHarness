@@ -58,9 +58,7 @@ async def _enable_evolver(db_session, workspace):
     await db_session.flush()
 
 
-async def test_propose_create_happy_path(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_propose_create_happy_path(db_session, workspace, identity, monkeypatch):
     await _enable_evolver(db_session, workspace)
     _set_ctx(workspace, identity)
     monkeypatch.setattr(
@@ -92,9 +90,7 @@ async def test_propose_create_happy_path(
     assert pack.state == SkillPackState.DRAFT
     assert pack.enabled is False
 
-    version = await db_session.get(
-        SkillPackVersion, uuid.UUID(result["version_id"])
-    )
+    version = await db_session.get(SkillPackVersion, uuid.UUID(result["version_id"]))
     assert version is not None
     assert version.state == SkillPackVersionState.PROPOSED
     assert version.created_by == "evolver"
@@ -116,9 +112,7 @@ async def test_propose_create_happy_path(
     assert body["pack_id"] == str(pack.id)
     assert body["version_id"] == str(version.id)
     assert body["rationale"] == "Recurring user requests"
-    assert body["supporting_run_ids"] == [
-        "00000000-0000-0000-0000-000000000123"
-    ]
+    assert body["supporting_run_ids"] == ["00000000-0000-0000-0000-000000000123"]
 
     audits = list(
         (
@@ -182,9 +176,7 @@ async def test_propose_create_disabled_workspace_rejects(
     assert audits[0].metadata_json["code"] == "evolver.disabled"
 
 
-async def test_propose_create_slug_in_use_rejects(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_propose_create_slug_in_use_rejects(db_session, workspace, identity, monkeypatch):
     from app.repositories.skills import SkillPackRepository
 
     await _enable_evolver(db_session, workspace)
@@ -220,9 +212,7 @@ async def test_propose_create_slug_in_use_rejects(
     assert result["code"] == "evolver.slug_in_use"
 
 
-async def test_propose_create_tombstoned_slug_rejects(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_propose_create_tombstoned_slug_rejects(db_session, workspace, identity, monkeypatch):
     from app.db.models.tombstone_slug import TombstoneSlug
 
     await _enable_evolver(db_session, workspace)
@@ -252,9 +242,7 @@ async def test_propose_create_tombstoned_slug_rejects(
     assert result["code"] == "evolver.slug_tombstoned"
 
 
-async def test_propose_create_breaker_tripped_rejects(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_propose_create_breaker_tripped_rejects(db_session, workspace, identity, monkeypatch):
     await _enable_evolver(db_session, workspace)
     _set_ctx(workspace, identity)
     monkeypatch.setattr(
@@ -290,9 +278,7 @@ async def test_propose_create_breaker_tripped_rejects(
     assert len(audits) == 1
 
 
-async def test_propose_create_rate_limit_rejects(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_propose_create_rate_limit_rejects(db_session, workspace, identity, monkeypatch):
     await _enable_evolver(db_session, workspace)
     _set_ctx(workspace, identity)
     monkeypatch.setattr(

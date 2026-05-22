@@ -84,9 +84,7 @@ class ThreadChannelBindingRepository(AsyncRepository[ThreadChannelBinding]):
         if external_user_id is None:
             stmt = stmt.where(ThreadChannelBinding.external_user_id.is_(None))
         else:
-            stmt = stmt.where(
-                ThreadChannelBinding.external_user_id == external_user_id
-            )
+            stmt = stmt.where(ThreadChannelBinding.external_user_id == external_user_id)
         return (await self.session.execute(stmt.limit(1))).scalar_one_or_none()
 
     async def list_for_thread(

@@ -79,30 +79,24 @@ class ReflectionDecision:
 # ─── Defaults ────────────────────────────────────────────────────
 _DEFAULTS: dict[str, Any] = {
     "stuck_loop_detect": True,
-    "stuck_loop_window": 6,          # consider last 6 tool calls
-    "stuck_loop_threshold": 3,       # same signature appearing >=3 times → stuck
-    "stuck_loop_abort": True,        # hard-abort the run (vs only emit warning)
-
+    "stuck_loop_window": 6,  # consider last 6 tool calls
+    "stuck_loop_threshold": 3,  # same signature appearing >=3 times → stuck
+    "stuck_loop_abort": True,  # hard-abort the run (vs only emit warning)
     "tool_error_recovery": True,
-    "tool_error_max_retries": 2,     # per tool name, whole-run
+    "tool_error_max_retries": 2,  # per tool name, whole-run
     "tool_error_backoff_base_ms": 250,
-
     "orphan_repair": True,
-
-    "adaptive_reasoning": False,     # opt-in: can affect cost/latency
-    "adaptive_reasoning_low_threshold": 120,   # <120 chars user text → low
+    "adaptive_reasoning": False,  # opt-in: can affect cost/latency
+    "adaptive_reasoning_low_threshold": 120,  # <120 chars user text → low
     "adaptive_reasoning_high_threshold": 800,  # >800 chars → high
-
     "limit_warnings": True,
-    "limit_warning_ratio": 0.8,      # 80% of iteration budget
-
+    "limit_warning_ratio": 0.8,  # 80% of iteration budget
     "tool_output_overflow": True,
     "tool_output_max_chars": 4000,
     "tool_output_overflow_hint": (
         "⚠ tool output truncated to {shown}/{total} chars; "
         "the full payload was saved to scratch/tool_output_{call_id}.json"
     ),
-
     "system_reminders": False,
     "system_reminder_every_iters": 5,
 }
@@ -118,7 +112,7 @@ def _cfg(policy: dict[str, Any] | None, key: str) -> Any:
 
 
 # ─── Per-run state ───────────────────────────────────────────────
-class StuckLoopAbort(RuntimeError):  # noqa: N818 - intentional non-Error suffix; signals control-flow abort, not an error condition
+class StuckLoopAbort(RuntimeError):
     """Raised by the runner when the same tool call is fired ``stuck_loop_threshold``
     times within ``stuck_loop_window`` and the policy asks us to hard-abort the
     run instead of just nudging the model.
@@ -129,8 +123,7 @@ class StuckLoopAbort(RuntimeError):  # noqa: N818 - intentional non-Error suffix
 
     def __init__(self, tool_name: str, count: int, threshold: int) -> None:
         super().__init__(
-            f"stuck_loop: tool {tool_name!r} called {count} times "
-            f"(threshold {threshold})"
+            f"stuck_loop: tool {tool_name!r} called {count} times (threshold {threshold})"
         )
         self.tool_name = tool_name
         self.count = count
@@ -151,9 +144,7 @@ class ReliabilityState:
     # Last-N tool-call summary for the M0.5 reflection prompt template; richer
     # than ``_recent_tools`` (carries name + arg digest + ok flag) so the
     # rendered prompt can show concrete evidence to the model.
-    _recent_tool_records: deque[dict[str, Any]] = field(
-        default_factory=lambda: deque(maxlen=10)
-    )
+    _recent_tool_records: deque[dict[str, Any]] = field(default_factory=lambda: deque(maxlen=10))
 
     # Per-tool retry counters for error recovery.
     _retries_by_tool: dict[str, int] = field(default_factory=dict)
@@ -182,18 +173,14 @@ class ReliabilityState:
         """Bump the tool-call counter used by the M0.5 reflection trigger."""
         self.tool_call_count += 1
 
-    def record_tool_outcome(
-        self, tool_name: str, args: dict | None, *, ok: bool
-    ) -> None:
+    def record_tool_outcome(self, tool_name: str, args: dict | None, *, ok: bool) -> None:
         """Append a (name, args, ok) tuple for the tool_call reflection
         template. Cheap; runs every tool result in the runner."""
         try:
             args_preview = _short_args(args)
         except Exception:  # pragma: no cover - defensive
             args_preview = ""
-        self._recent_tool_records.append(
-            {"name": tool_name, "args": args_preview, "ok": ok}
-        )
+        self._recent_tool_records.append({"name": tool_name, "args": args_preview, "ok": ok})
 
     def recent_tool_summary(self, max_count: int = 5) -> list[dict[str, Any]]:
         """Return the most recent ``max_count`` tool calls (name, args, ok).
@@ -226,19 +213,15 @@ class ReliabilityState:
 
         # Same-iteration de-dupe: never fire twice in one graph step.
         if self.last_reflection_iteration == self.iteration_count:
-            return ReflectionDecision(
-                False, reason="skip:already_this_iteration"
-            )
+            return ReflectionDecision(False, reason="skip:already_this_iteration")
 
         kind: ReflectionKind | None = None
         if cfg.interval_iterations > 0 and (
-            self.iteration_count - self.last_reflection_iteration
-            >= cfg.interval_iterations
+            self.iteration_count - self.last_reflection_iteration >= cfg.interval_iterations
         ):
             kind = ReflectionKind.PERIODIC
         elif cfg.interval_tool_calls > 0 and (
-            self.tool_call_count - self.last_reflection_tool_count
-            >= cfg.interval_tool_calls
+            self.tool_call_count - self.last_reflection_tool_count >= cfg.interval_tool_calls
         ):
             kind = ReflectionKind.TOOL_CALL
 
@@ -253,9 +236,7 @@ class ReliabilityState:
         )
 
         template_name = (
-            cfg.periodic_template
-            if kind == ReflectionKind.PERIODIC
-            else cfg.tool_call_template
+            cfg.periodic_template if kind == ReflectionKind.PERIODIC else cfg.tool_call_template
         )
         try:
             template_body = load_reflection_template(template_name)
@@ -407,6 +388,7 @@ def _signature(tool_name: str, args: dict | None) -> str:
     in front of a short args hash so logs are debuggable."""
     try:
         import json as _json
+
         raw = _json.dumps(args or {}, sort_keys=True, default=str)
     except Exception:
         raw = str(args)
@@ -424,6 +406,7 @@ def _short_args(args: dict | None) -> str:
         return ""
     try:
         import json as _json
+
         raw = _json.dumps(args, default=str, ensure_ascii=False, sort_keys=True)
     except Exception:
         raw = str(args)
@@ -515,21 +498,11 @@ def resolve_reflection_config(
 
     return ReflectionConfig(
         enabled=final_enabled,
-        interval_iterations=_pick_int(
-            ag, ws, "interval_iterations", base.interval_iterations
-        ),
-        interval_tool_calls=_pick_int(
-            ag, ws, "interval_tool_calls", base.interval_tool_calls
-        ),
-        max_prompt_chars=_pick_int(
-            ag, ws, "max_prompt_chars", base.max_prompt_chars
-        ),
-        periodic_template=_pick_str(
-            ag, ws, "periodic_template", base.periodic_template
-        ),
-        tool_call_template=_pick_str(
-            ag, ws, "tool_call_template", base.tool_call_template
-        ),
+        interval_iterations=_pick_int(ag, ws, "interval_iterations", base.interval_iterations),
+        interval_tool_calls=_pick_int(ag, ws, "interval_tool_calls", base.interval_tool_calls),
+        max_prompt_chars=_pick_int(ag, ws, "max_prompt_chars", base.max_prompt_chars),
+        periodic_template=_pick_str(ag, ws, "periodic_template", base.periodic_template),
+        tool_call_template=_pick_str(ag, ws, "tool_call_template", base.tool_call_template),
     )
 
 
@@ -540,9 +513,7 @@ def _reflection_block(source: dict[str, Any] | None) -> dict[str, Any]:
     return block if isinstance(block, dict) else {}
 
 
-def _pick_int(
-    high: dict[str, Any], low: dict[str, Any], key: str, default: int
-) -> int:
+def _pick_int(high: dict[str, Any], low: dict[str, Any], key: str, default: int) -> int:
     """``high`` (agent) > ``low`` (workspace) > ``default``; non-int values
     fall through silently rather than crashing the run."""
     for source in (high, low):
@@ -554,9 +525,7 @@ def _pick_int(
     return default
 
 
-def _pick_str(
-    high: dict[str, Any], low: dict[str, Any], key: str, default: str
-) -> str:
+def _pick_str(high: dict[str, Any], low: dict[str, Any], key: str, default: str) -> str:
     for source in (high, low):
         if key in source:
             return str(source[key])
@@ -582,6 +551,7 @@ def truncate_tool_output(
     max_chars = int(_cfg(policy, "tool_output_max_chars"))
     try:
         import json as _json
+
         as_json = _json.dumps(value, default=str, ensure_ascii=False)
     except Exception:
         as_json = str(value)
@@ -598,11 +568,15 @@ def truncate_tool_output(
         new_value = value[:max_chars] + "\n" + hint
     else:
         new_value = {"__truncated__": True, "preview": truncated_json, "hint": hint}
-    return new_value, True, {
-        "shown": max_chars,
-        "total": len(as_json),
-        "full_payload": as_json,
-    }
+    return (
+        new_value,
+        True,
+        {
+            "shown": max_chars,
+            "total": len(as_json),
+            "full_payload": as_json,
+        },
+    )
 
 
 def repair_orphan_tool_calls(history: list[Any]) -> list[Any]:

@@ -45,9 +45,7 @@ class BatchRunRepository(AsyncRepository[BatchRun]):
 class BatchRunCaseRepository(AsyncRepository[BatchRunCase]):
     model = BatchRunCase
 
-    async def list_for_run(
-        self, *, batch_run_id: uuid.UUID
-    ) -> Sequence[BatchRunCase]:
+    async def list_for_run(self, *, batch_run_id: uuid.UUID) -> Sequence[BatchRunCase]:
         stmt = (
             select(BatchRunCase)
             .where(BatchRunCase.batch_run_id == batch_run_id)

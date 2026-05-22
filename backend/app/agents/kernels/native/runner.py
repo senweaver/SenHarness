@@ -61,7 +61,11 @@ from app.agents.kernels.model_client import (
 )
 from app.agents.kernels.native._cache_wiring import (
     CacheWiringResult,
+)
+from app.agents.kernels.native._cache_wiring import (
     finalize as cache_finalize,
+)
+from app.agents.kernels.native._cache_wiring import (
     prepare as cache_prepare,
 )
 from app.agents.kernels.native._failover import (
@@ -80,8 +84,8 @@ from app.agents.tools._context import ToolRunContext, set_context
 from app.core.config import settings
 from app.core.pricing import calc_cost_usd
 from app.core.prometheus import record_run, record_tool_call
-from app.db.session import get_session_factory
 from app.db.models.agent import Agent as _AgentModel
+from app.db.session import get_session_factory
 from app.services import audit as audit_svc
 from app.services.provider_chain import (
     get_provider_chain,
@@ -97,7 +101,7 @@ class _ServedEnvelope:
     served lookup and the upstream resolver call.
     """
 
-    __slots__ = ("served_name", "upstream", "matched_via", "applied_override")
+    __slots__ = ("applied_override", "matched_via", "served_name", "upstream")
 
     def __init__(
         self,
@@ -191,9 +195,7 @@ async def _audit_upstream_called(
             )
             await db.commit()
     except Exception:  # pragma: no cover — defensive
-        log.warning(
-            "provider.upstream_called audit failed run=%s", req.run_id, exc_info=True
-        )
+        log.warning("provider.upstream_called audit failed run=%s", req.run_id, exc_info=True)
 
 
 class NativeBackend(AgentBackend):
@@ -257,9 +259,7 @@ class NativeBackend(AgentBackend):
                     running_tool_name=tool,
                 )
             except Exception:
-                log.exception(
-                    "agent_runtime write_phase failed run=%s", req.run_id
-                )
+                log.exception("agent_runtime write_phase failed run=%s", req.run_id)
             try:
                 publish_run_card_update(
                     workspace_id=req.workspace_id,
@@ -271,9 +271,7 @@ class NativeBackend(AgentBackend):
                     },
                 )
             except Exception:
-                log.exception(
-                    "agent_runtime publish failed run=%s", req.run_id
-                )
+                log.exception("agent_runtime publish failed run=%s", req.run_id)
 
         await _on_runtime_phase("planning", tool=None)
 
@@ -295,9 +293,7 @@ class NativeBackend(AgentBackend):
                 # spammed with one UPDATE per token.
                 if ev.kind == RunEventKind.TOOL_CALL:
                     tool_name = str(ev.data.get("name") or "") or None
-                    await _on_runtime_phase(
-                        "executing_tool", tool=tool_name
-                    )
+                    await _on_runtime_phase("executing_tool", tool=tool_name)
                 elif ev.kind == RunEventKind.TOOL_RESULT:
                     await _on_runtime_phase("planning", tool=None)
                 elif ev.kind == RunEventKind.FINAL:
@@ -307,9 +303,7 @@ class NativeBackend(AgentBackend):
             NativeBackend._active_runs.pop(req.run_id, None)
             NativeBackend._clear_injected_skill_ids(req.run_id)
             try:
-                await write_phase(
-                    run_id=req.run_id, phase=None, running_tool_name=None
-                )
+                await write_phase(run_id=req.run_id, phase=None, running_tool_name=None)
             except Exception:
                 log.exception(
                     "agent_runtime cleanup write_phase failed run=%s",
@@ -455,7 +449,9 @@ async def _placeholder_hint(req: RunRequest) -> str:
     try:
         async with factory() as session:
             stmt = (
-                select(ModelProvider.kind, ModelProvider.name, ModelProvider.enabled, ModelKey.enabled)
+                select(
+                    ModelProvider.kind, ModelProvider.name, ModelProvider.enabled, ModelKey.enabled
+                )
                 .join(ModelKey, ModelKey.provider_id == ModelProvider.id, isouter=True)
                 .where(
                     ModelProvider.workspace_id == req.workspace_id,
@@ -471,26 +467,24 @@ async def _placeholder_hint(req: RunRequest) -> str:
 
     if not rows:
         return (
-            "请打开 设置 → 模型供应商，新增一个供应商（如 DeepSeek / OpenAI / "  # noqa: RUF001
-            "Anthropic / OpenRouter / Ollama 等）并填入 API Key。"  # noqa: RUF001
+            "请打开 设置 → 模型供应商，新增一个供应商（如 DeepSeek / OpenAI / "
+            "Anthropic / OpenRouter / Ollama 等）并填入 API Key。"
         )
 
     disabled = [(k, n) for k, n, prov_enabled, _key_enabled in rows if not prov_enabled]
     no_key = [
-        (k, n)
-        for k, n, prov_enabled, key_enabled in rows
-        if prov_enabled and not key_enabled
+        (k, n) for k, n, prov_enabled, key_enabled in rows if prov_enabled and not key_enabled
     ]
     if disabled:
         kind, name = disabled[0]
         return (
-            f"已检测到禁用的供应商「{name}」（{kind}）。"  # noqa: RUF001
-            f"请到 设置 → 模型供应商 将其重新启用，或新增并启用其它供应商。"  # noqa: RUF001
+            f"已检测到禁用的供应商「{name}」（{kind}）。"
+            f"请到 设置 → 模型供应商 将其重新启用，或新增并启用其它供应商。"
         )
     if no_key:
         kind, name = no_key[0]
         return (
-            f"供应商「{name}」（{kind}）已启用，但未配置可用的 API Key。"  # noqa: RUF001
+            f"供应商「{name}」（{kind}）已启用，但未配置可用的 API Key。"
             f"请到 设置 → 模型供应商 为它填入 / 启用一个 Key。"
         )
     return "请到 设置 → 模型供应商 检查供应商状态与 API Key 配置。"
@@ -499,12 +493,7 @@ async def _placeholder_hint(req: RunRequest) -> str:
 # ─── Placeholder stream (no model configured) ─────────────────
 async def _placeholder_stream(req: RunRequest, *, reason: str) -> AsyncIterator[RunEvent]:
     hint = await _placeholder_hint(req)
-    preamble = (
-        f"[SenHarness · {reason}] "
-        f"当前工作区没有可用的模型供应商。"
-        f"{hint}"
-        f"你的消息："  # noqa: RUF001
-    )
+    preamble = f"[SenHarness · {reason}] 当前工作区没有可用的模型供应商。{hint}你的消息："
     full = preamble + req.user_text
     for i in range(0, len(full), 6):
         yield RunEvent(RunEventKind.DELTA, {"text": full[i : i + 6]})
@@ -643,9 +632,7 @@ async def _build_capabilities(
     if sub is not None:
         caps.append(sub)
 
-    skills_cap, injected_skill_ids = await _resolve_skills_for_run(
-        req=req, policy=policy
-    )
+    skills_cap, injected_skill_ids = await _resolve_skills_for_run(req=req, policy=policy)
     NativeBackend._injected_skill_ids[req.run_id] = injected_skill_ids
     if skills_cap is not None:
         caps.append(skills_cap)
@@ -824,17 +811,14 @@ async def _stream_with_optional_failover(
     chain: list[Any] = []
     try:
         async with factory() as fresh:
-            config = await get_workspace_failover_config(
-                fresh, workspace_id=req.workspace_id
-            )
+            config = await get_workspace_failover_config(fresh, workspace_id=req.workspace_id)
             if config.enabled:
                 chain = await get_provider_chain(
                     fresh,
                     workspace_id=req.workspace_id,
                     served_name=served_name,
                     primary_upstream=(
-                        f"{primary_resolved.provider_kind}:"
-                        f"{primary_resolved.model_name}"
+                        f"{primary_resolved.provider_kind}:{primary_resolved.model_name}"
                     ),
                     config=config,
                 )
@@ -1086,9 +1070,7 @@ async def _pydantic_ai_stream(
     )
 
     # Scratch directory for tool-output overflow dumps.
-    overflow_dir = (
-        Path(settings.STORAGE_LOCAL_PATH) / "scratch" / str(req.session_id)
-    )
+    overflow_dir = Path(settings.STORAGE_LOCAL_PATH) / "scratch" / str(req.session_id)
 
     started = time.perf_counter()
     final_text = ""
@@ -1110,9 +1092,7 @@ async def _pydantic_ai_stream(
     # Build the prompt — either a plain string (text-only) or a list with
     # pydantic-ai ``BinaryContent`` parts when the user attached images.
     prompt_input: Any = req.user_text
-    image_attachments = [
-        a for a in (req.attachments or []) if a.get("kind") == "image"
-    ]
+    image_attachments = [a for a in (req.attachments or []) if a.get("kind") == "image"]
     if image_attachments:
         try:
             from pydantic_ai import BinaryContent
@@ -1131,9 +1111,7 @@ async def _pydantic_ai_stream(
             log.warning("BinaryContent unavailable; dropping images: %s", e)
 
     try:
-        async with agent.iter(
-            prompt_input, message_history=history, deps=deps
-        ) as agent_run:
+        async with agent.iter(prompt_input, message_history=history, deps=deps) as agent_run:
             async for node in agent_run:
                 # Each graph node roughly corresponds to one reasoning/tool
                 # iteration from the user's perspective; tick the budget and
@@ -1155,9 +1133,7 @@ async def _pydantic_ai_stream(
                     if (
                         decision.should_inject
                         and decision.rendered_prompt
-                        and inject_ephemeral_system_message(
-                            node, decision.rendered_prompt
-                        )
+                        and inject_ephemeral_system_message(node, decision.rendered_prompt)
                     ):
                         await audit_reflection(
                             workspace_id=req.workspace_id,
@@ -1197,15 +1173,11 @@ async def _pydantic_ai_stream(
                                     if chunk:
                                         final_text += chunk
                                         llm_text_chars += len(chunk)
-                                        yield RunEvent(
-                                            RunEventKind.DELTA, {"text": chunk}
-                                        )
+                                        yield RunEvent(RunEventKind.DELTA, {"text": chunk})
                                 elif isinstance(event.delta, ThinkingPartDelta):
                                     chunk = event.delta.content_delta or ""
                                     if chunk:
-                                        yield RunEvent(
-                                            RunEventKind.THINKING, {"text": chunk}
-                                        )
+                                        yield RunEvent(RunEventKind.THINKING, {"text": chunk})
                     await plugin_host.fire(
                         "post_llm_call",
                         run_id=req.run_id,
@@ -1223,9 +1195,7 @@ async def _pydantic_ai_stream(
                         async for event in tool_stream:
                             if isinstance(event, FunctionToolCallEvent):
                                 args = _safe_args(event.part)
-                                reliability.record_tool_call(
-                                    event.part.tool_name, args
-                                )
+                                reliability.record_tool_call(event.part.tool_name, args)
                                 # M0.5: per-call tick — `is_call_tools_node`
                                 # may carry multiple parallel calls in one
                                 # node, so we count each one rather than the
@@ -1257,10 +1227,7 @@ async def _pydantic_ai_stream(
                                     session_id=req.session_id,
                                     agent_id=req.agent_id,
                                     tool_name=event.part.tool_name,
-                                    tool_call_id=(
-                                        event.part.tool_call_id
-                                        or str(uuid.uuid4())
-                                    ),
+                                    tool_call_id=(event.part.tool_call_id or str(uuid.uuid4())),
                                     args=args,
                                 )
                                 yield RunEvent(
@@ -1279,9 +1246,7 @@ async def _pydantic_ai_stream(
                                 # We don't have a clean error signal from the
                                 # raw event, so treat ``None`` as "no payload"
                                 # = error; everything else as ok.
-                                tool_name = getattr(
-                                    event.result, "tool_name", ""
-                                ) or ""
+                                tool_name = getattr(event.result, "tool_name", "") or ""
                                 reliability.record_tool_outcome(
                                     str(tool_name),
                                     None,
@@ -1292,13 +1257,8 @@ async def _pydantic_ai_stream(
                                 )
                                 if truncated and meta:
                                     try:
-                                        overflow_dir.mkdir(
-                                            parents=True, exist_ok=True
-                                        )
-                                        (
-                                            overflow_dir
-                                            / f"tool_output_{call_id}.json"
-                                        ).write_text(
+                                        overflow_dir.mkdir(parents=True, exist_ok=True)
+                                        (overflow_dir / f"tool_output_{call_id}.json").write_text(
                                             meta.get("full_payload", ""),
                                             encoding="utf-8",
                                         )
@@ -1334,9 +1294,7 @@ async def _pydantic_ai_stream(
         # Tool fired ≥ ``stuck_loop_threshold`` times. Surface a deterministic
         # ``stuck_loop`` error + ``final`` so the UI clears the streaming
         # cursor without flashing a scary kernel exception.
-        log.warning(
-            "stuck_loop abort tool=%s count=%d", abort.tool_name, abort.count
-        )
+        log.warning("stuck_loop abort tool=%s count=%d", abort.tool_name, abort.count)
         record_run(
             provider=resolved.provider_kind,
             model=resolved.model_name,
@@ -1350,7 +1308,7 @@ async def _pydantic_ai_stream(
             RunEventKind.DELTA,
             {
                 "text": (
-                    f"\n\n⚠ 检测到工具循环：`{abort.tool_name}` 被连续调用 "  # noqa: RUF001
+                    f"\n\n⚠ 检测到工具循环：`{abort.tool_name}` 被连续调用 "
                     f"{abort.count} 次。已自动终止本轮。"
                 )
             },
@@ -1412,6 +1370,7 @@ async def _pydantic_ai_stream(
                 GuardrailError,
                 ToolBlocked,
             )
+
             is_guard_block = isinstance(e, (ToolBlocked, GuardrailError))
         except ImportError:  # pragma: no cover
             is_guard_block = False
@@ -1488,9 +1447,7 @@ async def _pydantic_ai_stream(
                 set_context(None)
                 unregister_active_backend(req.run_id)
                 await _fire_session_end("provider_failover_hint")
-                raise ProviderFailoverHint(
-                    original=e, failure_kind=failure_kind
-                ) from e
+                raise ProviderFailoverHint(original=e, failure_kind=failure_kind) from e
 
         log.exception("pydantic-ai run failed")
         yield RunEvent(
@@ -1591,7 +1548,7 @@ async def _pydantic_ai_stream(
 
 
 # ─── Helpers ──────────────────────────────────────────────────
-def _qwen3_no_think(policy: dict[str, Any] | None, resolved: "ResolvedModel") -> bool:
+def _qwen3_no_think(policy: dict[str, Any] | None, resolved: ResolvedModel) -> bool:
     """True when a Qwen3 model should run without the extended reasoning phase.
 
     Qwen3 models on DashScope honour ``/no_think`` at the end of the system
@@ -1610,7 +1567,9 @@ def _qwen3_no_think(policy: dict[str, Any] | None, resolved: "ResolvedModel") ->
     return "qwen3" in model_flat
 
 
-def _qwen3_extra_body(policy: dict[str, Any] | None, resolved: "ResolvedModel") -> dict[str, Any] | None:
+def _qwen3_extra_body(
+    policy: dict[str, Any] | None, resolved: ResolvedModel
+) -> dict[str, Any] | None:
     """Return ``extra_body`` to hard-disable thinking for Qwen3 on DashScope.
 
     ``/no_think`` in the system prompt only softly reduces the thinking phase;
@@ -1623,7 +1582,7 @@ def _qwen3_extra_body(policy: dict[str, Any] | None, resolved: "ResolvedModel") 
     return {"enable_thinking": False}
 
 
-def _deepseek_no_think(policy: dict[str, Any] | None, resolved: "ResolvedModel") -> bool:
+def _deepseek_no_think(policy: dict[str, Any] | None, resolved: ResolvedModel) -> bool:
     """True when a DeepSeek hybrid model should skip the thinking phase.
 
     DeepSeek V4 (``deepseek-v4-pro`` / ``deepseek-v4-flash``) ships hybrid
@@ -1651,7 +1610,9 @@ def _deepseek_no_think(policy: dict[str, Any] | None, resolved: "ResolvedModel")
     return name.startswith("deepseek-v4-")
 
 
-def _deepseek_extra_body(policy: dict[str, Any] | None, resolved: "ResolvedModel") -> dict[str, Any] | None:
+def _deepseek_extra_body(
+    policy: dict[str, Any] | None, resolved: ResolvedModel
+) -> dict[str, Any] | None:
     """Return ``extra_body`` to disable thinking on DeepSeek V4 hybrid models."""
     if not _deepseek_no_think(policy, resolved):
         return None
@@ -1662,7 +1623,7 @@ def _assemble_prompt(
     req: RunRequest,
     *,
     memory_fragment: str | None = None,
-    resolved: "ResolvedModel | None" = None,
+    resolved: ResolvedModel | None = None,
 ) -> str:
     from app.agents.prompts import assemble_system
 

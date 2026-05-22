@@ -40,23 +40,18 @@ async def fan_out_agent_to_workspace_members(
     db: AsyncSession, *, workspace_id: uuid.UUID, agent_id: uuid.UUID
 ) -> None:
     """Insert a pinned star row for ``agent_id`` per active workspace member."""
-    src = (
-        select(
-            Membership.identity_id.label("identity_id"),
-            literal(agent_id).label("agent_id"),
-            literal(True).label("pinned"),
-        )
-        .where(
-            Membership.workspace_id == workspace_id,
-            Membership.deleted_at.is_(None),
-            Membership.status == MembershipStatus.ACTIVE,
-        )
+    src = select(
+        Membership.identity_id.label("identity_id"),
+        literal(agent_id).label("agent_id"),
+        literal(True).label("pinned"),
+    ).where(
+        Membership.workspace_id == workspace_id,
+        Membership.deleted_at.is_(None),
+        Membership.status == MembershipStatus.ACTIVE,
     )
     stmt = (
         pg_insert(AgentStar)
-        .from_select(
-            ["identity_id", "agent_id", "pinned"], src, include_defaults=False
-        )
+        .from_select(["identity_id", "agent_id", "pinned"], src, include_defaults=False)
         .on_conflict_do_nothing(
             index_elements=["identity_id", "agent_id"],
         )
@@ -68,18 +63,15 @@ async def fan_out_squad_to_workspace_members(
     db: AsyncSession, *, workspace_id: uuid.UUID, squad_id: uuid.UUID
 ) -> None:
     """Insert a pinned star row for ``squad_id`` per active workspace member."""
-    src = (
-        select(
-            Membership.identity_id.label("identity_id"),
-            literal(squad_id).label("squad_id"),
-            literal(workspace_id).label("workspace_id"),
-            literal(True).label("pinned"),
-        )
-        .where(
-            Membership.workspace_id == workspace_id,
-            Membership.deleted_at.is_(None),
-            Membership.status == MembershipStatus.ACTIVE,
-        )
+    src = select(
+        Membership.identity_id.label("identity_id"),
+        literal(squad_id).label("squad_id"),
+        literal(workspace_id).label("workspace_id"),
+        literal(True).label("pinned"),
+    ).where(
+        Membership.workspace_id == workspace_id,
+        Membership.deleted_at.is_(None),
+        Membership.status == MembershipStatus.ACTIVE,
     )
     stmt = (
         pg_insert(SquadStar)
@@ -99,16 +91,13 @@ async def fan_out_workspace_to_member(
     db: AsyncSession, *, workspace_id: uuid.UUID, identity_id: uuid.UUID
 ) -> None:
     """Insert pinned star rows for every visible workspace agent + squad."""
-    agent_src = (
-        select(
-            literal(identity_id).label("identity_id"),
-            Agent.id.label("agent_id"),
-            literal(True).label("pinned"),
-        )
-        .where(
-            Agent.workspace_id == workspace_id,
-            Agent.deleted_at.is_(None),
-        )
+    agent_src = select(
+        literal(identity_id).label("identity_id"),
+        Agent.id.label("agent_id"),
+        literal(True).label("pinned"),
+    ).where(
+        Agent.workspace_id == workspace_id,
+        Agent.deleted_at.is_(None),
     )
     agent_stmt = (
         pg_insert(AgentStar)
@@ -123,17 +112,14 @@ async def fan_out_workspace_to_member(
     )
     await db.execute(agent_stmt)
 
-    squad_src = (
-        select(
-            literal(identity_id).label("identity_id"),
-            Squad.id.label("squad_id"),
-            literal(workspace_id).label("workspace_id"),
-            literal(True).label("pinned"),
-        )
-        .where(
-            Squad.workspace_id == workspace_id,
-            Squad.deleted_at.is_(None),
-        )
+    squad_src = select(
+        literal(identity_id).label("identity_id"),
+        Squad.id.label("squad_id"),
+        literal(workspace_id).label("workspace_id"),
+        literal(True).label("pinned"),
+    ).where(
+        Squad.workspace_id == workspace_id,
+        Squad.deleted_at.is_(None),
     )
     squad_stmt = (
         pg_insert(SquadStar)

@@ -51,15 +51,13 @@ def _pg_container() -> Iterator[str | None]:
     test that needs a DB shares the same container — ~5s startup.
     """
     try:
-        from testcontainers.postgres import PostgresContainer  # noqa: PLC0415
+        from testcontainers.postgres import PostgresContainer
     except ImportError:
         yield None
         return
 
     with PostgresContainer("pgvector/pgvector:pg16") as pg:
-        dsn = pg.get_connection_url().replace(
-            "postgresql+psycopg2://", "postgresql+asyncpg://"
-        )
+        dsn = pg.get_connection_url().replace("postgresql+psycopg2://", "postgresql+asyncpg://")
         os.environ["DB_HOST"] = pg.get_container_host_ip()
         os.environ["DB_PORT"] = str(pg.get_exposed_port(5432))
         os.environ["DB_USER"] = pg.username
@@ -78,7 +76,7 @@ def _redis_url() -> str | None:
         return f"redis://{host}:{port}/0"
 
     try:
-        from testcontainers.redis import RedisContainer  # noqa: PLC0415
+        from testcontainers.redis import RedisContainer
     except ImportError:
         return None
 
@@ -120,14 +118,21 @@ async def _migrated_engine(_pg_container, db_available):
     if not db_available:
         pytest.skip("Postgres not available — install testcontainers or set DB_HOST")
 
-    from alembic import command  # noqa: PLC0415
-    from alembic.config import Config  # noqa: PLC0415
+    from alembic import command
+    from alembic.config import Config
 
-    from app.db.session import get_engine  # noqa: PLC0415
+    from app.db.session import get_engine
 
     cfg = Config("alembic.ini")
-    # Alembic runs its own engine (built from settings); just call it.
-    command.upgrade(cfg, "head")
+    # Run alembic on a worker thread. env.py's online path ends with
+    # `asyncio.run(run_migrations_online())`, which needs to own its
+    # event loop; calling it directly from this pytest-asyncio fixture
+    # nests loops, raises at the `asyncio.run` boundary, leaves the
+    # coroutine un-awaited, and surfaces as a collection-time `E` plus
+    # a `coroutine 'run_migrations_online' was never awaited`
+    # RuntimeWarning at gc time. The worker thread has no running
+    # loop, so `asyncio.run` is free to create one.
+    await asyncio.to_thread(command.upgrade, cfg, "head")
 
     engine = get_engine()
     yield engine
@@ -141,7 +146,7 @@ async def db_session(_migrated_engine) -> AsyncIterator:
     between each other — everything happens inside a transaction that
     never commits.
     """
-    from app.db.session import get_session_factory  # noqa: PLC0415
+    from app.db.session import get_session_factory
 
     factory = get_session_factory()
     async with factory() as session:
@@ -161,15 +166,13 @@ async def async_client(_migrated_engine, redis_available) -> AsyncIterator:
     if not redis_available:
         pytest.skip("Redis not available — install testcontainers or set REDIS_HOST")
 
-    import httpx  # noqa: PLC0415
-    from httpx import ASGITransport  # noqa: PLC0415
+    import httpx
+    from httpx import ASGITransport
 
-    from app.main import app  # noqa: PLC0415
+    from app.main import app
 
     transport = ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://testserver"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
         yield client
 
 
@@ -182,7 +185,7 @@ async def identity(db_session):
     contract (just an Identity, no membership) still holds — the
     ``workspace`` fixture creates one explicitly when needed.
     """
-    from app.services import auth as svc  # noqa: PLC0415
+    from app.services import auth as svc
 
     email = f"user-{uuid.uuid4().hex[:8]}@example.com"
     result = await svc.register(
@@ -199,7 +202,7 @@ async def identity(db_session):
 @pytest_asyncio.fixture
 async def workspace(db_session, identity):
     """A workspace with the given identity as its owner."""
-    from app.services import workspace as ws_svc  # noqa: PLC0415
+    from app.services import workspace as ws_svc
 
     ws = await ws_svc.create_workspace(
         db_session,
@@ -214,7 +217,7 @@ async def workspace(db_session, identity):
 @pytest_asyncio.fixture
 async def agent(db_session, workspace, identity):
     """A pydantic-ai backed agent inside ``workspace``."""
-    from app.services import agent as svc  # noqa: PLC0415
+    from app.services import agent as svc
 
     a = await svc.create_agent(
         db_session,

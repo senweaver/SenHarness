@@ -90,7 +90,7 @@ VerifierBreakerBucket = "verifier"
 
 
 # ── Errors ───────────────────────────────────────────────────
-class VerifierAlreadyTerminal(AppError):  # noqa: N818
+class VerifierAlreadyTerminal(AppError):
     """Caller asked to verify a version that's past PROPOSED.
 
     Distinct from the lower-level
@@ -276,9 +276,7 @@ async def find_relevant_artifacts(
     pack_str = str(pack_id)
     needle = pack_slug.lower() if pack_slug else ""
     for row in rows:
-        injected_match = pack_str in [
-            str(p) for p in (row.injected_skill_pack_ids or [])
-        ]
+        injected_match = pack_str in [str(p) for p in (row.injected_skill_pack_ids or [])]
         tool_match = bool(pack_slug) and pack_slug in (row.invoked_tools or [])
         if injected_match or tool_match:
             selected.append(row)
@@ -315,20 +313,14 @@ async def replay_judge_with_skill_swap(
     scorer never propagates the aux exception so a single bad
     artifact can't abort the per-version sweep.
     """
-    config = await get_aux_model(
-        db, workspace_id=workspace_id, task=AuxiliaryTask.SKILL_REVIEW
-    )
+    config = await get_aux_model(db, workspace_id=workspace_id, task=AuxiliaryTask.SKILL_REVIEW)
     if config is None:
         # Fall back to the judge tier — workspaces wired for M0.3 always
         # have a judge model resolved, so this keeps the verifier usable
         # before the operator picks an explicit ``aux_model_skill_review``.
-        config = await get_aux_model(
-            db, workspace_id=workspace_id, task=AuxiliaryTask.JUDGE
-        )
+        config = await get_aux_model(db, workspace_id=workspace_id, task=AuxiliaryTask.JUDGE)
     if config is None:
-        return ArtifactReplayPair(
-            artifact_id=artifact.id, old_score=0, new_score=0, failed=True
-        )
+        return ArtifactReplayPair(artifact_id=artifact.id, old_score=0, new_score=0, failed=True)
 
     turns_payload = _safe_json_dump_turns(
         list(artifact.turns_json or []), max_chars=_TURNS_REPLAY_BUDGET
@@ -362,25 +354,15 @@ async def replay_judge_with_skill_swap(
         return None  # type: ignore[return-value]
 
     try:
-        old, new = await asyncio.gather(
-            _one(old_content, "old"), _one(new_content, "new")
-        )
+        old, new = await asyncio.gather(_one(old_content, "old"), _one(new_content, "new"))
     except Exception:
-        log.exception(
-            "verifier replay gather crashed for artifact=%s", artifact.id
-        )
-        return ArtifactReplayPair(
-            artifact_id=artifact.id, old_score=0, new_score=0, failed=True
-        )
+        log.exception("verifier replay gather crashed for artifact=%s", artifact.id)
+        return ArtifactReplayPair(artifact_id=artifact.id, old_score=0, new_score=0, failed=True)
 
     if old is None or new is None:
-        return ArtifactReplayPair(
-            artifact_id=artifact.id, old_score=0, new_score=0, failed=True
-        )
+        return ArtifactReplayPair(artifact_id=artifact.id, old_score=0, new_score=0, failed=True)
 
-    return ArtifactReplayPair(
-        artifact_id=artifact.id, old_score=int(old), new_score=int(new)
-    )
+    return ArtifactReplayPair(artifact_id=artifact.id, old_score=int(old), new_score=int(new))
 
 
 # ── Verify one PROPOSED version ─────────────────────────────
@@ -503,12 +485,8 @@ async def verify_skill_version(
     started = utcnow_naive()
     monotonic_started = time.monotonic()
 
-    version = await _load_proposed_version(
-        db, workspace_id=workspace_id, version_id=version_id
-    )
-    pack = await _load_pack_or_raise(
-        db, workspace_id=workspace_id, pack_id=version.pack_id
-    )
+    version = await _load_proposed_version(db, workspace_id=workspace_id, version_id=version_id)
+    pack = await _load_pack_or_raise(db, workspace_id=workspace_id, pack_id=version.pack_id)
     config = await get_workspace_evolver_config(db, workspace_id=workspace_id)
     threshold = float(config.auto_verifier.min_score_delta)
     min_artifacts = int(config.auto_verifier.min_replay_artifacts)
@@ -596,10 +574,7 @@ async def verify_skill_version(
                 action="verifier.completed",
                 workspace_id=workspace_id,
                 version=version,
-                summary=(
-                    f"verifier accepted v{version.version_no} "
-                    "(skipped_insufficient)"
-                ),
+                summary=(f"verifier accepted v{version.version_no} (skipped_insufficient)"),
                 metadata={
                     "pack_id": str(pack.id),
                     "slug": pack.slug,
@@ -745,22 +720,15 @@ async def verify_skill_version(
             artifacts_examined=0,
         )
         try:
-            await _persist_validation_results(
-                db, version=version, payload=results_payload
-            )
+            await _persist_validation_results(db, version=version, payload=results_payload)
         except Exception:  # pragma: no cover
             log.exception(
                 "verifier failed to persist errored results for version=%s",
                 version.id,
             )
         try:
-            current = (
-                await SkillPackVersionRepository(db).get(version.id)
-            )
-            if (
-                current is not None
-                and current.state == SkillPackVersionState.VALIDATING
-            ):
+            current = await SkillPackVersionRepository(db).get(version.id)
+            if current is not None and current.state == SkillPackVersionState.VALIDATING:
                 await skill_version_svc.transition_version(
                     db,
                     workspace_id=workspace_id,

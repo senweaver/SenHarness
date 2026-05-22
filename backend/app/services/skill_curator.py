@@ -179,9 +179,7 @@ async def get_workspace_curator_config(
     if ws_row is not None and isinstance(ws_row.home_config_json, dict):
         ws_overrides = ws_row.home_config_json.get("curator")
         if isinstance(ws_overrides, dict):
-            merged.update(
-                {k: v for k, v in ws_overrides.items() if v is not None}
-            )
+            merged.update({k: v for k, v in ws_overrides.items() if v is not None})
 
     return CuratorConfig.from_dict(merged)
 
@@ -346,9 +344,7 @@ async def propose_archive(
 
     Caller commits the transaction.
     """
-    if await _has_pending_archive_approval(
-        db, workspace_id=workspace_id, pack_id=pack.id
-    ):
+    if await _has_pending_archive_approval(db, workspace_id=workspace_id, pack_id=pack.id):
         return None
 
     cur = now or utcnow_naive()
@@ -359,22 +355,13 @@ async def propose_archive(
         "slug": pack.slug,
         "reason": reason,
         "stale_since": (
-            pack.state_changed_at.isoformat()
-            if pack.state_changed_at is not None
-            else None
+            pack.state_changed_at.isoformat() if pack.state_changed_at is not None else None
         ),
-        "last_used_at": (
-            pack.last_used_at.isoformat()
-            if pack.last_used_at is not None
-            else None
-        ),
+        "last_used_at": (pack.last_used_at.isoformat() if pack.last_used_at is not None else None),
         "use_count_30d": int(use_count_30d),
     }
 
-    summary = (
-        f"Curator proposes archiving stale skill pack {pack.slug!r} "
-        f"({reason})"
-    )
+    summary = f"Curator proposes archiving stale skill pack {pack.slug!r} ({reason})"
 
     repo = ApprovalRepository(db)
     approval = await repo.create(

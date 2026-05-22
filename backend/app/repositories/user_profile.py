@@ -75,9 +75,7 @@ class UserProfileFactRepository(AsyncRepository[UserProfileFact]):
         )
         return (await self.session.execute(stmt)).scalar_one_or_none()
 
-    async def supersede(
-        self, *, fact_id: uuid.UUID, by_fact_id: uuid.UUID
-    ) -> None:
+    async def supersede(self, *, fact_id: uuid.UUID, by_fact_id: uuid.UUID) -> None:
         """Mark ``fact_id`` as superseded by ``by_fact_id``.
 
         A no-op if the source row is missing — the daily sweep races
@@ -90,9 +88,7 @@ class UserProfileFactRepository(AsyncRepository[UserProfileFact]):
         existing.superseded_by_id = by_fact_id
         await self.session.flush([existing])
 
-    async def confirm(
-        self, *, fact_id: uuid.UUID, identity_id: uuid.UUID
-    ) -> UserProfileFact:
+    async def confirm(self, *, fact_id: uuid.UUID, identity_id: uuid.UUID) -> UserProfileFact:
         """Flip ``user_confirmed`` to True and ensure ``user_rejected`` is False.
 
         Raises :class:`NotFound` if the row doesn't exist or belongs to
@@ -109,9 +105,7 @@ class UserProfileFactRepository(AsyncRepository[UserProfileFact]):
         await self.session.flush([fact])
         return fact
 
-    async def reject(
-        self, *, fact_id: uuid.UUID, identity_id: uuid.UUID
-    ) -> UserProfileFact:
+    async def reject(self, *, fact_id: uuid.UUID, identity_id: uuid.UUID) -> UserProfileFact:
         """Flip ``user_rejected`` to True. Confirmed → False on rejection."""
         fact = await self.get(fact_id)
         if fact is None or fact.identity_id != identity_id:

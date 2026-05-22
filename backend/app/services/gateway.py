@@ -50,9 +50,7 @@ def generate_api_key() -> str:
 
 
 # ─── Adapter lookup ───────────────────────────────────────
-async def authenticate_adapter(
-    session: AsyncSession, *, raw_api_key: str
-) -> BackendAdapter | None:
+async def authenticate_adapter(session: AsyncSession, *, raw_api_key: str) -> BackendAdapter | None:
     digest = hash_api_key(raw_api_key)
     repo = BackendAdapterRepository(session)
     return await repo.find_by_api_key_hash(digest)
@@ -94,9 +92,7 @@ async def poll_pending_requests(
 
     factory = get_session_factory()
     deadline = asyncio.get_event_loop().time() + max(0, wait_ms) / 1000.0
-    poll_interval = max(
-        0.05, min(0.5, max(0, wait_ms) / 1000.0 / 8 or 0.25)
-    )
+    poll_interval = max(0.05, min(0.5, max(0, wait_ms) / 1000.0 / 8 or 0.25))
 
     while True:
         async with factory() as db:
@@ -159,9 +155,7 @@ async def emit_event(
 
 
 # ─── Housekeeping ─────────────────────────────────────────
-async def purge_expired(
-    session: AsyncSession, *, older_than_seconds: int
-) -> int:
+async def purge_expired(session: AsyncSession, *, older_than_seconds: int) -> int:
     """Flip DELIVERED requests that never got ``final`` within the timeout to
     EXPIRED. Runs on a cron (future) — exposed as a service function for
     reuse by the GC job."""

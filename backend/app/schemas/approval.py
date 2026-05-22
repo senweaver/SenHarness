@@ -1,4 +1,5 @@
 """Approval DTOs for REST + WS."""
+
 from __future__ import annotations
 
 import uuid

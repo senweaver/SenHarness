@@ -8,14 +8,11 @@ Ensures:
 
 from __future__ import annotations
 
-import pytest
-
 from app.agents.kernels.base import (
     AgentBackend,
     BackendCapabilities,
     RunEvent,
     RunEventKind,
-    RunRequest,
 )
 from app.agents.kernels.registry import (
     available_kinds,
@@ -44,7 +41,7 @@ class _StubBackend(AgentBackend):
         )
 
     async def run(self, req):  # pragma: no cover - not exercised here
-        if False:  # noqa: SIM223
+        if False:
             yield RunEvent(RunEventKind.FINAL, {})
 
     async def cancel(self, run_id):  # pragma: no cover
@@ -113,9 +110,7 @@ class TestDescribeShape:
             backend_kind = "_test_remote"
 
             def capabilities(self) -> BackendCapabilities:
-                return BackendCapabilities(
-                    display_name="Remote", requires_adapter=True
-                )
+                return BackendCapabilities(display_name="Remote", requires_adapter=True)
 
         register(_RemoteStub())
         row = next(r for r in describe() if r["kind"] == "_test_remote")

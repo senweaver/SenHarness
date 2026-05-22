@@ -29,6 +29,7 @@ Usage:
 The command expects to be run inside the backend container (or against
 a configured .env — it uses the normal app.db.session factory).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -67,7 +68,7 @@ SCENARIOS: list[dict[str, Any]] = [
             "Never invent metrics; if a number isn't available, say "
             "'(metric not yet captured)'."
         ),
-        "autonomy": "l2",       # may read memory + session history
+        "autonomy": "l2",  # may read memory + session history
         "metadata": {
             # L4 memory: lean heavily on episodic recall of past sessions
             # so the report reflects what the user actually did.
@@ -124,7 +125,7 @@ SCENARIOS: list[dict[str, Any]] = [
             "If the reply would commit to a refund, suspension, or "
             "contract change, request approval explicitly."
         ),
-        "autonomy": "l3",       # destructive tools → HITL approval
+        "autonomy": "l3",  # destructive tools → HITL approval
         "metadata": {
             "approvals": "required_for_destructive",
             "shields": {
@@ -140,11 +141,11 @@ SCENARIOS: list[dict[str, Any]] = [
 
 async def seed(workspace_slug: str | None) -> None:
     """Create the three scenario agents in the target workspace."""
-    from app.db.models.agent import AgentVisibility, AutonomyLevel  # noqa: PLC0415
-    from app.db.session import get_session_factory  # noqa: PLC0415
-    from app.repositories.agent import AgentRepository  # noqa: PLC0415
-    from app.repositories.workspace import WorkspaceRepository  # noqa: PLC0415
-    from app.services import agent as agent_svc  # noqa: PLC0415
+    from app.db.models.agent import AgentVisibility, AutonomyLevel
+    from app.db.session import get_session_factory
+    from app.repositories.agent import AgentRepository
+    from app.repositories.workspace import WorkspaceRepository
+    from app.services import agent as agent_svc
 
     factory = get_session_factory()
     async with factory() as db:
@@ -153,9 +154,7 @@ async def seed(workspace_slug: str | None) -> None:
         if workspace_slug:
             ws = await ws_repo.get_by_slug(workspace_slug)
             if ws is None:
-                console.print(
-                    f"[red]workspace slug={workspace_slug!r} not found[/red]"
-                )
+                console.print(f"[red]workspace slug={workspace_slug!r} not found[/red]")
                 sys.exit(2)
         else:
             # Fall back to the demo workspace `seed_defaults` creates.
@@ -167,13 +166,14 @@ async def seed(workspace_slug: str | None) -> None:
                 )
                 sys.exit(2)
 
-        console.print(
-            f"[cyan]seeding into workspace[/cyan] {ws.name!r} ({ws.slug})"
-        )
+        console.print(f"[cyan]seeding into workspace[/cyan] {ws.name!r} ({ws.slug})")
         agent_repo = AgentRepository(db)
-        existing = {a.name for a in await agent_repo.list_visible(
-            workspace_id=ws.id, identity_id=None, offset=0, limit=500
-        )}
+        existing = {
+            a.name
+            for a in await agent_repo.list_visible(
+                workspace_id=ws.id, identity_id=None, offset=0, limit=500
+            )
+        }
 
         created = 0
         skipped = 0
@@ -203,9 +203,7 @@ async def seed(workspace_slug: str | None) -> None:
             created += 1
 
         await db.commit()
-        console.print(
-            f"[bold green]done[/bold green] — {created} created, {skipped} skipped"
-        )
+        console.print(f"[bold green]done[/bold green] — {created} created, {skipped} skipped")
 
 
 def main() -> None:
@@ -214,10 +212,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--workspace-slug",
-        help=(
-            "Target workspace slug. Defaults to 'demo' (created by "
-            "cli.commands seed)."
-        ),
+        help=("Target workspace slug. Defaults to 'demo' (created by cli.commands seed)."),
         default=None,
     )
     args = parser.parse_args()

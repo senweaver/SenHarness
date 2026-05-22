@@ -70,9 +70,7 @@ def _excerpt_for_message(msg: Message) -> str:
         candidates.append(content.get("text") if isinstance(content.get("text"), str) else None)
     thinking = msg.thinking_json or {}
     if isinstance(thinking, dict):
-        candidates.append(
-            thinking.get("text") if isinstance(thinking.get("text"), str) else None
-        )
+        candidates.append(thinking.get("text") if isinstance(thinking.get("text"), str) else None)
     tool_call = msg.tool_call_json or {}
     if isinstance(tool_call, dict):
         name = tool_call.get("name")
@@ -200,9 +198,7 @@ async def get_lineage_replay(
     :func:`app.services.session.get_session_or_404`, which raises
     :class:`NotFound` with the same shape used elsewhere.
     """
-    await session_svc.get_session_or_404(
-        db, session_id, workspace_id=workspace_id
-    )
+    await session_svc.get_session_or_404(db, session_id, workspace_id=workspace_id)
 
     summary_stmt = select(Message).where(
         Message.id == message_id,
@@ -276,9 +272,7 @@ async def list_compressed_summaries_in_session(
     ``limit`` to keep the surface bounded for chat sessions that
     accumulate many sliding-window passes.
     """
-    await session_svc.get_session_or_404(
-        db, session_id, workspace_id=workspace_id
-    )
+    await session_svc.get_session_or_404(db, session_id, workspace_id=workspace_id)
     stmt = (
         select(Message)
         .where(
@@ -300,9 +294,7 @@ async def list_compressed_summaries_in_session(
                 "summary_message_id": m.id,
                 "role": str(m.role),
                 "turn_count": int(ref.get("turn_count") or 0),
-                "compaction_strategy": _coerce_strategy(
-                    ref.get("compaction_strategy")
-                ),
+                "compaction_strategy": _coerce_strategy(ref.get("compaction_strategy")),
                 "compressed_at": _coerce_compressed_at(ref.get("compressed_at")),
                 "summary_excerpt": _excerpt_for_message(m),
             }

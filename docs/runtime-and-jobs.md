@@ -841,9 +841,9 @@ Hard outer timeout `EVOLVER_AGENT_TIMEOUT_SECONDS = 300`. Shared breaker
 
 Pre-flight raises:
 
-* `EvolverDisabled` — workspace opted out (HTTP 409).
-* `EvolverBreakerOpen` — breaker tripped (HTTP 503).
-* `EvolverAuxModelMissing` — no aux model resolved (HTTP 412).
+* `EvolverDisabledError` — workspace opted out (HTTP 409).
+* `EvolverBreakerOpenError` — breaker tripped (HTTP 503).
+* `EvolverAuxModelMissingError` — no aux model resolved (HTTP 412).
 
 After run starts, every outcome (success / skip / timeout / internal
 exception) returns a populated `EvolverInvokeResult` — caller never
@@ -854,7 +854,7 @@ Aux resolution (first match wins):
 1. `EvolverSettings.aux_model_evolver`.
 2. `auxiliary_client.get_aux_model(task=SKILL_REVIEW)`.
 3. `auxiliary_client.get_aux_model(task=JUDGE)`.
-4. `EvolverAuxModelMissing`.
+4. `EvolverAuxModelMissingError`.
 
 Admin endpoint:
 

@@ -78,6 +78,7 @@ def render_prompt(template: str, payload: dict[str, Any]) -> str:
     Missing keys are replaced with an empty string. Keeps the feature tiny
     without pulling in Jinja2.
     """
+
     def _sub(m: re.Match[str]) -> str:
         key = m.group(1)
         value: Any = payload
@@ -92,9 +93,7 @@ def render_prompt(template: str, payload: dict[str, Any]) -> str:
     return _TEMPLATE_RE.sub(_sub, template or "")
 
 
-async def get_or_404(
-    session: AsyncSession, flow_id: uuid.UUID, *, workspace_id: uuid.UUID
-) -> Flow:
+async def get_or_404(session: AsyncSession, flow_id: uuid.UUID, *, workspace_id: uuid.UUID) -> Flow:
     row = await FlowRepository(session).get(flow_id)
     if row is None or row.workspace_id != workspace_id or row.deleted_at is not None:
         raise NotFound("flow_not_found", code="flow.not_found")
@@ -121,7 +120,8 @@ async def create_flow(
         )
         if not has_graph and kwargs.get("agent_id") is None and kwargs.get("squad_id") is None:
             raise Conflict(
-                "no_target", code="flow.no_target",
+                "no_target",
+                code="flow.no_target",
                 extras={"hint": "Set agent_id, squad_id, or provide a visual graph."},
             )
     return await FlowRepository(session).create(
@@ -238,9 +238,7 @@ async def _execute_script(
         # so users with passwords containing spaces are not silently broken.
         import shlex
 
-        prefix = " ".join(
-            f"{k}={shlex.quote(v)}" for k, v in cfg.script_env.items()
-        )
+        prefix = " ".join(f"{k}={shlex.quote(v)}" for k, v in cfg.script_env.items())
         composed = f"{prefix} {composed}"
 
     timeout_s = int(cfg.script_timeout_s or SCRIPT_TIMEOUT_DEFAULT_S)
@@ -255,9 +253,7 @@ async def _execute_script(
         else:
             loop = asyncio.get_running_loop()
             result = await asyncio.wait_for(
-                loop.run_in_executor(
-                    None, lambda: execute(composed, timeout=timeout_s)
-                ),
+                loop.run_in_executor(None, lambda: execute(composed, timeout=timeout_s)),
                 timeout=timeout_s + 5,
             )
     except TimeoutError:
@@ -478,14 +474,10 @@ async def _resolve_http_payload(
     """Resolve vault templates in headers + body. Workspace-scoped."""
     headers: dict[str, str] = {}
     for k, v in cfg.http_headers.items():
-        headers[k] = await resolve_vault_template(
-            db, workspace_id=workspace_id, template=v
-        )
+        headers[k] = await resolve_vault_template(db, workspace_id=workspace_id, template=v)
     body = None
     if cfg.http_method == "POST" and cfg.http_body:
-        body = await resolve_vault_template(
-            db, workspace_id=workspace_id, template=cfg.http_body
-        )
+        body = await resolve_vault_template(db, workspace_id=workspace_id, template=cfg.http_body)
         if body and len(body.encode("utf-8")) > HTTP_BODY_MAX_BYTES:
             raise ValueError("http_body exceeds 64 KiB after vault expansion")
     return headers, body
@@ -502,9 +494,7 @@ async def _execute_http(
 ) -> tuple[FlowRunOutcome, int | None, str | None, int]:
     """Send the probe; return ``(outcome, status, error_excerpt, duration_ms)``."""
     expected = (
-        frozenset(cfg.http_expected_status)
-        if cfg.http_expected_status
-        else _DEFAULT_HTTP_EXPECTED
+        frozenset(cfg.http_expected_status) if cfg.http_expected_status else _DEFAULT_HTTP_EXPECTED
     )
     timeout_s = float(cfg.http_timeout_s or HTTP_TIMEOUT_DEFAULT_S)
     started = time.monotonic()
@@ -527,9 +517,7 @@ async def _execute_http(
             netloc_ip = f"{pinned_ip}:{parsed.port}"
         # IPv6 literals must be wrapped in brackets in the URL netloc.
         if ":" in pinned_ip and not pinned_ip.startswith("["):
-            netloc_ip = (
-                f"[{pinned_ip}]:{parsed.port}" if parsed.port else f"[{pinned_ip}]"
-            )
+            netloc_ip = f"[{pinned_ip}]:{parsed.port}" if parsed.port else f"[{pinned_ip}]"
         request_url = urlunparse(parsed._replace(netloc=netloc_ip))
 
     try:
@@ -547,9 +535,7 @@ async def _execute_http(
                     content=body or b"",
                 )
             else:
-                response = await client.request(
-                    method, request_url, headers=final_headers
-                )
+                response = await client.request(method, request_url, headers=final_headers)
     except httpx.TimeoutException:
         duration_ms = int((time.monotonic() - started) * 1000)
         return FlowRunOutcome.TIMEOUT, None, None, duration_ms
@@ -651,9 +637,7 @@ async def _run_http_flow(
 
     async with factory() as db:
         try:
-            headers, body = await _resolve_http_payload(
-                db, workspace_id=flow.workspace_id, cfg=cfg
-            )
+            headers, body = await _resolve_http_payload(db, workspace_id=flow.workspace_id, cfg=cfg)
         except (VaultKeyNotFoundError, ValueError) as e:
             run = await _persist_run(
                 db,
@@ -714,9 +698,7 @@ async def _run_http_flow(
         )
 
     run_status = (
-        FlowRunStatus.SUCCEEDED
-        if outcome == FlowRunOutcome.SILENT_2XX
-        else FlowRunStatus.FAILED
+        FlowRunStatus.SUCCEEDED if outcome == FlowRunOutcome.SILENT_2XX else FlowRunStatus.FAILED
     )
     error_msg = None
     if outcome == FlowRunOutcome.HTTP_ERROR:
@@ -880,9 +862,7 @@ async def _escalate_to_agent(
         session_id = new_session.id
         graph = dict(flow.graph_json or {}) if _graph_is_active(flow.graph_json) else None
         prompt = (
-            None
-            if graph is not None
-            else render_prompt(flow.prompt_template, enriched_payload)
+            None if graph is not None else render_prompt(flow.prompt_template, enriched_payload)
         )
 
     _spawn_agent_run_task(
@@ -1038,9 +1018,7 @@ async def _run_agent_flow(
             raise NotFound("flow_not_found", code="flow.not_found")
         uses_graph = _graph_is_active(flow.graph_json)
         if not uses_graph and flow.agent_id is None:
-            raise Conflict(
-                "squad_flow_not_supported", code="flow.squad_not_supported"
-            )
+            raise Conflict("squad_flow_not_supported", code="flow.squad_not_supported")
 
         new_session = await SessionRepository(db).create(
             workspace_id=flow.workspace_id,
@@ -1157,9 +1135,7 @@ async def dry_run_http(
             "error": e.code,
         }
     try:
-        headers, body = await _resolve_http_payload(
-            db, workspace_id=flow.workspace_id, cfg=cfg
-        )
+        headers, body = await _resolve_http_payload(db, workspace_id=flow.workspace_id, cfg=cfg)
     except (VaultKeyNotFoundError, ValueError) as e:
         return {
             "outcome": FlowRunOutcome.VALIDATION_FAILED,

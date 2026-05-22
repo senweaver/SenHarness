@@ -26,9 +26,7 @@ async def _bootstrap(async_client) -> tuple[dict, str, str]:
         json={"email": email, "name": "Insights API", "password": password},
     )
     assert r.status_code == 201, r.text
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -41,9 +39,7 @@ async def _bootstrap(async_client) -> tuple[dict, str, str]:
     ws_id = r.json()["id"]
     headers["X-Workspace-Id"] = ws_id
 
-    r = await async_client.post(
-        "/api/v1/sessions", headers=headers, json={"kind": "p2p"}
-    )
+    r = await async_client.post("/api/v1/sessions", headers=headers, json={"kind": "p2p"})
     sid = r.json()["id"]
     return headers, ws_id, sid
 
@@ -55,9 +51,7 @@ async def test_generate_happy_path(async_client):
         _ = kwargs
         return "fake-job-1"
 
-    with patch(
-        "app.services.cross_session_insights._enqueue_generate", fake_enqueue
-    ):
+    with patch("app.services.cross_session_insights._enqueue_generate", fake_enqueue):
         r = await async_client.post(
             "/api/v1/insights/generate",
             headers=headers,
@@ -145,9 +139,7 @@ async def test_recent_happy_path_scopes_to_caller(async_client):
         )
         await db.commit()
 
-    r = await async_client.get(
-        "/api/v1/insights/recent?days=30&limit=20", headers=headers
-    )
+    r = await async_client.get("/api/v1/insights/recent?days=30&limit=20", headers=headers)
     assert r.status_code == 200, r.text
     items = r.json()["items"]
     assert len(items) == 1

@@ -66,9 +66,7 @@ class Memory(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin,
     content: Mapped[str] = mapped_column(nullable=False)
     value_json: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
-    embedding: Mapped[list[float] | None] = mapped_column(
-        Vector(MEMORY_VECTOR_DIM), nullable=True
-    )
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(MEMORY_VECTOR_DIM), nullable=True)
     embedding_model: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     confidence: Mapped[float] = mapped_column(default=1.0, nullable=False)

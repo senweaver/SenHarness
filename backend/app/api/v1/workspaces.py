@@ -56,9 +56,7 @@ router = APIRouter()
 
 # ─── Workspace CRUD ──────────────────────────────────────
 @router.get("", response_model=list[WorkspaceRead])
-async def list_my_workspaces(
-    db: DBSession, identity_id: CurrentIdentityId
-) -> list[WorkspaceRead]:
+async def list_my_workspaces(db: DBSession, identity_id: CurrentIdentityId) -> list[WorkspaceRead]:
     pairs = await MembershipRepository(db).list_with_workspace_for_identity(identity_id)
     return [WorkspaceRead.model_validate(ws) for _, ws in pairs]
 
@@ -138,9 +136,7 @@ async def delete_workspace(
     Members lose access on the next session refresh because the
     workspace service's existing reads filter ``deleted_at IS NULL``.
     """
-    mem = await svc.ensure_member_access(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    mem = await svc.ensure_member_access(db, workspace_id=workspace_id, identity_id=identity_id)
     from app.db.models.role import BuiltinRole
 
     if mem.role != BuiltinRole.OWNER.value:
@@ -224,9 +220,7 @@ async def switch_workspace(
     from app.core.security import create_access_token
     from app.repositories.identity import IdentityRepository
 
-    mem = await svc.ensure_member_access(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    mem = await svc.ensure_member_access(db, workspace_id=workspace_id, identity_id=identity_id)
     identity = await IdentityRepository(db).get(identity_id)
     if identity is None:
         raise NotFound("identity_not_found", code="identity.not_found")
@@ -244,9 +238,7 @@ async def list_members(
     workspace_id: uuid.UUID, db: DBSession, identity_id: CurrentIdentityId
 ) -> list[MemberRead]:
     await svc.ensure_member_access(db, workspace_id=workspace_id, identity_id=identity_id)
-    rows = await MembershipRepository(db).list_with_identity(
-        workspace_id=workspace_id, limit=500
-    )
+    rows = await MembershipRepository(db).list_with_identity(workspace_id=workspace_id, limit=500)
     out: list[MemberRead] = []
     for mem, ident in rows:
         card = MemberRead.model_validate(mem)
@@ -402,9 +394,7 @@ async def _resolve_curator_config(
     to write back (PATCH) can reuse the resolved platform values
     without re-reading the system_settings row.
     """
-    raw_platform = await get_system_setting(
-        db, SystemSettingKey.CURATOR_DEFAULTS, default={}
-    )
+    raw_platform = await get_system_setting(db, SystemSettingKey.CURATOR_DEFAULTS, default={})
     platform_block: dict = raw_platform if isinstance(raw_platform, dict) else {}
 
     ws = await db.get(Workspace, workspace_id)
@@ -471,12 +461,8 @@ async def get_curator_settings(
     Workspace member access is enough — every member can see how
     the Curator will behave for their tenant; only admins can edit it.
     """
-    await svc.ensure_member_access(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
-    config, _ws_block, _platform = await _resolve_curator_config(
-        db, workspace_id=workspace_id
-    )
+    await svc.ensure_member_access(db, workspace_id=workspace_id, identity_id=identity_id)
+    config, _ws_block, _platform = await _resolve_curator_config(db, workspace_id=workspace_id)
     return config
 
 
@@ -511,13 +497,9 @@ async def update_curator_settings(
     as long as the resulting effective state still satisfies the
     invariant.
     """
-    await svc.ensure_admin(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    await svc.ensure_admin(db, workspace_id=workspace_id, identity_id=identity_id)
 
-    pre_config, ws_block, _platform = await _resolve_curator_config(
-        db, workspace_id=workspace_id
-    )
+    pre_config, ws_block, _platform = await _resolve_curator_config(db, workspace_id=workspace_id)
 
     patch = body.model_dump(exclude_none=True)
     new_ws_block = {**ws_block, **patch}
@@ -547,9 +529,7 @@ async def update_curator_settings(
     new_home["curator"] = new_ws_block
     ws.home_config_json = new_home
 
-    post_config, _new_ws_block, _ = await _resolve_curator_config(
-        db, workspace_id=workspace_id
-    )
+    post_config, _new_ws_block, _ = await _resolve_curator_config(db, workspace_id=workspace_id)
 
     diff = _diff_curator_blocks(
         pre_config.model_dump(exclude={"source"}),
@@ -595,9 +575,7 @@ async def force_run_curator(
     so the admin UI can render a "service not ready" notice instead
     of crashing.
     """
-    await svc.ensure_admin(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    await svc.ensure_admin(db, workspace_id=workspace_id, identity_id=identity_id)
 
     try:
         from app.services import (
@@ -663,9 +641,7 @@ async def get_curator_last_run(
     ``upcoming_run_at`` is sourced from the M1.4 Curator service
     when available; otherwise None.
     """
-    await svc.ensure_member_access(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    await svc.ensure_member_access(db, workspace_id=workspace_id, identity_id=identity_id)
 
     stmt = (
         select(AuditEvent)
@@ -731,15 +707,10 @@ async def list_served_aliases(
     db: DBSession,
     identity_id: CurrentIdentityId,
 ) -> ServedAliasListOut:
-    await svc.ensure_member_access(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    await svc.ensure_member_access(db, workspace_id=workspace_id, identity_id=identity_id)
     alias_map = await served_svc.get_alias_map(db, workspace_id=workspace_id)
     return ServedAliasListOut(
-        aliases=[
-            ServedAliasOut(served_name=k, upstream=v)
-            for k, v in sorted(alias_map.items())
-        ]
+        aliases=[ServedAliasOut(served_name=k, upstream=v) for k, v in sorted(alias_map.items())]
     )
 
 
@@ -764,9 +735,7 @@ async def upsert_served_alias(
     the prior upstream (if any) so an operator can reconstruct the
     sequence of upstream swaps later.
     """
-    await svc.ensure_admin(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    await svc.ensure_admin(db, workspace_id=workspace_id, identity_id=identity_id)
     try:
         cleaned_name = validate_served_name(served_name)
     except ValueError as exc:
@@ -815,9 +784,7 @@ async def delete_served_alias(
     request: Request,
 ) -> Response:
     """Remove a served-name alias entry. Idempotent."""
-    await svc.ensure_admin(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    await svc.ensure_admin(db, workspace_id=workspace_id, identity_id=identity_id)
     try:
         cleaned_name = validate_served_name(served_name)
     except ValueError as exc:
@@ -825,9 +792,7 @@ async def delete_served_alias(
     pre_map = await served_svc.get_alias_map(db, workspace_id=workspace_id)
     prior_upstream = pre_map.get(cleaned_name)
 
-    await served_svc.delete_alias(
-        db, workspace_id=workspace_id, served_name=cleaned_name
-    )
+    await served_svc.delete_alias(db, workspace_id=workspace_id, served_name=cleaned_name)
 
     await audit_svc.record(
         db,

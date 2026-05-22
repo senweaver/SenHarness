@@ -22,9 +22,7 @@ async def _bootstrap(async_client) -> tuple[dict, str]:
         json={"email": email, "name": "Goals Tester", "password": password},
     )
     assert r.status_code == 201, r.text
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -68,9 +66,7 @@ async def test_lock_then_get_active(async_client):
     assert body["alignment_threshold"] == 0.7
     assert body["unlocked_at"] is None
 
-    r = await async_client.get(
-        f"/api/v1/sessions/{sid}/goals?only_active=true", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/sessions/{sid}/goals?only_active=true", headers=headers)
     assert r.status_code == 200
     rows = r.json()
     assert len(rows) == 1
@@ -81,9 +77,7 @@ async def test_lock_rejected_when_active_exists(async_client):
     headers, _ = await _bootstrap(async_client)
     sid = await _new_session(async_client, headers)
     payload = {"goal_text": "first goal"}
-    r = await async_client.post(
-        f"/api/v1/sessions/{sid}/goals", headers=headers, json=payload
-    )
+    r = await async_client.post(f"/api/v1/sessions/{sid}/goals", headers=headers, json=payload)
     assert r.status_code == 201
     r = await async_client.post(
         f"/api/v1/sessions/{sid}/goals", headers=headers, json={"goal_text": "second"}
@@ -119,24 +113,18 @@ async def test_unlock_idempotent(async_client):
         json={"goal_text": "unlock me"},
     )
     gid = r.json()["id"]
-    r = await async_client.post(
-        f"/api/v1/sessions/{sid}/goals/{gid}/unlock", headers=headers
-    )
+    r = await async_client.post(f"/api/v1/sessions/{sid}/goals/{gid}/unlock", headers=headers)
     assert r.status_code == 200
     assert r.json()["unlocked_at"] is not None
     # Second unlock — idempotent (returns the same row, no error).
-    r = await async_client.post(
-        f"/api/v1/sessions/{sid}/goals/{gid}/unlock", headers=headers
-    )
+    r = await async_client.post(f"/api/v1/sessions/{sid}/goals/{gid}/unlock", headers=headers)
     assert r.status_code == 200
 
 
 async def test_list_alignment_empty(async_client):
     headers, _ = await _bootstrap(async_client)
     sid = await _new_session(async_client, headers)
-    r = await async_client.get(
-        f"/api/v1/sessions/{sid}/alignment", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/sessions/{sid}/alignment", headers=headers)
     assert r.status_code == 200
     assert r.json() == []
 
@@ -217,8 +205,6 @@ async def test_get_active_cross_workspace_returns_empty(async_client):
     )
 
     headers_b, _ = await _bootstrap(async_client)
-    r = await async_client.get(
-        f"/api/v1/sessions/{sid_a}/goals", headers=headers_b
-    )
+    r = await async_client.get(f"/api/v1/sessions/{sid_a}/goals", headers=headers_b)
     # Either 403/404 from workspace mismatch — never the leaked rows.
     assert r.status_code in (403, 404)

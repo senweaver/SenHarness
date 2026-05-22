@@ -107,9 +107,7 @@ async def test_list_usage_returns_rows(async_client):
     sid = await _seed_session(ws_id, identity_id)
     await _seed_rows(ws_id=ws_id, pack_id=pid, sid=sid, identity_id=identity_id)
 
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/usage", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/usage", headers=headers)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["pack_id"] == pid
@@ -132,9 +130,7 @@ async def test_stats_returns_aggregate(async_client):
     sid = await _seed_session(ws_id, identity_id)
     await _seed_rows(ws_id=ws_id, pack_id=pid, sid=sid, identity_id=identity_id)
 
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/usage/stats", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/usage/stats", headers=headers)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["pack_id"] == pid
@@ -154,9 +150,7 @@ async def test_rollup_writes_pack_columns(async_client):
     sid = await _seed_session(ws_id, identity_id)
     await _seed_rows(ws_id=ws_id, pack_id=pid, sid=sid, identity_id=identity_id)
 
-    r = await async_client.post(
-        f"/api/v1/skills/packs/{pid}/usage/rollup", headers=headers
-    )
+    r = await async_client.post(f"/api/v1/skills/packs/{pid}/usage/rollup", headers=headers)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["last_used_at"] is not None
@@ -175,9 +169,7 @@ async def test_cross_workspace_pack_404(async_client):
     pid_a = await _create_pack(async_client, headers_a)
 
     headers_b, _, _ = await _bootstrap(async_client)
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid_a}/usage", headers=headers_b
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid_a}/usage", headers=headers_b)
     assert r.status_code == 404
     body = r.json()
     detail = body.get("detail")
@@ -194,9 +186,7 @@ async def test_rollup_blocks_non_admin(async_client):
 
     headers_b, ws_b, _ = await _bootstrap(async_client)
     headers_b["X-Workspace-Id"] = ws_b
-    r = await async_client.post(
-        f"/api/v1/skills/packs/{pid_a}/usage/rollup", headers=headers_b
-    )
+    r = await async_client.post(f"/api/v1/skills/packs/{pid_a}/usage/rollup", headers=headers_b)
     # Since workspace headers point to ws_b but pack belongs to ws_a,
     # the pack-not-found check fires (404) before any role check.
     assert r.status_code in (403, 404)

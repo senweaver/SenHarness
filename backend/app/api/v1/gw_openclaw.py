@@ -51,14 +51,10 @@ async def _current_adapter(
     """
 
     if not x_api_key or len(x_api_key) < 16:
-        raise Unauthorized(
-            "missing_api_key", code="gateway.missing_api_key"
-        )
+        raise Unauthorized("missing_api_key", code="gateway.missing_api_key")
     adapter = await gw_svc.authenticate_adapter(db, raw_api_key=x_api_key)
     if adapter is None:
-        raise Unauthorized(
-            "invalid_api_key", code="gateway.unauthorized"
-        )
+        raise Unauthorized("invalid_api_key", code="gateway.unauthorized")
     return adapter
 
 
@@ -172,7 +168,5 @@ async def resolve_adapter_from_key(
 ) -> uuid.UUID | None:
     factory = get_session_factory()
     async with factory() as db:
-        adapter = await gw_svc.authenticate_adapter(
-            db, raw_api_key=raw_api_key
-        )
+        adapter = await gw_svc.authenticate_adapter(db, raw_api_key=raw_api_key)
         return adapter.id if adapter else None

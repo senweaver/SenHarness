@@ -96,10 +96,8 @@ async def reap_zombies(ctx: dict[str, Any]) -> dict[str, Any]:
             row = await _reap_one(snap=snap, now=now, summary=summary)
             if row is not None:
                 summary["reaped"] += 1
-        except Exception:  # noqa: BLE001
-            log.exception(
-                "reap_zombies: failure on subagent_run %s", snap.spine_id
-            )
+        except Exception:
+            log.exception("reap_zombies: failure on subagent_run %s", snap.spine_id)
             summary["errored"] += 1
 
     return summary
@@ -110,15 +108,15 @@ class _StaleSnapshot:
     """Tiny holder so we don't keep ORM rows across sessions."""
 
     __slots__ = (
+        "child_run_id",
+        "hallucination_approval_id",
+        "last_heartbeat_at",
+        "parent_run_id",
+        "retry_budget",
+        "retry_count",
+        "spawn_depth",
         "spine_id",
         "workspace_id",
-        "child_run_id",
-        "parent_run_id",
-        "spawn_depth",
-        "retry_count",
-        "retry_budget",
-        "last_heartbeat_at",
-        "hallucination_approval_id",
     )
 
     def __init__(self, row: SubAgentRun) -> None:
@@ -150,7 +148,7 @@ async def _reap_one(
         # Re-fetch under the new session so a parallel reaper run can't
         # double-process the same row — the second worker sees state ≠
         # RUNNING and short-circuits.
-        from app.repositories.subagent_run import (  # noqa: PLC0415
+        from app.repositories.subagent_run import (
             SubAgentRunRepository,
         )
 
@@ -159,9 +157,7 @@ async def _reap_one(
         if live is None or live.state != SubAgentRunState.RUNNING:
             return None
         # Heartbeat may have caught up between snapshot + reap.
-        if (now - live.last_heartbeat_at).total_seconds() < (
-            subagent_svc.HEARTBEAT_DEAD_SECONDS
-        ):
+        if (now - live.last_heartbeat_at).total_seconds() < (subagent_svc.HEARTBEAT_DEAD_SECONDS):
             return None
 
         reason = (
@@ -232,9 +228,7 @@ async def _cancel_dangling_approval(
 
 
 # ─── ARQ permanent-failure hook ──────────────────────────────
-async def on_subagent_zombie_job_failed_permanent(
-    ctx: dict[str, Any], exc: BaseException
-) -> None:
+async def on_subagent_zombie_job_failed_permanent(ctx: dict[str, Any], exc: BaseException) -> None:
     """Three-strike hook for ``reap_zombies``.
 
     Mirrors the pending-memory / curator / approval-TTL hooks: writes

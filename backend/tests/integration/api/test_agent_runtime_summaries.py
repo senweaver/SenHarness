@@ -83,9 +83,7 @@ async def _make_workspace(async_client) -> tuple[uuid.UUID, uuid.UUID]:
     return uuid.UUID(body["workspace"]["id"]), uuid.UUID(body["identity"]["id"])
 
 
-async def _attach_membership(
-    *, workspace_id: uuid.UUID, identity_id: uuid.UUID, role: str
-) -> None:
+async def _attach_membership(*, workspace_id: uuid.UUID, identity_id: uuid.UUID, role: str) -> None:
     factory = get_session_factory()
     async with factory() as db:
         db.add(

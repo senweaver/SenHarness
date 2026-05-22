@@ -31,9 +31,7 @@ class DocStatus(StrEnum):
     FAILED = "failed"
 
 
-class KnowledgeCollection(
-    UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base
-):
+class KnowledgeCollection(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "knowledge_collections"
 
     name: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -64,9 +62,7 @@ class KnowledgeDoc(UuidPkMixin, TimestampMixin, SoftDeleteMixin, Base):
     source_uri: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    status: Mapped[DocStatus] = mapped_column(
-        String(16), default=DocStatus.PENDING, nullable=False
-    )
+    status: Mapped[DocStatus] = mapped_column(String(16), default=DocStatus.PENDING, nullable=False)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     chunk_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     metadata_json: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)

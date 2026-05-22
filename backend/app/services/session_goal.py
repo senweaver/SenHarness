@@ -47,9 +47,7 @@ def _validate_goal_payload(
 ) -> tuple[str, list[str], float]:
     text = (goal_text or "").strip()
     if not text:
-        raise ValidationFailed(
-            "goal_text required", code="session_goal.text_required"
-        )
+        raise ValidationFailed("goal_text required", code="session_goal.text_required")
     if len(text) > MAX_GOAL_TEXT:
         raise ValidationFailed(
             "goal_text exceeds 2000 chars",
@@ -98,9 +96,7 @@ async def lock_goal(
     or slash command) must explicitly unlock the previous one. This
     keeps the audit trail unambiguous.
     """
-    sess = await session_svc.get_session_or_404(
-        db, session_id, workspace_id=workspace_id
-    )
+    sess = await session_svc.get_session_or_404(db, session_id, workspace_id=workspace_id)
     text, criteria, threshold = _validate_goal_payload(
         goal_text=goal_text,
         success_criteria=success_criteria,
@@ -108,9 +104,7 @@ async def lock_goal(
     )
 
     repo = SessionGoalRepository(db)
-    existing = await repo.get_active(
-        session_id=sess.id, workspace_id=workspace_id
-    )
+    existing = await repo.get_active(session_id=sess.id, workspace_id=workspace_id)
     if existing is not None:
         raise Conflict(
             "another goal is already locked",
@@ -366,9 +360,7 @@ async def record_score(
             "score out of range",
             code="session_goal.score_out_of_range",
         )
-    goal = await get_goal_or_404(
-        db, goal_id=session_goal_id, workspace_id=workspace_id
-    )
+    goal = await get_goal_or_404(db, goal_id=session_goal_id, workspace_id=workspace_id)
     flagged = score < goal.alignment_threshold
     row = await GoalAlignmentScoreRepository(db).create(
         workspace_id=workspace_id,

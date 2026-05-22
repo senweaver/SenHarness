@@ -51,9 +51,7 @@ class AuxConfigReadOut(BaseModel):
 
 def _require_workspace(workspace_id: uuid.UUID | None) -> uuid.UUID:
     if workspace_id is None:
-        raise Unauthorized(
-            "no_active_workspace", code="auth.no_active_workspace"
-        )
+        raise Unauthorized("no_active_workspace", code="auth.no_active_workspace")
     return workspace_id
 
 
@@ -61,9 +59,7 @@ def _require_workspace(workspace_id: uuid.UUID | None) -> uuid.UUID:
     "/workspaces/{workspace_id}/aux-config",
     response_model=AuxConfigReadOut,
     status_code=status.HTTP_200_OK,
-    dependencies=[
-        Depends(rate_limit("aux_config_read", limit=60, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("aux_config_read", limit=60, period_seconds=60))],
     tags=["workspaces"],
 )
 async def get_aux_config(
@@ -81,16 +77,12 @@ async def get_aux_config(
     active = _require_workspace(active_workspace_id)
     if active != workspace_id:
         raise NotFound("workspace not found", code="workspace.not_found")
-    await ws_svc.ensure_admin(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_admin(db, workspace_id=workspace_id, identity_id=identity_id)
 
     settings = await get_workspace_aux_settings(db, workspace_id=workspace_id)
     fail_strikes = int(settings.get("judge_fail_strikes") or 5)
     fail_window = int(settings.get("judge_fail_window_seconds") or 300)
-    recover_seconds = int(
-        settings.get("judge_breaker_recover_seconds") or 3600
-    )
+    recover_seconds = int(settings.get("judge_breaker_recover_seconds") or 3600)
     rate_limit_per_min = int(settings.get("judge_rate_per_minute") or 60)
 
     open_state = await is_breaker_open(

@@ -69,13 +69,17 @@ async def test_workspace_alias_emits_provider_upstream_called(
     )
 
     rows = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.workspace_id == workspace.id,
-                AuditEvent.action == "provider.upstream_called",
+        (
+            await db_session.execute(
+                select(AuditEvent).where(
+                    AuditEvent.workspace_id == workspace.id,
+                    AuditEvent.action == "provider.upstream_called",
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(rows) >= 1
     meta = rows[-1].metadata_json or {}
     assert meta.get("served_model_name") == "ws-fast"

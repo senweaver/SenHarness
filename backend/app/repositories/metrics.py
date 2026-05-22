@@ -91,14 +91,8 @@ class MetricsRepository:
             func.coalesce(func.sum(_num_field("cost")), 0).label("cost_usd"),
             func.count(Message.id).label("turns"),
             func.count(func.distinct(Message.session_id)).label("sessions"),
-            func.coalesce(func.avg(_int_field("latency_ms")), 0).label(
-                "avg_latency_ms"
-            ),
-        ).where(
-            self._base_filters(
-                workspace_id, since=since, until=until, identity_id=identity_id
-            )
-        )
+            func.coalesce(func.avg(_int_field("latency_ms")), 0).label("avg_latency_ms"),
+        ).where(self._base_filters(workspace_id, since=since, until=until, identity_id=identity_id))
         row = (await self.session.execute(stmt)).one()
         return {
             "input_tokens": int(row.input_tokens or 0),
@@ -123,16 +117,12 @@ class MetricsRepository:
             select(
                 bucket,
                 func.coalesce(func.sum(_int_field("input")), 0).label("input_tokens"),
-                func.coalesce(func.sum(_int_field("output")), 0).label(
-                    "output_tokens"
-                ),
+                func.coalesce(func.sum(_int_field("output")), 0).label("output_tokens"),
                 func.coalesce(func.sum(_num_field("cost")), 0).label("cost_usd"),
                 func.count(Message.id).label("turns"),
             )
             .where(
-                self._base_filters(
-                    workspace_id, since=since, until=until, identity_id=identity_id
-                )
+                self._base_filters(workspace_id, since=since, until=until, identity_id=identity_id)
             )
             .group_by(bucket)
             .order_by(bucket)
@@ -165,17 +155,13 @@ class MetricsRepository:
                 Message.author_agent_id.label("agent_id"),
                 Agent.name.label("agent_name"),
                 func.coalesce(func.sum(_int_field("input")), 0).label("input_tokens"),
-                func.coalesce(func.sum(_int_field("output")), 0).label(
-                    "output_tokens"
-                ),
+                func.coalesce(func.sum(_int_field("output")), 0).label("output_tokens"),
                 func.coalesce(func.sum(_num_field("cost")), 0).label("cost_usd"),
                 func.count(Message.id).label("turns"),
             )
             .join(Agent, Agent.id == Message.author_agent_id, isouter=True)
             .where(
-                self._base_filters(
-                    workspace_id, since=since, until=until, identity_id=identity_id
-                ),
+                self._base_filters(workspace_id, since=since, until=until, identity_id=identity_id),
                 Message.author_agent_id.isnot(None),
             )
             .group_by(Message.author_agent_id, Agent.name)
@@ -212,16 +198,12 @@ class MetricsRepository:
                 model,
                 provider,
                 func.coalesce(func.sum(_int_field("input")), 0).label("input_tokens"),
-                func.coalesce(func.sum(_int_field("output")), 0).label(
-                    "output_tokens"
-                ),
+                func.coalesce(func.sum(_int_field("output")), 0).label("output_tokens"),
                 func.coalesce(func.sum(_num_field("cost")), 0).label("cost_usd"),
                 func.count(Message.id).label("turns"),
             )
             .where(
-                self._base_filters(
-                    workspace_id, since=since, until=until, identity_id=identity_id
-                )
+                self._base_filters(workspace_id, since=since, until=until, identity_id=identity_id)
             )
             .group_by(model, provider)
             .order_by(desc("cost_usd"), desc("turns"))

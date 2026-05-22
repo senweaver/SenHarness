@@ -16,9 +16,7 @@ from app.services.protocol_adapter import (
 
 # ─── Translation: request → normalized ──────────────────────
 def test_string_input_becomes_user_message() -> None:
-    norm = openai_responses_to_normalized(
-        {"model": "gpt-5", "input": "hello there"}
-    )
+    norm = openai_responses_to_normalized({"model": "gpt-5", "input": "hello there"})
     assert norm.model == "gpt-5"
     assert norm.messages == [
         {
@@ -218,9 +216,7 @@ def test_response_envelope_with_function_call() -> None:
     out = normalized_to_openai_responses(
         {
             "output_text": "I'll search.",
-            "tool_uses": [
-                {"id": "call_zzz", "name": "search", "input": {"q": "foo"}}
-            ],
+            "tool_uses": [{"id": "call_zzz", "name": "search", "input": {"q": "foo"}}],
             "usage": {"input_tokens": 4, "output_tokens": 2},
             "stop_reason": "tool_use",
             "model": "gpt-5",

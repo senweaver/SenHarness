@@ -64,9 +64,7 @@ def _entry(provider: str, model: str) -> ProviderChainEntry:
     )
 
 
-async def test_message_history_byte_equal_across_attempts(
-    workspace, agent, identity, monkeypatch
-):
+async def test_message_history_byte_equal_across_attempts(workspace, agent, identity, monkeypatch):
     """First provider fails → second succeeds. Capture the history each
     attempt observed and assert byte-equality.
     """
@@ -99,9 +97,7 @@ async def test_message_history_byte_equal_across_attempts(
 
     captured: list[dict[str, Any]] = []
 
-    async def fake_inner_stream(
-        req, *, model, resolved, served_name, raise_provider_errors
-    ):
+    async def fake_inner_stream(req, *, model, resolved, served_name, raise_provider_errors):
         # Deep-copy the live request payload so subsequent in-place
         # mutations cannot retroactively change a prior snapshot.
         captured.append(
@@ -202,9 +198,7 @@ async def test_message_history_shape_preserved_through_chain_exhaustion(
 
     captured: list[Any] = []
 
-    async def fake_inner_stream(
-        req, *, model, resolved, served_name, raise_provider_errors
-    ):
+    async def fake_inner_stream(req, *, model, resolved, served_name, raise_provider_errors):
         captured.append(copy.deepcopy(req.message_history))
         raise ProviderFailoverHint(
             original=Exception("503 service unavailable"),

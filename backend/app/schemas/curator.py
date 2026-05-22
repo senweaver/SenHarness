@@ -57,10 +57,7 @@ class CuratorConfigIn(BaseModel):
             and self.archive_after_days is not None
             and self.stale_after_days > self.archive_after_days
         ):
-            raise ValueError(
-                "stale_after_days must be less than or equal to "
-                "archive_after_days"
-            )
+            raise ValueError("stale_after_days must be less than or equal to archive_after_days")
         return self
 
 

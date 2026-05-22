@@ -56,9 +56,7 @@ async def _make_pack(
 
 
 # ── find_stale_candidates ─────────────────────────────────────
-async def test_stale_candidate_qualifies_when_idle_for_31_days(
-    db_session, workspace
-):
+async def test_stale_candidate_qualifies_when_idle_for_31_days(db_session, workspace):
     now = utcnow_naive()
     eligible = await _make_pack(
         db_session,
@@ -83,9 +81,7 @@ async def test_stale_candidate_qualifies_when_idle_for_31_days(
     assert fresh.id not in found_ids
 
 
-async def test_stale_candidate_skips_pack_used_within_min_idle_hours(
-    db_session, workspace
-):
+async def test_stale_candidate_skips_pack_used_within_min_idle_hours(db_session, workspace):
     """Recently-touched pack stays out even when it crosses ``stale_after_days``.
 
     The ``min_idle_hours`` knob exists to protect against a race with
@@ -128,9 +124,7 @@ async def test_stale_candidate_includes_pinned_pack(db_session, workspace):
     assert pinned_pack.id in {p.id for p in found}
 
 
-async def test_stale_candidate_never_used_pack_uses_state_changed_age(
-    db_session, workspace
-):
+async def test_stale_candidate_never_used_pack_uses_state_changed_age(db_session, workspace):
     now = utcnow_naive()
     old_unused = await _make_pack(
         db_session,
@@ -183,9 +177,7 @@ async def test_stale_candidate_skips_non_active_packs(db_session, workspace):
 
 
 # ── find_archive_candidates ──────────────────────────────────
-async def test_archive_candidate_qualifies_after_archive_threshold(
-    db_session, workspace
-):
+async def test_archive_candidate_qualifies_after_archive_threshold(db_session, workspace):
     now = utcnow_naive()
     eligible = await _make_pack(
         db_session,
@@ -227,9 +219,7 @@ async def test_archive_candidate_skips_active_packs(db_session, workspace):
     assert active_pack.id not in {p.id for p in found}
 
 
-async def test_archive_candidate_metrics_do_not_affect_selection(
-    db_session, workspace
-):
+async def test_archive_candidate_metrics_do_not_affect_selection(db_session, workspace):
     """``effectiveness_avg`` and use_count_30d don't gate selection.
 
     The candidate query is age-based only; the M1.9 admin "soft cap"

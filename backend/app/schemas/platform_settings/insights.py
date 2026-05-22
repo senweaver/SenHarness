@@ -41,9 +41,7 @@ class InsightsSettings(BaseModel):
     max_items_per_summary: int = Field(ge=1, le=20, default=7)
 
     @model_validator(mode="after")
-    def _validate_days_window(self) -> "InsightsSettings":
+    def _validate_days_window(self) -> InsightsSettings:
         if self.default_days > self.max_days:
-            raise ValueError(
-                "default_days must not exceed max_days"
-            )
+            raise ValueError("default_days must not exceed max_days")
         return self

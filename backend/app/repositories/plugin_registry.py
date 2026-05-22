@@ -18,9 +18,7 @@ class PluginRegistryRepository(AsyncRepository[PluginRegistry]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, PluginRegistry)
 
-    async def get_by_sha(
-        self, *, name: str, version: str, sha256: str
-    ) -> PluginRegistry | None:
+    async def get_by_sha(self, *, name: str, version: str, sha256: str) -> PluginRegistry | None:
         stmt = (
             select(PluginRegistry)
             .where(PluginRegistry.name == name)
@@ -36,11 +34,7 @@ class PluginRegistryRepository(AsyncRepository[PluginRegistry]):
         status: PluginRegistryStatus | None = None,
         limit: int = 200,
     ) -> Sequence[PluginRegistry]:
-        stmt = (
-            select(PluginRegistry)
-            .order_by(desc(PluginRegistry.updated_at))
-            .limit(limit)
-        )
+        stmt = select(PluginRegistry).order_by(desc(PluginRegistry.updated_at)).limit(limit)
         if status is not None:
             stmt = stmt.where(PluginRegistry.status == status)
         return (await self.session.execute(stmt)).scalars().all()
@@ -67,9 +61,7 @@ class PluginRegistryRepository(AsyncRepository[PluginRegistry]):
         APPROVED row reappears with the same sha we leave it APPROVED
         so a reload doesn't undo the admin decision.
         """
-        existing = await self.get_by_sha(
-            name=name, version=version, sha256=sha256
-        )
+        existing = await self.get_by_sha(name=name, version=version, sha256=sha256)
         if existing is not None:
             existing.signature = signature
             existing.capability_scopes = capability_scopes

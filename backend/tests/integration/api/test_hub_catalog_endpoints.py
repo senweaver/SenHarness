@@ -136,9 +136,7 @@ async def test_get_hub_pack_detail_visible(async_client):
     slug = f"d-{uuid.uuid4().hex[:6]}"
     pack_id = await _seed_hub_pack(scope="tenant", tenant_id=ws_id, slug=slug)
 
-    r = await async_client.get(
-        f"/api/v1/skills/hub/{pack_id}", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/hub/{pack_id}", headers=headers)
     assert r.status_code == 200, r.text
     assert r.json()["slug"] == slug
 
@@ -147,13 +145,9 @@ async def test_get_hub_pack_detail_cross_tenant_returns_404(async_client):
     headers_owner, ws_owner, _ = await _bootstrap(async_client)
     headers_other, _ws_other, _ = await _bootstrap(async_client)
     slug = f"hidden-{uuid.uuid4().hex[:6]}"
-    pack_id = await _seed_hub_pack(
-        scope="tenant", tenant_id=ws_owner, slug=slug
-    )
+    pack_id = await _seed_hub_pack(scope="tenant", tenant_id=ws_owner, slug=slug)
 
-    r = await async_client.get(
-        f"/api/v1/skills/hub/{pack_id}", headers=headers_other
-    )
+    r = await async_client.get(f"/api/v1/skills/hub/{pack_id}", headers=headers_other)
     assert r.status_code == 404
     body = r.json()
     detail = body.get("detail")
@@ -168,9 +162,7 @@ async def test_list_versions_for_visible_pack(async_client):
     pack_id = await _seed_hub_pack(scope="tenant", tenant_id=ws_id, slug=slug)
     await _seed_hub_version(hub_pack_id=pack_id, version_no=1)
 
-    r = await async_client.get(
-        f"/api/v1/skills/hub/{pack_id}/versions", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/hub/{pack_id}/versions", headers=headers)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["hub_pack_id"] == pack_id
@@ -181,14 +173,10 @@ async def test_list_versions_blocked_for_other_tenant(async_client):
     headers_owner, ws_owner, _ = await _bootstrap(async_client)
     headers_other, _ws_other, _ = await _bootstrap(async_client)
     slug = f"v-{uuid.uuid4().hex[:6]}"
-    pack_id = await _seed_hub_pack(
-        scope="tenant", tenant_id=ws_owner, slug=slug
-    )
+    pack_id = await _seed_hub_pack(scope="tenant", tenant_id=ws_owner, slug=slug)
     await _seed_hub_version(hub_pack_id=pack_id, version_no=1)
 
-    r = await async_client.get(
-        f"/api/v1/skills/hub/{pack_id}/versions", headers=headers_other
-    )
+    r = await async_client.get(f"/api/v1/skills/hub/{pack_id}/versions", headers=headers_other)
     assert r.status_code == 404
 
 
@@ -267,9 +255,7 @@ async def test_admin_transition_blocks_cross_tenant_workspace_admin(
     headers_owner, ws_owner, _ = await _bootstrap(async_client)
     headers_other, _ws_other, _ = await _bootstrap(async_client)
     slug = f"x-{uuid.uuid4().hex[:6]}"
-    pack_id = await _seed_hub_pack(
-        scope="tenant", tenant_id=ws_owner, slug=slug
-    )
+    pack_id = await _seed_hub_pack(scope="tenant", tenant_id=ws_owner, slug=slug)
 
     r = await async_client.post(
         f"/api/v1/admin/skills/hub/{pack_id}/transition",

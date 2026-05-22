@@ -10,8 +10,8 @@ from app.api.deps import CurrentIdentityId, CurrentWorkspaceId, DBSession
 from app.core.errors import Unauthorized
 from app.schemas.provider import (
     DiscoverApplyRequest,
-    DiscoverResponse,
     DiscoveredModel,
+    DiscoverResponse,
     ProviderCreate,
     ProviderModelManualCreate,
     ProviderModelRead,
@@ -97,9 +97,7 @@ async def reorder_providers(
     """
     ws_id = _require_workspace(workspace_id)
     await ws_svc.ensure_admin(db, workspace_id=ws_id, identity_id=identity_id)
-    rows = await svc.reorder_providers(
-        db, workspace_id=ws_id, ordered_ids=body.ordered_ids
-    )
+    rows = await svc.reorder_providers(db, workspace_id=ws_id, ordered_ids=body.ordered_ids)
     await db.commit()
     return [await _attach_has_key(db, p) for p in rows]
 
@@ -184,9 +182,7 @@ async def add_provider_model(
     return ProviderModelRead.model_validate(pm)
 
 
-@router.patch(
-    "/{provider_id}/models/{model_id}", response_model=ProviderModelRead
-)
+@router.patch("/{provider_id}/models/{model_id}", response_model=ProviderModelRead)
 async def update_provider_model(
     provider_id: uuid.UUID,
     model_id: uuid.UUID,
@@ -246,9 +242,7 @@ async def reorder_provider_models(
     ws_id = _require_workspace(workspace_id)
     await ws_svc.ensure_admin(db, workspace_id=ws_id, identity_id=identity_id)
     provider = await svc.get_or_404(db, provider_id, workspace_id=ws_id)
-    rows = await svc.reorder_provider_models(
-        db, provider=provider, ordered_ids=body.ordered_ids
-    )
+    rows = await svc.reorder_provider_models(db, provider=provider, ordered_ids=body.ordered_ids)
     await db.commit()
     return [ProviderModelRead.model_validate(r) for r in rows]
 
@@ -292,9 +286,7 @@ async def test_connectivity(
     return ProviderTestResponse(**payload)
 
 
-@router.post(
-    "/{provider_id}/discover/apply", response_model=list[ProviderModelRead]
-)
+@router.post("/{provider_id}/discover/apply", response_model=list[ProviderModelRead])
 async def apply_discover(
     provider_id: uuid.UUID,
     body: DiscoverApplyRequest,

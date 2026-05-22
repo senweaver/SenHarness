@@ -27,12 +27,12 @@ class GatewayMessageDirection(StrEnum):
 
 
 class GatewayMessageStatus(StrEnum):
-    PENDING = "pending"       # request waiting to be polled
-    DELIVERED = "delivered"   # request handed to a worker
-    ACKED = "acked"           # request fully answered (final/error emitted)
-    EXPIRED = "expired"       # run timeout
-    FAILED = "failed"         # run cancelled / worker errored
-    EMITTED = "emitted"       # event recorded (terminal for event rows)
+    PENDING = "pending"  # request waiting to be polled
+    DELIVERED = "delivered"  # request handed to a worker
+    ACKED = "acked"  # request fully answered (final/error emitted)
+    EXPIRED = "expired"  # run timeout
+    FAILED = "failed"  # run cancelled / worker errored
+    EMITTED = "emitted"  # event recorded (terminal for event rows)
 
 
 class GatewayMessage(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
@@ -52,7 +52,9 @@ class GatewayMessage(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
             "created_at",
         ),
         UniqueConstraint(
-            "run_id", "direction", "seq",
+            "run_id",
+            "direction",
+            "seq",
             name="uq_gateway_messages_run_direction_seq",
         ),
     )
@@ -74,9 +76,7 @@ class GatewayMessage(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
         nullable=True,
     )
 
-    direction: Mapped[GatewayMessageDirection] = mapped_column(
-        String(16), nullable=False
-    )
+    direction: Mapped[GatewayMessageDirection] = mapped_column(String(16), nullable=False)
     # Request rows use the constant ``"run"``. Event rows mirror RunEventKind
     # plus a synthetic ``"cancel"`` marker pushed by OpenClawBackend.cancel().
     kind: Mapped[str] = mapped_column(String(32), nullable=False)

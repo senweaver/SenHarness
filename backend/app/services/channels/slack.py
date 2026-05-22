@@ -89,9 +89,7 @@ class SlackProvider(ChannelProvider):
                 "timestamp outside replay window",
             )
         basestring = b"v0:" + ts.encode() + b":" + body
-        digest = hmac.new(
-            signing_secret.encode(), basestring, hashlib.sha256
-        ).hexdigest()
+        digest = hmac.new(signing_secret.encode(), basestring, hashlib.sha256).hexdigest()
         expected = f"v0={digest}"
         if not hmac.compare_digest(expected, sig):
             raise SignatureInvalid("slack.bad_signature", "Slack signature mismatch")

@@ -120,10 +120,7 @@ async def gc_old_checkpoints(ctx: dict[str, Any]) -> dict[str, Any]:
             workspace_id=None,
             resource_type="session_checkpoint",
             resource_id=None,
-            summary=(
-                f"pruned {pruned} session_checkpoints older than "
-                f"{CHECKPOINT_GC_AGE_DAYS}d"
-            ),
+            summary=(f"pruned {pruned} session_checkpoints older than {CHECKPOINT_GC_AGE_DAYS}d"),
             metadata={
                 "pruned_count": pruned,
                 "cutoff": cutoff.isoformat(),

@@ -91,14 +91,10 @@ class EvolverSettings(BaseModel):
 
     enabled: bool = False
     engine: Literal["workflow", "agent"] = "workflow"
-    publish_mode: Literal["approval_required", "auto_after_validation"] = (
-        "approval_required"
-    )
+    publish_mode: Literal["approval_required", "auto_after_validation"] = "approval_required"
     min_artifacts_per_evolution: int = Field(ge=1, le=100, default=5)
     auto_verifier: EvolverAutoVerifier = Field(default_factory=EvolverAutoVerifier)
-    approval_ttl_days: EvolverApprovalTtlDays = Field(
-        default_factory=EvolverApprovalTtlDays
-    )
+    approval_ttl_days: EvolverApprovalTtlDays = Field(default_factory=EvolverApprovalTtlDays)
     aux_model_evolver: str | None = Field(default=None, max_length=120)
     evolver_breaker_strikes: int = Field(ge=1, le=20, default=5)
     evolver_breaker_window_seconds: int = Field(ge=60, le=3600, default=300)

@@ -85,7 +85,5 @@ class Message(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
     original_turns_ref: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
 
-COMPACTION_STRATEGIES: frozenset[str] = frozenset(
-    {"sliding_window", "manual", "evolver"}
-)
+COMPACTION_STRATEGIES: frozenset[str] = frozenset({"sliding_window", "manual", "evolver"})
 LINEAGE_TEXT_EXCERPT_MAX_CHARS: int = 200

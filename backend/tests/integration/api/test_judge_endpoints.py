@@ -18,9 +18,7 @@ async def _bootstrap(async_client) -> tuple[dict, str]:
         json={"email": email, "name": "Judge Api", "password": password},
     )
     assert r.status_code == 201, r.text
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -36,9 +34,7 @@ async def _bootstrap(async_client) -> tuple[dict, str]:
 
 
 async def _new_session(async_client, headers) -> str:
-    r = await async_client.post(
-        "/api/v1/sessions", headers=headers, json={"kind": "p2p"}
-    )
+    r = await async_client.post("/api/v1/sessions", headers=headers, json={"kind": "p2p"})
     assert r.status_code in (200, 201), r.text
     return r.json()["id"]
 
@@ -124,9 +120,7 @@ async def test_get_artifact_verdict_happy(async_client):
         identity_id=_identity_id_from_token(headers),
     )
 
-    r = await async_client.get(
-        f"/api/v1/artifacts/{aid}/verdict", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/artifacts/{aid}/verdict", headers=headers)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["artifact_id"] == aid
@@ -142,9 +136,7 @@ async def test_get_verdict_404_when_unjudged(async_client):
         session_id=sid,
         identity_id=_identity_id_from_token(headers),
     )
-    r = await async_client.get(
-        f"/api/v1/artifacts/{aid}/verdict", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/artifacts/{aid}/verdict", headers=headers)
     assert r.status_code == 404
 
 
@@ -152,19 +144,11 @@ async def test_session_judge_summary_counts(async_client):
     headers, ws_id = await _bootstrap(async_client)
     sid = await _new_session(async_client, headers)
     actor = _identity_id_from_token(headers)
-    await _seed_judged_artifact(
-        workspace_id=ws_id, session_id=sid, identity_id=actor, score=1
-    )
-    await _seed_judged_artifact(
-        workspace_id=ws_id, session_id=sid, identity_id=actor, score=-1
-    )
-    await _seed_unjudged_artifact(
-        workspace_id=ws_id, session_id=sid, identity_id=actor
-    )
+    await _seed_judged_artifact(workspace_id=ws_id, session_id=sid, identity_id=actor, score=1)
+    await _seed_judged_artifact(workspace_id=ws_id, session_id=sid, identity_id=actor, score=-1)
+    await _seed_unjudged_artifact(workspace_id=ws_id, session_id=sid, identity_id=actor)
 
-    r = await async_client.get(
-        f"/api/v1/sessions/{sid}/artifacts/judge-summary", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/sessions/{sid}/artifacts/judge-summary", headers=headers)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["total_artifacts"] == 3
@@ -182,17 +166,13 @@ async def test_rejudge_resets_score_and_audits(async_client):
         identity_id=_identity_id_from_token(headers),
     )
 
-    r = await async_client.post(
-        f"/api/v1/artifacts/{aid}/rejudge", headers=headers
-    )
+    r = await async_client.post(f"/api/v1/artifacts/{aid}/rejudge", headers=headers)
     assert r.status_code == 202, r.text
     body = r.json()
     assert body["judge_score"] is None
 
     # Verdict row gone, score nulled.
-    r = await async_client.get(
-        f"/api/v1/artifacts/{aid}/verdict", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/artifacts/{aid}/verdict", headers=headers)
     assert r.status_code == 404
 
     from sqlalchemy import select
@@ -228,9 +208,7 @@ async def test_get_verdict_other_workspace_404(async_client):
     )
 
     headers_b, _ = await _bootstrap(async_client)
-    r = await async_client.get(
-        f"/api/v1/artifacts/{aid}/verdict", headers=headers_b
-    )
+    r = await async_client.get(f"/api/v1/artifacts/{aid}/verdict", headers=headers_b)
     assert r.status_code in (403, 404)
 
 

@@ -40,9 +40,7 @@ router = APIRouter(prefix="/skills/packs", tags=["skills"])
 
 
 _GRAPH_READ = Depends(rate_limit("skill_graph_read", limit=30, period_seconds=60))
-_LINEAGE_READ = Depends(
-    rate_limit("skill_lineage_read", limit=30, period_seconds=60)
-)
+_LINEAGE_READ = Depends(rate_limit("skill_lineage_read", limit=30, period_seconds=60))
 
 
 def _require_workspace(workspace_id: uuid.UUID | None) -> uuid.UUID:
@@ -51,9 +49,7 @@ def _require_workspace(workspace_id: uuid.UUID | None) -> uuid.UUID:
     return workspace_id
 
 
-async def _ensure_pack(
-    db, *, workspace_id: uuid.UUID, pack_id: uuid.UUID
-) -> None:
+async def _ensure_pack(db, *, workspace_id: uuid.UUID, pack_id: uuid.UUID) -> None:
     pack = await SkillPackRepository(db).get(pack_id, include_deleted=True)
     if pack is None or pack.workspace_id != workspace_id:
         raise NotFound("skill_pack_not_found", code="skill_pack.not_found")
@@ -80,9 +76,7 @@ async def get_skill_graph(
     surfaces a 422 instead of getting an unexpectedly small graph.
     """
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     await _ensure_pack(db, workspace_id=ws_id, pack_id=pack_id)
 
     graph = await graph_svc.build_skill_graph(
@@ -160,9 +154,7 @@ async def get_skill_lineage(
 ) -> SkillLineageRead:
     """One-step incoming + outgoing edges for ``pack_id``."""
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     await _ensure_pack(db, workspace_id=ws_id, pack_id=pack_id)
 
     incoming, outgoing = await graph_svc.list_one_step_lineage(

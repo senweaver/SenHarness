@@ -75,9 +75,7 @@ async def test_nonempty_output_no_escalation(db_session, workspace, agent):
     with patch.object(
         flow_svc,
         "_execute_script",
-        AsyncMock(
-            return_value=(FlowRunOutcome.NONEMPTY_OUTPUT, 0, "hello\n", 30)
-        ),
+        AsyncMock(return_value=(FlowRunOutcome.NONEMPTY_OUTPUT, 0, "hello\n", 30)),
     ):
         run_id = await flow_svc._run_script_flow(
             flow,

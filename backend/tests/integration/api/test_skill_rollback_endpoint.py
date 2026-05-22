@@ -76,9 +76,7 @@ async def _patch_body(async_client, headers, pack_id: str, body: str) -> None:
 
 
 async def _versions(async_client, headers, pack_id: str) -> list[dict]:
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pack_id}/versions", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pack_id}/versions", headers=headers)
     assert r.status_code == 200, r.text
     return r.json()["items"]
 
@@ -111,9 +109,7 @@ async def test_rollback_promotes_v1_and_retires_current_active(
     assert by_no[2]["state"] == "retired"
     assert by_no[3]["state"] == "retired"
 
-    r = await async_client.get(
-        f"/api/v1/skills/packs/{pid}/content", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/skills/packs/{pid}/content", headers=headers)
     assert r.json()["content_md"] == "v1 body"
 
 
@@ -132,10 +128,10 @@ async def test_rollback_writes_dedicated_audit_row(async_client) -> None:
     )
     assert r.status_code == 200, r.text
 
-    from sqlalchemy import select  # noqa: PLC0415
+    from sqlalchemy import select
 
-    from app.db.models.audit import AuditEvent  # noqa: PLC0415
-    from app.db.session import get_session_factory  # noqa: PLC0415
+    from app.db.models.audit import AuditEvent
+    from app.db.session import get_session_factory
 
     factory = get_session_factory()
     async with factory() as db:
@@ -243,9 +239,9 @@ async def test_rollback_to_rejected_version_returns_409(async_client) -> None:
     # Drop a fresh PROPOSED row directly through the service so we can
     # transition it to REJECTED without disturbing the ACTIVE pointer
     # (the public PATCH path always activates after creating).
-    from app.db.models.skill_pack_version import SkillPackVersionState  # noqa: PLC0415
-    from app.db.session import get_session_factory  # noqa: PLC0415
-    from app.services import skill_version as svc  # noqa: PLC0415
+    from app.db.models.skill_pack_version import SkillPackVersionState
+    from app.db.session import get_session_factory
+    from app.services import skill_version as svc
 
     factory = get_session_factory()
     async with factory() as db:

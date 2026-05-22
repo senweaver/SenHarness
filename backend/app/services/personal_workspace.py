@@ -140,9 +140,7 @@ async def _slug_taken(db: AsyncSession, slug: str) -> bool:
     return await quota_svc.is_slug_tombstoned(db, slug=slug)
 
 
-async def reserve_personal_workspace_slug(
-    db: AsyncSession, *, email: str
-) -> tuple[str, bool]:
+async def reserve_personal_workspace_slug(db: AsyncSession, *, email: str) -> tuple[str, bool]:
     """Compute a slug for a freshly-registered user's personal workspace.
 
     Returns ``(slug, used_random_suffix)``. ``used_random_suffix`` is True

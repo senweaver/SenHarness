@@ -32,10 +32,10 @@ class TestOpenRedirectBlocked:
         [
             "http://evil.com",
             "https://evil.com/path",
-            "//evil.com/path",          # protocol-relative
+            "//evil.com/path",  # protocol-relative
             "//evil.com?sess=abc",
-            "\\\\evil.com\\share",      # UNC (Windows)
-            "/\\evil.com/path",         # mixed-slash protocol-relative
+            "\\\\evil.com\\share",  # UNC (Windows)
+            "/\\evil.com/path",  # mixed-slash protocol-relative
             "javascript:alert(1)",
             "javascript:alert(document.cookie)",
             "data:text/html,<script>x</script>",

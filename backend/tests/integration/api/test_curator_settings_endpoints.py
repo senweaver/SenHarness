@@ -86,9 +86,7 @@ def _err_code(body: dict) -> str | None:
 # ─── GET ─────────────────────────────────────────────────────
 async def test_get_returns_platform_default_when_no_override(async_client):
     headers, ws_id = await _bootstrap(async_client)
-    r = await async_client.get(
-        f"/api/v1/workspaces/{ws_id}/settings/curator", headers=headers
-    )
+    r = await async_client.get(f"/api/v1/workspaces/{ws_id}/settings/curator", headers=headers)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["enabled"] is True
@@ -113,9 +111,7 @@ async def test_patch_sets_workspace_override(async_client):
     assert body["source"]["stale_after_days"] == "workspace"
     assert body["source"]["archive_after_days"] == "platform_default"
 
-    r2 = await async_client.get(
-        f"/api/v1/workspaces/{ws_id}/settings/curator", headers=headers
-    )
+    r2 = await async_client.get(f"/api/v1/workspaces/{ws_id}/settings/curator", headers=headers)
     assert r2.status_code == 200
     assert r2.json()["stale_after_days"] == 14
 

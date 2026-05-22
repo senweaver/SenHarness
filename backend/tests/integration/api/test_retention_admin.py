@@ -27,9 +27,7 @@ async def _register_user(async_client, *, become_admin: bool) -> dict[str, str]:
     )
     assert r.status_code == 201, r.text
     identity_id = uuid.UUID(r.json()["identity_id"])
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -51,15 +49,11 @@ async def _register_user(async_client, *, become_admin: bool) -> dict[str, str]:
 async def test_get_watermarks_admin_only(async_client):
     # Non-admin gets 403.
     user = await _register_user(async_client, become_admin=False)
-    r = await async_client.get(
-        "/api/v1/admin/retention/watermarks", headers=user["headers"]
-    )
+    r = await async_client.get("/api/v1/admin/retention/watermarks", headers=user["headers"])
     assert r.status_code == 403
 
     admin = await _register_user(async_client, become_admin=True)
-    r = await async_client.get(
-        "/api/v1/admin/retention/watermarks", headers=admin["headers"]
-    )
+    r = await async_client.get("/api/v1/admin/retention/watermarks", headers=admin["headers"])
     assert r.status_code == 200
     body = r.json()
     assert "watermarks" in body
@@ -71,30 +65,22 @@ async def test_get_watermarks_admin_only(async_client):
 
 async def test_last_runs_admin_only(async_client):
     user = await _register_user(async_client, become_admin=False)
-    r = await async_client.get(
-        "/api/v1/admin/retention/last-runs", headers=user["headers"]
-    )
+    r = await async_client.get("/api/v1/admin/retention/last-runs", headers=user["headers"])
     assert r.status_code == 403
 
     admin = await _register_user(async_client, become_admin=True)
-    r = await async_client.get(
-        "/api/v1/admin/retention/last-runs", headers=admin["headers"]
-    )
+    r = await async_client.get("/api/v1/admin/retention/last-runs", headers=admin["headers"])
     assert r.status_code == 200
     assert isinstance(r.json(), list)
 
 
 async def test_purge_dry_run_admin_only(async_client):
     user = await _register_user(async_client, become_admin=False)
-    r = await async_client.post(
-        "/api/v1/admin/retention/purge/dry-run", headers=user["headers"]
-    )
+    r = await async_client.post("/api/v1/admin/retention/purge/dry-run", headers=user["headers"])
     assert r.status_code == 403
 
     admin = await _register_user(async_client, become_admin=True)
-    r = await async_client.post(
-        "/api/v1/admin/retention/purge/dry-run", headers=admin["headers"]
-    )
+    r = await async_client.post("/api/v1/admin/retention/purge/dry-run", headers=admin["headers"])
     assert r.status_code == 200
     body = r.json()
     assert body["dry_run"] is True
@@ -104,15 +90,11 @@ async def test_purge_dry_run_admin_only(async_client):
 
 async def test_sweep_trigger_admin_only_and_enqueues(async_client):
     user = await _register_user(async_client, become_admin=False)
-    r = await async_client.post(
-        "/api/v1/admin/retention/sweep/run", headers=user["headers"]
-    )
+    r = await async_client.post("/api/v1/admin/retention/sweep/run", headers=user["headers"])
     assert r.status_code == 403
 
     admin = await _register_user(async_client, become_admin=True)
-    r = await async_client.post(
-        "/api/v1/admin/retention/sweep/run", headers=admin["headers"]
-    )
+    r = await async_client.post("/api/v1/admin/retention/sweep/run", headers=admin["headers"])
     assert r.status_code == 200
     body = r.json()
     assert "enqueued" in body

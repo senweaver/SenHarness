@@ -63,9 +63,7 @@ async def list_sources(
     return [KbSourceRead.model_validate(r) for r in rows]
 
 
-@router.post(
-    "/sources", response_model=KbSourceRead, status_code=status.HTTP_201_CREATED
-)
+@router.post("/sources", response_model=KbSourceRead, status_code=status.HTTP_201_CREATED)
 async def create_source(
     body: KbSourceCreate,
     db: DBSession,
@@ -75,9 +73,7 @@ async def create_source(
 ) -> KbSourceRead:
     ws_id = _require_workspace(workspace_id)
     await ws_svc.ensure_admin(db, workspace_id=ws_id, identity_id=identity_id)
-    col = await knowledge_svc.get_collection_or_404(
-        db, body.collection_id, workspace_id=ws_id
-    )
+    col = await knowledge_svc.get_collection_or_404(db, body.collection_id, workspace_id=ws_id)
     try:
         connector = get_connector(body.kind)
     except KeyError as exc:
@@ -191,24 +187,16 @@ async def run_sync_blocking(
     ws_id = _require_workspace(workspace_id)
     await ws_svc.ensure_admin(db, workspace_id=ws_id, identity_id=identity_id)
     source = await svc.get_source_or_404(db, source_id, workspace_id=ws_id)
-    col = await knowledge_svc.get_collection_or_404(
-        db, source.collection_id, workspace_id=ws_id
-    )
+    col = await knowledge_svc.get_collection_or_404(db, source.collection_id, workspace_id=ws_id)
     final_sync_id: uuid.UUID | None = None
-    async for update in svc.run_sync(
-        db, source=source, collection=col, started_by=identity_id
-    ):
+    async for update in svc.run_sync(db, source=source, collection=col, started_by=identity_id):
         if update.kind in {"started", "done", "failed"}:
             raw = update.payload.get("sync_id")
             if raw:
                 final_sync_id = uuid.UUID(raw)
     from app.db.models.kb_source import KbSourceSync
 
-    row = (
-        await AsyncRepository(db, KbSourceSync).get(final_sync_id)
-        if final_sync_id
-        else None
-    )
+    row = await AsyncRepository(db, KbSourceSync).get(final_sync_id) if final_sync_id else None
     if row is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -230,9 +218,7 @@ async def run_sync_sse(
     ws_id = _require_workspace(workspace_id)
     await ws_svc.ensure_admin(db, workspace_id=ws_id, identity_id=identity_id)
     source = await svc.get_source_or_404(db, source_id, workspace_id=ws_id)
-    col = await knowledge_svc.get_collection_or_404(
-        db, source.collection_id, workspace_id=ws_id
-    )
+    col = await knowledge_svc.get_collection_or_404(db, source.collection_id, workspace_id=ws_id)
     generator = svc.stream_sse(
         svc.run_sync(db, source=source, collection=col, started_by=identity_id)
     )

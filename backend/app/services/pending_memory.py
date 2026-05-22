@@ -107,9 +107,7 @@ async def queue_pending_memory(
     return row
 
 
-def _validate_payload(
-    target_table: PendingMemoryTargetTable, payload: dict
-) -> None:
+def _validate_payload(target_table: PendingMemoryTargetTable, payload: dict) -> None:
     if not isinstance(payload, dict):
         raise ValidationFailed(
             "pending_memory_payload_invalid",
@@ -161,9 +159,7 @@ async def queue_immediate_or_pending(
     _validate_payload(target_table, payload)
 
     if effective == "now":
-        settings = await memory_svc.get_workspace_memory_settings(
-            db, workspace_id=workspace_id
-        )
+        settings = await memory_svc.get_workspace_memory_settings(db, workspace_id=workspace_id)
         if not settings.allow_immediate:
             await audit_svc.record(
                 db,
@@ -246,9 +242,7 @@ async def promote_pending_memories_for_session(
     ``failure_count`` bumped (the workspace sweep retries up to the
     platform ceiling).
     """
-    settings = await memory_svc.get_workspace_memory_settings(
-        db, workspace_id=workspace_id
-    )
+    settings = await memory_svc.get_workspace_memory_settings(db, workspace_id=workspace_id)
     repo = PendingMemoryRepository(db)
     rows = await repo.list_pending_for_session(
         workspace_id=workspace_id,
@@ -284,14 +278,10 @@ async def promote_pending_memories_workspace_sweep(
     must not have its pending writes promoted out from under the
     synchronous hook the next time the user replies.
     """
-    settings = await memory_svc.get_workspace_memory_settings(
-        db, workspace_id=workspace_id
-    )
+    settings = await memory_svc.get_workspace_memory_settings(db, workspace_id=workspace_id)
     repo = PendingMemoryRepository(db)
     cutoff = utcnow_naive() - timedelta(seconds=int(max_age_seconds))
-    quiet_floor = utcnow_naive() - timedelta(
-        minutes=_SWEEP_SESSION_QUIET_MINUTES
-    )
+    quiet_floor = utcnow_naive() - timedelta(minutes=_SWEEP_SESSION_QUIET_MINUTES)
 
     pending_rows = list(
         await repo.list_pending_for_workspace(
@@ -315,9 +305,7 @@ async def promote_pending_memories_workspace_sweep(
 
     eligible: list[PendingMemory] = []
     for row in candidates:
-        if await _session_is_quiet(
-            db, session_id=row.session_id, quiet_floor=quiet_floor
-        ):
+        if await _session_is_quiet(db, session_id=row.session_id, quiet_floor=quiet_floor):
             if row.status == PendingMemoryStatus.FAILED:
                 await repo.reset_failed_to_pending(pending=row)
             eligible.append(row)
@@ -347,9 +335,7 @@ async def _session_is_quiet(
     """
     row = (
         await db.execute(
-            text(
-                "SELECT deleted_at, last_message_at FROM sessions WHERE id = :sid"
-            ),
+            text("SELECT deleted_at, last_message_at FROM sessions WHERE id = :sid"),
             {"sid": str(session_id)},
         )
     ).first()
@@ -379,9 +365,7 @@ async def _promote_rows(
     for row in rows:
         target_table = _target_from_value(row.target_table)
         if target_table is None:
-            await repo.mark_skipped(
-                pending=row, reason="unknown_target_table"
-            )
+            await repo.mark_skipped(pending=row, reason="unknown_target_table")
             await audit_svc.record(
                 db,
                 action="memory.promotion_failed",
@@ -409,9 +393,7 @@ async def _promote_rows(
                 payload=row.payload or {},
             )
         except MemoryHardCapExceeded as exc:
-            await repo.mark_skipped(
-                pending=row, reason="hard_cap_exceeded"
-            )
+            await repo.mark_skipped(pending=row, reason="hard_cap_exceeded")
             await audit_svc.record(
                 db,
                 action="memory.hard_cap_blocked",
@@ -430,9 +412,7 @@ async def _promote_rows(
             skipped += 1
             continue
         except ValidationFailed as exc:
-            await repo.mark_skipped(
-                pending=row, reason=getattr(exc, "code", "validation_failed")
-            )
+            await repo.mark_skipped(pending=row, reason=getattr(exc, "code", "validation_failed"))
             await audit_svc.record(
                 db,
                 action="memory.promotion_failed",
@@ -452,9 +432,7 @@ async def _promote_rows(
             continue
         except Exception as exc:
             log.exception("pending_memory promote failed (row=%s)", row.id)
-            await repo.mark_failed(
-                pending=row, reason=type(exc).__name__
-            )
+            await repo.mark_failed(pending=row, reason=type(exc).__name__)
             await audit_svc.record(
                 db,
                 action="memory.promotion_failed",
@@ -473,9 +451,7 @@ async def _promote_rows(
             )
             failed += 1
             if int(row.failure_count or 0) >= max_failure_count:
-                await repo.mark_skipped(
-                    pending=row, reason="max_failure_count_exceeded"
-                )
+                await repo.mark_skipped(pending=row, reason="max_failure_count_exceeded")
                 # Net effect: failed bumped above, then collapsed to skipped.
                 failed -= 1
                 skipped += 1
@@ -483,9 +459,7 @@ async def _promote_rows(
 
         target_id_raw = applied.get("id") if isinstance(applied, dict) else None
         target_id = (
-            uuid.UUID(target_id_raw)
-            if isinstance(target_id_raw, str) and target_id_raw
-            else None
+            uuid.UUID(target_id_raw) if isinstance(target_id_raw, str) and target_id_raw else None
         )
         await repo.mark_promoted(pending=row, target_id=target_id)
         await audit_svc.record(
@@ -566,9 +540,7 @@ async def cancel_pending_memory(
     if row is None or row.workspace_id != workspace_id or row.deleted_at is not None:
         from app.core.errors import NotFound
 
-        raise NotFound(
-            "pending_memory_not_found", code="pending_memory.not_found"
-        )
+        raise NotFound("pending_memory_not_found", code="pending_memory.not_found")
     if row.status != PendingMemoryStatus.PENDING:
         # Idempotent: cancelling an already-promoted / skipped row is a no-op.
         return row
@@ -607,9 +579,7 @@ async def list_session_pending(
     )
 
 
-async def workspace_stats(
-    db: AsyncSession, *, workspace_id: uuid.UUID
-) -> dict[str, Any]:
+async def workspace_stats(db: AsyncSession, *, workspace_id: uuid.UUID) -> dict[str, Any]:
     repo = PendingMemoryRepository(db)
     counts = await repo.workspace_status_counts(workspace_id=workspace_id)
     oldest = await repo.workspace_oldest_pending(workspace_id=workspace_id)
@@ -626,6 +596,4 @@ async def workspace_stats(
 async def list_active_workspace_ids(
     db: AsyncSession, *, since: datetime | None = None, limit: int = 500
 ) -> Sequence[uuid.UUID]:
-    return await PendingMemoryRepository(db).list_active_workspace_ids(
-        since=since, limit=limit
-    )
+    return await PendingMemoryRepository(db).list_active_workspace_ids(since=since, limit=limit)

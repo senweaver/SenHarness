@@ -73,9 +73,7 @@ SOUL_DIMENSIONS: tuple[str, ...] = (
 )
 
 
-class MemoryProfile(
-    UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base
-):
+class MemoryProfile(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "memory_profiles"
     __table_args__ = (
         Index(
@@ -87,15 +85,11 @@ class MemoryProfile(
         ),
     )
 
-    kind: Mapped[MemoryProfileKind] = mapped_column(
-        String(32), nullable=False, index=True
-    )
+    kind: Mapped[MemoryProfileKind] = mapped_column(String(32), nullable=False, index=True)
     # For ``workspace_memory`` this equals ``workspace_id`` (so the
     # unique index still partitions cleanly); for ``user_profile`` /
     # ``user_soul`` it's the identity id.
-    subject_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False, index=True
-    )
+    subject_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     # Only populated when subject is an identity — lets us cascade on
     # identity delete without reading ``subject_id`` generically.
     identity_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -112,9 +106,7 @@ class MemoryProfile(
     # {"id": "<uuid>", "proposed_content": str, "proposed_dims": {...},
     #  "proposed_at": iso8601, "proposed_by_identity_id": uuid|null,
     #  "source_session_id": uuid|null, "rationale": str}
-    pending_updates_json: Mapped[list] = mapped_column(
-        JSONB, default=list, nullable=False
-    )
+    pending_updates_json: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
     metadata_json: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
     updated_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),

@@ -80,10 +80,7 @@ def _resolve_for_kind(toolbox: list[str], *, agent_kind: str | None) -> list[str
         tool = BUILTIN_TOOL_REGISTRY.get(name)
         if tool is None:
             continue
-        if (
-            tool.available_for_kinds is not None
-            and agent_kind not in tool.available_for_kinds
-        ):
+        if tool.available_for_kinds is not None and agent_kind not in tool.available_for_kinds:
             continue
         out.append(name)
     return out
@@ -91,19 +88,13 @@ def _resolve_for_kind(toolbox: list[str], *, agent_kind: str | None) -> list[str
 
 # ─── Capability gate ────────────────────────────────────────
 async def test_cronjob_verb_visible_only_to_evolver_agent_kind() -> None:
-    visible_for_evolver = _resolve_for_kind(
-        ["propose_cronjob_create"], agent_kind="evolver"
-    )
+    visible_for_evolver = _resolve_for_kind(["propose_cronjob_create"], agent_kind="evolver")
     assert visible_for_evolver == ["propose_cronjob_create"]
 
-    visible_for_default = _resolve_for_kind(
-        ["propose_cronjob_create"], agent_kind=None
-    )
+    visible_for_default = _resolve_for_kind(["propose_cronjob_create"], agent_kind=None)
     assert visible_for_default == []
 
-    visible_for_other = _resolve_for_kind(
-        ["propose_cronjob_create"], agent_kind="workspace"
-    )
+    visible_for_other = _resolve_for_kind(["propose_cronjob_create"], agent_kind="workspace")
     assert visible_for_other == []
 
 
@@ -173,11 +164,7 @@ async def test_cronjob_propose_e2e_files_approval_audit_and_no_flow_row(
     # Critical: the verb must NOT have created a Flow row. M2.5 dispatch
     # is the only place that mints Flow rows on approval.
     flows = list(
-        (
-            await db_session.execute(
-                select(Flow).where(Flow.workspace_id == workspace.id)
-            )
-        ).scalars()
+        (await db_session.execute(select(Flow).where(Flow.workspace_id == workspace.id))).scalars()
     )
     assert flows == []
 
@@ -199,9 +186,7 @@ async def test_cronjob_rate_limit_trips_after_budget(
     async def _denied(**_kwargs) -> bool:
         return False
 
-    monkeypatch.setattr(
-        "app.agents.tools.cronjob_propose.consume_rate", _denied
-    )
+    monkeypatch.setattr("app.agents.tools.cronjob_propose.consume_rate", _denied)
 
     result = await run_propose_cronjob(
         ProposeCronjobArgs(

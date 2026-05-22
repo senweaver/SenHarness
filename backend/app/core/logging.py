@@ -148,9 +148,7 @@ def setup_logging() -> None:
             encoding="utf-8",
         )
         file_handler.setFormatter(
-            JsonFormatter()
-            if use_json
-            else logging.Formatter(fmt, datefmt="%H:%M:%S")
+            JsonFormatter() if use_json else logging.Formatter(fmt, datefmt="%H:%M:%S")
         )
         logging.getLogger().addHandler(file_handler)
 

@@ -30,7 +30,8 @@ class _StubResponse:
     def raise_for_status(self) -> None:
         if self.status_code >= 400:
             raise httpx.HTTPStatusError(
-                "stub", request=httpx.Request("GET", "http://example"),
+                "stub",
+                request=httpx.Request("GET", "http://example"),
                 response=httpx.Response(self.status_code),
             )
 
@@ -52,9 +53,7 @@ class _StubClient:
     async def __aexit__(self, *_: Any) -> None:
         pass
 
-    async def get(
-        self, url: str, *, headers: dict[str, str] | None = None
-    ) -> _StubResponse:
+    async def get(self, url: str, *, headers: dict[str, str] | None = None) -> _StubResponse:
         self.last_url = url
         self.last_headers = headers
         return self._response
@@ -73,9 +72,7 @@ async def test_fetch_remote_models_openai_shape(monkeypatch: pytest.MonkeyPatch)
     stub = _StubClient(_StubResponse(body=body))
     monkeypatch.setattr(httpx, "AsyncClient", lambda *_a, **_kw: stub)
 
-    rows = await svc._fetch_remote_models(
-        "https://api.example.com/v1/models", api_key="sk-test"
-    )
+    rows = await svc._fetch_remote_models("https://api.example.com/v1/models", api_key="sk-test")
 
     assert [r["model"] for r in rows] == ["gpt-5", "gpt-5-mini"]
     assert rows[0]["context_window"] == 200000
@@ -93,9 +90,7 @@ async def test_fetch_remote_models_bare_list_shape(monkeypatch: pytest.MonkeyPat
     stub = _StubClient(_StubResponse(body=body))
     monkeypatch.setattr(httpx, "AsyncClient", lambda *_a, **_kw: stub)
 
-    rows = await svc._fetch_remote_models(
-        "http://localhost:8000/v1/models", api_key="anything"
-    )
+    rows = await svc._fetch_remote_models("http://localhost:8000/v1/models", api_key="anything")
     assert [r["model"] for r in rows] == ["qwen-72b", "llama-3-70b"]
     assert rows[0]["context_window"] == 32768
 
@@ -105,9 +100,7 @@ async def test_fetch_remote_models_empty_or_garbage(monkeypatch: pytest.MonkeyPa
     stub = _StubClient(_StubResponse(body={"unrelated": "shape"}))
     monkeypatch.setattr(httpx, "AsyncClient", lambda *_a, **_kw: stub)
 
-    rows = await svc._fetch_remote_models(
-        "https://example.com/v1/models", api_key="x"
-    )
+    rows = await svc._fetch_remote_models("https://example.com/v1/models", api_key="x")
     assert rows == []
 
 

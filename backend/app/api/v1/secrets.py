@@ -119,7 +119,5 @@ async def _get_or_404(db, secret_id: uuid.UUID, workspace_id: uuid.UUID) -> Vaul
     )
     item = (await db.execute(stmt)).scalar_one_or_none()
     if item is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Secret not found."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Secret not found.")
     return item

@@ -22,7 +22,7 @@ from sqlalchemy import select
 
 from app.agents.harness import subagents as subagents_svc
 from app.db.models.approval import Approval, ApprovalStatus
-from app.db.models.subagent_run import SubAgentRun, SubAgentRunState
+from app.db.models.subagent_run import SubAgentRunState
 from app.repositories.subagent_run import SubAgentRunRepository
 from app.services import subagent_run as subagent_svc
 from app.services.subagent_batch_config import ResolvedSubagentBatchConfig
@@ -38,9 +38,7 @@ def _share_session_factory(monkeypatch, db_session) -> None:
     monkeypatch.setattr("app.db.session.get_session_factory", lambda: _ctx)
 
 
-async def test_one_child_hallucinates_others_complete(
-    db_session, workspace, monkeypatch
-):
+async def test_one_child_hallucinates_others_complete(db_session, workspace, monkeypatch):
     """3 children: one returns text the aux scores 0.20 → halluc_review;
     two return text scoring 0.80 → completed. Tally + spine rows
     reflect the split."""
@@ -64,7 +62,7 @@ async def test_one_child_hallucinates_others_complete(
     halluc_task = "task-haunted"
 
     class _GoodAgent:
-        async def run(self, prompt: str):  # noqa: ARG002
+        async def run(self, prompt: str):
             await asyncio.sleep(0.005)
 
             class _Out:
@@ -73,7 +71,7 @@ async def test_one_child_hallucinates_others_complete(
             return _Out()
 
     class _HallucAgent:
-        async def run(self, prompt: str):  # noqa: ARG002
+        async def run(self, prompt: str):
             await asyncio.sleep(0.005)
 
             class _Out:
@@ -83,14 +81,12 @@ async def test_one_child_hallucinates_others_complete(
 
     halluc_target_ids: set[uuid.UUID] = set()
 
-    async def _fake_resolve(*, workspace_id, target_agent_id):  # noqa: ARG001
+    async def _fake_resolve(*, workspace_id, target_agent_id):
         return target_agent_id, None
 
-    monkeypatch.setattr(
-        subagents_svc, "_resolve_child_agent_model", _fake_resolve
-    )
+    monkeypatch.setattr(subagents_svc, "_resolve_child_agent_model", _fake_resolve)
 
-    def _build(*, model, persona_md):  # noqa: ARG001
+    def _build(*, model, persona_md):
         if model in halluc_target_ids:
             return _HallucAgent()
         return _GoodAgent()
@@ -99,18 +95,16 @@ async def test_one_child_hallucinates_others_complete(
 
     # Per-child aux scoring: 0.20 for the haunted task, 0.80 for the
     # well-grounded ones. The gate threshold default is 0.50.
-    async def fake_evaluate(db, *, workspace_id, final_output, timeout_s=25.0):  # noqa: ARG001
+    async def fake_evaluate(db, *, workspace_id, final_output, timeout_s=25.0):
         if "vibes" in (final_output or "").lower():
             return 0.20, "stub:aux"
         return 0.80, "stub:aux"
 
-    async def fake_breaker_open(*, bucket, workspace_id, trip_at):  # noqa: ARG001
+    async def fake_breaker_open(*, bucket, workspace_id, trip_at):
         return False
 
     monkeypatch.setattr(subagent_svc, "evaluate_hallucination", fake_evaluate)
-    monkeypatch.setattr(
-        "app.jobs._breaker.is_breaker_open", fake_breaker_open
-    )
+    monkeypatch.setattr("app.jobs._breaker.is_breaker_open", fake_breaker_open)
 
     halluc_target = uuid.uuid4()
     halluc_target_ids.add(halluc_target)
@@ -155,9 +149,7 @@ async def test_one_child_hallucinates_others_complete(
     assert approval_id is not None
 
     approval = (
-        await db_session.execute(
-            select(Approval).where(Approval.id == approval_id)
-        )
+        await db_session.execute(select(Approval).where(Approval.id == approval_id))
     ).scalar_one_or_none()
     assert approval is not None
     assert approval.status == ApprovalStatus.PENDING
@@ -166,8 +158,6 @@ async def test_one_child_hallucinates_others_complete(
     # Sibling spine rows should be COMPLETED — independent gate.
     for task_id in (f"task-good-{i}" for i in range(2)):
         good = summary.results[task_id]
-        good_row = await repo.get_by_child_run_id(
-            child_run_id=good.child_run_id
-        )
+        good_row = await repo.get_by_child_run_id(child_run_id=good.child_run_id)
         assert good_row is not None
         assert good_row.state == SubAgentRunState.COMPLETED

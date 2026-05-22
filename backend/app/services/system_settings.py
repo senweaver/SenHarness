@@ -315,12 +315,8 @@ def _platform_section_defaults() -> dict[str, Any]:
         SystemSettingKey.WORKSPACE_DEFAULTS.value: WorkspaceDefaultsSettings().model_dump(
             mode="json"
         ),
-        SystemSettingKey.SECURITY_SHIELDS.value: SecurityShieldsSettings().model_dump(
-            mode="json"
-        ),
-        SystemSettingKey.SECURITY_SANDBOX.value: SecuritySandboxSettings().model_dump(
-            mode="json"
-        ),
+        SystemSettingKey.SECURITY_SHIELDS.value: SecurityShieldsSettings().model_dump(mode="json"),
+        SystemSettingKey.SECURITY_SANDBOX.value: SecuritySandboxSettings().model_dump(mode="json"),
         # ``EVOLVER`` is the legacy placeholder row from M0.13. M2.6
         # promotes ``EVOLVER_DEFAULTS`` to canonical and only reads
         # ``EVOLVER`` for one-shot back-compat (see
@@ -336,19 +332,13 @@ def _platform_section_defaults() -> dict[str, Any]:
         SystemSettingKey.SUBAGENT_BATCH_DEFAULTS.value: (
             SubagentBatchDefaults().model_dump(mode="json")
         ),
-        SystemSettingKey.CACHE_CONTROL.value: (
-            CacheControlDefaults().model_dump(mode="json")
-        ),
+        SystemSettingKey.CACHE_CONTROL.value: (CacheControlDefaults().model_dump(mode="json")),
         SystemSettingKey.HUB.value: HubSettings().model_dump(mode="json"),
         SystemSettingKey.SESSION_ROUTING_DEFAULTS.value: (
             SessionRoutingDefaults().model_dump(mode="json")
         ),
-        SystemSettingKey.COMPACTION.value: (
-            CompactionSettings().model_dump(mode="json")
-        ),
-        SystemSettingKey.INSIGHTS_DEFAULTS.value: (
-            InsightsSettings().model_dump(mode="json")
-        ),
+        SystemSettingKey.COMPACTION.value: (CompactionSettings().model_dump(mode="json")),
+        SystemSettingKey.INSIGHTS_DEFAULTS.value: (InsightsSettings().model_dump(mode="json")),
     }
 
 
@@ -421,9 +411,7 @@ def get_default(key: SystemSettingKey | str) -> Any:
     return _DEFAULTS.get(_normalize_key(key))
 
 
-async def delete_system_setting(
-    db: AsyncSession, key: SystemSettingKey | str
-) -> bool:
+async def delete_system_setting(db: AsyncSession, key: SystemSettingKey | str) -> bool:
     """Drop the DB row for a key. Returns True iff a row existed.
 
     The next read falls through to ``_DEFAULTS`` (or any caller-supplied
@@ -433,7 +421,5 @@ async def delete_system_setting(
     from sqlalchemy import delete
 
     key_str = _normalize_key(key)
-    res = await db.execute(
-        delete(SystemSetting).where(SystemSetting.key == key_str)
-    )
+    res = await db.execute(delete(SystemSetting).where(SystemSetting.key == key_str))
     return bool(res.rowcount)

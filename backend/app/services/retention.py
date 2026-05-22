@@ -322,9 +322,7 @@ async def get_retention_settings(db: AsyncSession) -> RetentionSettings:
     Returns the model defaults whenever the row is absent so a fresh
     deployment behaves identically to the documented contract.
     """
-    raw = await get_system_setting(
-        db, SystemSettingKey.RETENTION, default=None
-    )
+    raw = await get_system_setting(db, SystemSettingKey.RETENTION, default=None)
     if raw is None:
         return RetentionSettings()
     if isinstance(raw, RetentionSettings):
@@ -337,13 +335,9 @@ async def get_retention_settings(db: AsyncSession) -> RetentionSettings:
     return RetentionSettings()
 
 
-def _retention_days_for(
-    target: CascadeTarget, settings: RetentionSettings
-) -> int:
+def _retention_days_for(target: CascadeTarget, settings: RetentionSettings) -> int:
     if target.retention_days_override_key:
-        explicit = settings.per_table_days.get(
-            target.retention_days_override_key
-        )
+        explicit = settings.per_table_days.get(target.retention_days_override_key)
         if explicit is not None:
             return int(explicit)
     explicit = settings.per_table_days.get(target.table_name)
@@ -357,15 +351,11 @@ def _has_table(sync_session: Session, table_name: str) -> bool:
 
 
 async def _table_exists(db: AsyncSession, table_name: str) -> bool:
-    return bool(
-        await db.run_sync(lambda sync_session: _has_table(sync_session, table_name))
-    )
+    return bool(await db.run_sync(lambda sync_session: _has_table(sync_session, table_name)))
 
 
 # ── Cascade ───────────────────────────────────────────────────
-async def cascade_for_identity(
-    db: AsyncSession, *, identity_id: uuid.UUID
-) -> dict[str, int]:
+async def cascade_for_identity(db: AsyncSession, *, identity_id: uuid.UUID) -> dict[str, int]:
     """Soft-delete (or physically delete) every identity-scoped row.
 
     Idempotent: running twice for the same identity yields zero rows on
@@ -399,9 +389,7 @@ async def cascade_for_identity(
     return affected
 
 
-async def cascade_for_workspace(
-    db: AsyncSession, *, workspace_id: uuid.UUID
-) -> dict[str, int]:
+async def cascade_for_workspace(db: AsyncSession, *, workspace_id: uuid.UUID) -> dict[str, int]:
     """Soft-delete (or physically delete) every workspace-scoped row.
 
     Identity-only tables (``email_verification_tokens``,
@@ -443,10 +431,7 @@ async def _cascade_one(
                 "AND deleted_at IS NULL"
             )
         else:
-            sql = text(
-                f"DELETE FROM {table} "
-                "WHERE workspace_id = CAST(:scope_id AS UUID)"
-            )
+            sql = text(f"DELETE FROM {table} WHERE workspace_id = CAST(:scope_id AS UUID)")
         result = await db.execute(sql, bind)
         return int(result.rowcount or 0)
 
@@ -484,10 +469,7 @@ async def _cascade_one(
                 "AND deleted_at IS NULL"
             )
         else:
-            sql = text(
-                f"DELETE FROM {table} "
-                "WHERE identity_id = CAST(:scope_id AS UUID)"
-            )
+            sql = text(f"DELETE FROM {table} WHERE identity_id = CAST(:scope_id AS UUID)")
     result = await db.execute(sql, bind)
     return int(result.rowcount or 0)
 
@@ -504,9 +486,7 @@ class PurgeReport:
     skipped_reason: str | None = None
 
 
-async def physically_purge_expired(
-    db: AsyncSession, *, dry_run: bool
-) -> dict[str, PurgeReport]:
+async def physically_purge_expired(db: AsyncSession, *, dry_run: bool) -> dict[str, PurgeReport]:
     """For every soft-delete cascade target, drop expired rows.
 
     The cutoff is ``now() - retention_days`` where ``retention_days`` is
@@ -542,17 +522,13 @@ async def physically_purge_expired(
         cutoff = now - timedelta(days=days)
 
         cnt_sql = text(
-            f"SELECT COUNT(*) FROM {table} "
-            "WHERE deleted_at IS NOT NULL AND deleted_at < :cutoff"
+            f"SELECT COUNT(*) FROM {table} WHERE deleted_at IS NOT NULL AND deleted_at < :cutoff"
         )
-        candidates = int(
-            (await db.execute(cnt_sql, {"cutoff": cutoff})).scalar() or 0
-        )
+        candidates = int((await db.execute(cnt_sql, {"cutoff": cutoff})).scalar() or 0)
         deleted = 0
         if not dry_run and candidates > 0:
             del_sql = text(
-                f"DELETE FROM {table} "
-                "WHERE deleted_at IS NOT NULL AND deleted_at < :cutoff"
+                f"DELETE FROM {table} WHERE deleted_at IS NOT NULL AND deleted_at < :cutoff"
             )
             res = await db.execute(del_sql, {"cutoff": cutoff})
             deleted = int(res.rowcount or 0)

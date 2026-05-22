@@ -60,7 +60,7 @@ def _truncate(text: str, cap: int) -> tuple[str, int]:
         return body, len(body)
     clipped = body[:cap]
     # Prefer paragraph break, then sentence end, then hard cut.
-    for sep in ("\n\n", "\n", ". ", "。", "！", "？"):  # noqa: RUF001
+    for sep in ("\n\n", "\n", ". ", "。", "！", "？"):
         idx = clipped.rfind(sep)
         if idx >= int(cap * 0.6):  # don't chop off too much
             clipped = clipped[: idx + len(sep)].rstrip()
@@ -193,9 +193,7 @@ async def propose_soul_update(
     proposal entry; the profile's ``content_md`` isn't touched until the
     proposal is approved."""
     if not proposed_content or not proposed_content.strip():
-        raise ValidationFailed(
-            "empty_soul_content", code="memory_profile.empty_soul_content"
-        )
+        raise ValidationFailed("empty_soul_content", code="memory_profile.empty_soul_content")
 
     # Upsert an empty SOUL row if this is the first proposal.
     existing = await get_profile(
@@ -266,16 +264,12 @@ async def decide_soul_update(
         subject_id=identity_id,
     )
     if profile is None:
-        raise NotFound(
-            "soul_profile_not_found", code="memory_profile.soul_not_found"
-        )
+        raise NotFound("soul_profile_not_found", code="memory_profile.soul_not_found")
 
     pending = list(profile.pending_updates_json or [])
     target = next((p for p in pending if p.get("id") == proposal_id), None)
     if target is None:
-        raise NotFound(
-            "soul_proposal_not_found", code="memory_profile.soul_proposal_not_found"
-        )
+        raise NotFound("soul_proposal_not_found", code="memory_profile.soul_proposal_not_found")
 
     remaining = [p for p in pending if p.get("id") != proposal_id]
     history = list(profile.metadata_json.get("decisions", []))

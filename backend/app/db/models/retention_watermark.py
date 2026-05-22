@@ -48,9 +48,7 @@ class RetentionScopeKind(StrEnum):
 
 class RetentionWatermark(UuidPkMixin, TimestampMixin, Base):
     __tablename__ = "retention_watermarks"
-    __table_args__ = (
-        UniqueConstraint("scope_kind", name="uq_retention_watermarks_scope"),
-    )
+    __table_args__ = (UniqueConstraint("scope_kind", name="uq_retention_watermarks_scope"),)
 
     scope_kind: Mapped[RetentionScopeKind] = mapped_column(
         Enum(
@@ -69,9 +67,7 @@ class RetentionWatermark(UuidPkMixin, TimestampMixin, Base):
     last_seen_deleted_at: Mapped[datetime] = mapped_column(
         nullable=False, server_default=func.now()
     )
-    last_processed_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True
-    )
+    last_processed_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     last_run_at: Mapped[datetime | None] = mapped_column(nullable=True)
     last_run_rows_affected: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"

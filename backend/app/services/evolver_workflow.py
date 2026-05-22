@@ -234,7 +234,7 @@ async def build_drain_summary(
     sample_run_ids: list[uuid.UUID] = []
 
     for art in failing:
-        bucket = int(round(float(art.judge_score)))
+        bucket = round(float(art.judge_score))
         score_dist[bucket] = score_dist.get(bucket, 0) + 1
         if art.error_kind:
             err_counter[str(art.error_kind)] += 1
@@ -274,9 +274,7 @@ def _render_summary_seed(summary: DrainSummary) -> str:
         ", ".join(f"{k}({v})" for k, v in summary.common_invoked_tools[:5])
         or "(no tool calls recorded)"
     )
-    score_part = ", ".join(
-        f"{k}={v}" for k, v in sorted(summary.score_distribution.items())
-    )
+    score_part = ", ".join(f"{k}={v}" for k, v in sorted(summary.score_distribution.items()))
 
     return (
         f"{summary.artifact_count} failing artifact(s) in the lookback window. "
@@ -305,9 +303,7 @@ async def summarize_drain_with_aux(
 
     config = aux_config
     if config is None:
-        config = await get_aux_model(
-            db, workspace_id=workspace_id, task=AuxiliaryTask.SKILL_REVIEW
-        )
+        config = await get_aux_model(db, workspace_id=workspace_id, task=AuxiliaryTask.SKILL_REVIEW)
     if config is None:
         return seed[:_SUMMARY_MAX_CHARS]
 
@@ -413,9 +409,7 @@ def _fallback_draft(cluster: _Cluster, summary_text: str) -> _SkillDraft:
     """
     base_slug = _slugify_for_skill(cluster.label)
     short_label = _humanise_for_name(cluster.label)
-    tools_line = (
-        ", ".join(cluster.invoked_tools) if cluster.invoked_tools else "(none recorded)"
-    )
+    tools_line = ", ".join(cluster.invoked_tools) if cluster.invoked_tools else "(none recorded)"
     error_line = cluster.error_kind or "(no error_kind tagged)"
     body = (
         f"# {short_label}\n\n"
@@ -480,9 +474,7 @@ async def _draft_skill_for_cluster(
     return _fallback_draft(cluster, summary_text)
 
 
-async def _ensure_unique_slug(
-    db: AsyncSession, *, workspace_id: uuid.UUID, base_slug: str
-) -> str:
+async def _ensure_unique_slug(db: AsyncSession, *, workspace_id: uuid.UUID, base_slug: str) -> str:
     """Return a slug that doesn't collide with an existing pack.
 
     The propose verb itself rejects slug conflicts hard, so the
@@ -519,9 +511,7 @@ async def _file_proposal_for_cluster(
     """
     factory = get_session_factory()
     async with factory() as db:
-        unique_slug = await _ensure_unique_slug(
-            db, workspace_id=workspace_id, base_slug=draft.slug
-        )
+        unique_slug = await _ensure_unique_slug(db, workspace_id=workspace_id, base_slug=draft.slug)
 
     args = ProposeSkillCreateArgs(
         rationale=(
@@ -536,12 +526,8 @@ async def _file_proposal_for_cluster(
         supporting_run_ids=[str(r) for r in cluster.sample_run_ids[:20]],
     )
 
-    sentinel_session_id = uuid.uuid5(
-        uuid.NAMESPACE_DNS, f"evolver:workflow:session:{run_id}"
-    )
-    sentinel_agent_id = uuid.uuid5(
-        uuid.NAMESPACE_DNS, f"evolver:workflow:agent:{workspace_id}"
-    )
+    sentinel_session_id = uuid.uuid5(uuid.NAMESPACE_DNS, f"evolver:workflow:session:{run_id}")
+    sentinel_agent_id = uuid.uuid5(uuid.NAMESPACE_DNS, f"evolver:workflow:agent:{workspace_id}")
     ctx = ToolRunContext(
         run_id=run_id,
         workspace_id=workspace_id,
@@ -590,16 +576,12 @@ async def _record_audit(
         log.exception("evolver workflow audit failed action=%s", action)
 
 
-async def _maybe_reset_breaker(
-    *, workspace_id: uuid.UUID, proposals_created: int
-) -> None:
+async def _maybe_reset_breaker(*, workspace_id: uuid.UUID, proposals_created: int) -> None:
     """Reset the shared evolver breaker on a healthy workflow run."""
     if proposals_created < 1:
         return
     try:
-        await reset_failure(
-            bucket=EVOLVER_BREAKER_BUCKET, workspace_id=str(workspace_id)
-        )
+        await reset_failure(bucket=EVOLVER_BREAKER_BUCKET, workspace_id=str(workspace_id))
     except Exception:  # pragma: no cover - breaker reset is fail-open
         log.exception("evolver breaker reset failed for workspace=%s", workspace_id)
 
@@ -620,9 +602,7 @@ async def _preflight(
     """
     factory = get_session_factory()
     async with factory() as db:
-        config = await get_workspace_evolver_config(
-            db, workspace_id=workspace_id
-        )
+        config = await get_workspace_evolver_config(db, workspace_id=workspace_id)
 
     if not config.enabled:
         return config, DrainSummary(artifact_count=0), "evolver_disabled"
@@ -637,9 +617,7 @@ async def _preflight(
 
     since = utcnow_naive() - timedelta(days=DEFAULT_LOOKBACK_DAYS)
     async with factory() as db:
-        summary = await build_drain_summary(
-            db, workspace_id=workspace_id, since=since
-        )
+        summary = await build_drain_summary(db, workspace_id=workspace_id, since=since)
 
     min_required = max(1, int(config.min_artifacts_per_evolution))
     if not bypass_min_artifacts and summary.artifact_count < min_required:
@@ -720,7 +698,7 @@ async def evolve_workspace_skills_workflow(
                     cluster.label,
                     outcome,
                 )
-    except Exception as exc:  # noqa: BLE001 - workflow must not raise to ARQ
+    except Exception as exc:
         duration_ms = int((time.perf_counter() - started) * 1000)
         await _record_audit(
             workspace_id=workspace_id,
@@ -753,9 +731,7 @@ async def evolve_workspace_skills_workflow(
         )
 
     # ── Stage: publish (audit + breaker reset) ──────────
-    await _maybe_reset_breaker(
-        workspace_id=workspace_id, proposals_created=proposals_created
-    )
+    await _maybe_reset_breaker(workspace_id=workspace_id, proposals_created=proposals_created)
     duration_ms = int((time.perf_counter() - started) * 1000)
     await _record_audit(
         workspace_id=workspace_id,
@@ -885,11 +861,9 @@ async def evolve_workspace_skills_agent(
             error_message = result.error
     except EvolverError as exc:
         error_message = f"{type(exc).__name__}: {exc}"
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         error_message = f"{type(exc).__name__}: {exc}"
-        log.exception(
-            "evolver agent dispatch crashed for workspace=%s", workspace_id
-        )
+        log.exception("evolver agent dispatch crashed for workspace=%s", workspace_id)
 
     duration_ms = int((time.perf_counter() - started) * 1000)
 
@@ -924,9 +898,7 @@ async def evolve_workspace_skills_agent(
             aux_model=aux_model_name,
         )
 
-    await _maybe_reset_breaker(
-        workspace_id=workspace_id, proposals_created=proposals_created
-    )
+    await _maybe_reset_breaker(workspace_id=workspace_id, proposals_created=proposals_created)
     await _record_audit(
         workspace_id=workspace_id,
         actor_identity_id=actor_identity_id,

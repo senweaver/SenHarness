@@ -131,9 +131,7 @@ async def _run_default_agent(
 
 @router.get(
     "/models",
-    dependencies=[
-        Depends(rate_limit("openai_list_models", limit=60, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("openai_list_models", limit=60, period_seconds=60))],
 )
 async def list_models(
     db: DBSession,
@@ -171,9 +169,7 @@ async def list_models(
 
 @router.post(
     "/chat/completions",
-    dependencies=[
-        Depends(rate_limit("openai_chat_completions", limit=60, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("openai_chat_completions", limit=60, period_seconds=60))],
 )
 async def chat_completions(
     body: ChatCompletionsIn,
@@ -279,9 +275,10 @@ async def _stream_with_kernel(
             identity_id=identity_id,
         )
     except protocol_kernel.ProtocolKernelError as exc:  # pragma: no cover
+        err_message = str(exc)
 
         async def _error_only() -> AsyncIterator[dict[str, Any]]:
-            yield {"type": "error", "message": str(exc)}
+            yield {"type": "error", "message": err_message}
 
         kernel_stream = _error_only()
 
@@ -291,9 +288,7 @@ async def _stream_with_kernel(
 
 @router.post(
     "/messages",
-    dependencies=[
-        Depends(rate_limit("anthropic_messages", limit=60, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("anthropic_messages", limit=60, period_seconds=60))],
 )
 async def anthropic_messages_endpoint(
     body: dict,
@@ -360,11 +355,7 @@ async def anthropic_messages_endpoint(
 
 @router.post(
     "/messages/count_tokens",
-    dependencies=[
-        Depends(
-            rate_limit("anthropic_count_tokens", limit=120, period_seconds=60)
-        )
-    ],
+    dependencies=[Depends(rate_limit("anthropic_count_tokens", limit=120, period_seconds=60))],
 )
 async def anthropic_count_tokens(
     body: dict,
@@ -405,9 +396,7 @@ async def anthropic_count_tokens(
 
 @router.post(
     "/responses",
-    dependencies=[
-        Depends(rate_limit("openai_responses", limit=60, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("openai_responses", limit=60, period_seconds=60))],
 )
 async def openai_responses_endpoint(
     body: dict,

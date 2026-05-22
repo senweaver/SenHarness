@@ -104,9 +104,7 @@ def _resolve_indicator(
         custom = cfg.get("text")
         if isinstance(custom, str) and custom.strip():
             return custom.strip()
-    return _DEFAULT_INDICATOR_TEXT_BY_KIND.get(
-        channel_kind, _INDICATOR_FALLBACK_TEXT
-    )
+    return _DEFAULT_INDICATOR_TEXT_BY_KIND.get(channel_kind, _INDICATOR_FALLBACK_TEXT)
 
 
 async def _safe_send_indicator(

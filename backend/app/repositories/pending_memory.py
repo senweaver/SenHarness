@@ -106,9 +106,7 @@ class PendingMemoryRepository(AsyncRepository[PendingMemory]):
             stmt = stmt.where(PendingMemory.created_at < older_than)
         return (await self.session.execute(stmt)).scalars().all()
 
-    async def workspace_status_counts(
-        self, *, workspace_id: uuid.UUID
-    ) -> dict[str, int]:
+    async def workspace_status_counts(self, *, workspace_id: uuid.UUID) -> dict[str, int]:
         """``{status: count}`` for the admin stats card. Soft-deleted
         rows are excluded so the dashboard tracks live queue depth.
         """
@@ -123,17 +121,11 @@ class PendingMemoryRepository(AsyncRepository[PendingMemory]):
         rows = (await self.session.execute(stmt)).all()
         out = {s.value: 0 for s in PendingMemoryStatus}
         for raw_status, count in rows:
-            key = (
-                raw_status.value
-                if hasattr(raw_status, "value")
-                else str(raw_status)
-            )
+            key = raw_status.value if hasattr(raw_status, "value") else str(raw_status)
             out[key] = int(count)
         return out
 
-    async def workspace_oldest_pending(
-        self, *, workspace_id: uuid.UUID
-    ) -> datetime | None:
+    async def workspace_oldest_pending(self, *, workspace_id: uuid.UUID) -> datetime | None:
         stmt = select(func.min(PendingMemory.created_at)).where(
             PendingMemory.workspace_id == workspace_id,
             PendingMemory.status == PendingMemoryStatus.PENDING,
@@ -178,18 +170,14 @@ class PendingMemoryRepository(AsyncRepository[PendingMemory]):
         await self.session.refresh(pending)
         return pending
 
-    async def mark_skipped(
-        self, *, pending: PendingMemory, reason: str
-    ) -> PendingMemory:
+    async def mark_skipped(self, *, pending: PendingMemory, reason: str) -> PendingMemory:
         pending.status = PendingMemoryStatus.SKIPPED
         pending.failure_reason = reason[:200]
         await self.session.flush([pending])
         await self.session.refresh(pending)
         return pending
 
-    async def mark_failed(
-        self, *, pending: PendingMemory, reason: str
-    ) -> PendingMemory:
+    async def mark_failed(self, *, pending: PendingMemory, reason: str) -> PendingMemory:
         pending.status = PendingMemoryStatus.FAILED
         pending.failure_reason = reason[:200]
         pending.failure_count = int(pending.failure_count or 0) + 1
@@ -197,9 +185,7 @@ class PendingMemoryRepository(AsyncRepository[PendingMemory]):
         await self.session.refresh(pending)
         return pending
 
-    async def reset_failed_to_pending(
-        self, *, pending: PendingMemory
-    ) -> PendingMemory:
+    async def reset_failed_to_pending(self, *, pending: PendingMemory) -> PendingMemory:
         """Flip a transient ``FAILED`` row back into the ``PENDING`` queue
         so the next promote pass picks it up again. ``failure_count`` is
         intentionally preserved so the ceiling check still kicks in.

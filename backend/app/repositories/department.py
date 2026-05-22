@@ -1,4 +1,5 @@
 """Department repository — workspace-scoped tree."""
+
 from __future__ import annotations
 
 import uuid

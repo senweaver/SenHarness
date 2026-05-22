@@ -9,21 +9,19 @@ from __future__ import annotations
 
 from app.db.models.approval import ApprovalResourceType
 from app.jobs.approval_ttl import (
+    _AUTO_EXECUTE_ON_EXPIRY,
     AUDIT_EXPIRED_AUTO_EXECUTED,
     AUDIT_EXPIRED_REJECTED,
     AUDIT_EXPIRING_REMINDER_SENT,
     AUDIT_TTL_FAILED_PERMANENT,
 )
-from app.jobs.approval_ttl import _AUTO_EXECUTE_ON_EXPIRY
 
 
 def test_auto_execute_set_only_contains_skill_pack_archive():
     """Roadmap TTL strategy table: only ``skill_pack_archive`` is an
     auto-archive on expiry; every other recognised verb must REJECT.
     """
-    assert _AUTO_EXECUTE_ON_EXPIRY == frozenset(
-        {ApprovalResourceType.SKILL_PACK_ARCHIVE.value}
-    )
+    assert frozenset({ApprovalResourceType.SKILL_PACK_ARCHIVE.value}) == _AUTO_EXECUTE_ON_EXPIRY
 
 
 def test_audit_action_constants_match_brief():

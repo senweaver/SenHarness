@@ -32,9 +32,7 @@ async def _make(db, workspace, identity, *, kind: str, name: str):
 
 async def test_reorder_persists_new_order(db_session, workspace, identity):
     p1 = await _make(db_session, workspace, identity, kind="openai", name="A")
-    p2 = await _make(
-        db_session, workspace, identity, kind="anthropic", name="B"
-    )
+    p2 = await _make(db_session, workspace, identity, kind="anthropic", name="B")
     p3 = await _make(db_session, workspace, identity, kind="deepseek", name="C")
 
     listed = await svc.list_providers(db_session, workspace_id=workspace.id)
@@ -56,9 +54,7 @@ async def test_reorder_ignores_unknown_ids(db_session, workspace, identity):
     import uuid
 
     p1 = await _make(db_session, workspace, identity, kind="openai", name="A")
-    p2 = await _make(
-        db_session, workspace, identity, kind="anthropic", name="B"
-    )
+    p2 = await _make(db_session, workspace, identity, kind="anthropic", name="B")
 
     stranger = uuid.uuid4()
     result = await svc.reorder_providers(

@@ -77,9 +77,7 @@ def _message_to_event(msg: Message) -> dict[str, Any]:
     if msg.original_turns_ref:
         payload["original_turns_ref"] = msg.original_turns_ref
     if msg.compressed_into_summary_id is not None:
-        payload["compressed_into_summary_id"] = str(
-            msg.compressed_into_summary_id
-        )
+        payload["compressed_into_summary_id"] = str(msg.compressed_into_summary_id)
     return payload
 
 
@@ -128,9 +126,7 @@ async def replay_session(
 
     # Evaluator verdicts live under ``metadata_json.eval`` (see evaluator.py).
     verdicts = [
-        (m.metadata_json or {}).get("eval")
-        for m in rows
-        if (m.metadata_json or {}).get("eval")
+        (m.metadata_json or {}).get("eval") for m in rows if (m.metadata_json or {}).get("eval")
     ]
 
     return {

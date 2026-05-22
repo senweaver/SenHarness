@@ -12,9 +12,9 @@ from app.security.keyring.base import Keyring
 
 @dataclass(slots=True)
 class Sealed:
-    ciphertext: bytes        # Fernet(DEK).encrypt(plaintext)
-    wrapped_dek: bytes       # KEK.encrypt(DEK)
-    kek_version: str         # points at the KEK that wrapped the DEK
+    ciphertext: bytes  # Fernet(DEK).encrypt(plaintext)
+    wrapped_dek: bytes  # KEK.encrypt(DEK)
+    kek_version: str  # points at the KEK that wrapped the DEK
 
 
 def seal(plaintext: bytes, *, keyring: Keyring) -> Sealed:

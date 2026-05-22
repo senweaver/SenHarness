@@ -111,9 +111,7 @@ class McpClientConfig:
                 raise McpConfigInvalid("stdio command parts must be non-empty strings")
         elif self.transport in (McpTransport.SSE, McpTransport.STREAMABLE_HTTP):
             if not self.url or not self.url.strip():
-                raise McpConfigInvalid(
-                    f"{self.transport.value} transport requires ``url``"
-                )
+                raise McpConfigInvalid(f"{self.transport.value} transport requires ``url``")
         else:  # pragma: no cover — StrEnum guards
             raise McpConfigInvalid(f"unknown transport {self.transport!r}")
         if self.keepalive_seconds < 5 or self.keepalive_seconds > 600:
@@ -170,7 +168,10 @@ def _import_sdk() -> Any:
     """
     try:
         from mcp.client.session import ClientSession  # type: ignore[import-not-found]
-        from mcp.client.stdio import StdioServerParameters, stdio_client  # type: ignore[import-not-found]
+        from mcp.client.stdio import (  # type: ignore[import-not-found]
+            StdioServerParameters,
+            stdio_client,
+        )
 
         try:
             from mcp.client.sse import sse_client  # type: ignore[import-not-found]
@@ -178,7 +179,9 @@ def _import_sdk() -> Any:
             sse_client = None  # type: ignore[assignment]
 
         try:
-            from mcp.client.streamable_http import streamable_http_client  # type: ignore[import-not-found]
+            from mcp.client.streamable_http import (
+                streamable_http_client,  # type: ignore[import-not-found]
+            )
         except ImportError:  # pragma: no cover — older SDK
             try:
                 from mcp.client.streamable_http import (  # type: ignore[import-not-found]
@@ -248,7 +251,7 @@ class McpClient:
         config: McpClientConfig,
         *,
         on_audit: Callable[[str, dict[str, Any]], Awaitable[None]] | None = None,
-    ) -> "McpClient":
+    ) -> McpClient:
         sdk = _import_sdk()
         client = cls(config, sdk=sdk, on_audit=on_audit)
         await client._open()
@@ -337,7 +340,7 @@ class McpClient:
             with contextlib.suppress(Exception):
                 await stack.aclose()
 
-    async def __aenter__(self) -> "McpClient":  # pragma: no cover - convenience
+    async def __aenter__(self) -> McpClient:  # pragma: no cover - convenience
         return self
 
     async def __aexit__(self, exc_type, exc, tb) -> None:  # pragma: no cover - convenience
@@ -405,9 +408,7 @@ class McpClient:
                             "timeout_seconds": budget,
                         },
                     )
-                    raise McpRequestTimeout(
-                        f"mcp tool {name!r} timed out after {budget}s"
-                    ) from e
+                    raise McpRequestTimeout(f"mcp tool {name!r} timed out after {budget}s") from e
             wrapped = _wrap_tool_result(raw)
         await self._emit_audit(
             "mcp.tool_called",
@@ -472,9 +473,7 @@ class McpClient:
                             {
                                 "server_slug": self._config.server_slug,
                                 "misses": misses,
-                                "since_last_pong_s": int(
-                                    time.monotonic() - self._last_pong_at
-                                ),
+                                "since_last_pong_s": int(time.monotonic() - self._last_pong_at),
                             },
                         )
                         with contextlib.suppress(Exception):

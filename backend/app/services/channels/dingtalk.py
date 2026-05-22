@@ -203,9 +203,7 @@ class DingTalkProvider(ChannelProvider):
         try:
             ts_ms = int(timestamp)
         except ValueError as e:
-            raise SignatureInvalid(
-                "dingtalk.bad_timestamp", f"timestamp not an int: {e}"
-            ) from e
+            raise SignatureInvalid("dingtalk.bad_timestamp", f"timestamp not an int: {e}") from e
 
         now_ms = int(time.time() * 1000)
         if abs(now_ms - ts_ms) > DINGTALK_TIMESTAMP_TOLERANCE_MS:
@@ -246,11 +244,7 @@ class DingTalkProvider(ChannelProvider):
         if not user_text:
             return None
 
-        sender = (
-            payload.get("senderNick")
-            or payload.get("senderStaffId")
-            or "unknown"
-        )
+        sender = payload.get("senderNick") or payload.get("senderStaffId") or "unknown"
         thread_key = build_thread_key(
             conversation_type=payload.get("conversationType"),
             conversation_id=payload.get("conversationId"),
@@ -368,9 +362,7 @@ async def _fetch_openapi_access_token(
         return None
 
     if resp.status_code >= 300:
-        log.warning(
-            "dingtalk accessToken HTTP %s: %s", resp.status_code, resp.text[:200]
-        )
+        log.warning("dingtalk accessToken HTTP %s: %s", resp.status_code, resp.text[:200])
         return None
 
     data = resp.json() if resp.content else {}
@@ -423,9 +415,7 @@ async def _send_via_openapi(
 
     target_kind, target_id = parsed
     if not target_id:
-        log.warning(
-            "dingtalk openapi: thread_key %r has empty target id", thread_key
-        )
+        log.warning("dingtalk openapi: thread_key %r has empty target id", thread_key)
         return
 
     token = await _fetch_openapi_access_token(client_id, client_secret)

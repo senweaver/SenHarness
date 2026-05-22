@@ -58,9 +58,7 @@ async def _seed(
     return row
 
 
-async def test_low_confidence_unconfirmed_not_injected(
-    db_session, workspace, identity
-):
+async def test_low_confidence_unconfirmed_not_injected(db_session, workspace, identity):
     await _seed(
         db_session,
         workspace,
@@ -78,9 +76,7 @@ async def test_low_confidence_unconfirmed_not_injected(
     assert rendered == ""
 
 
-async def test_low_confidence_confirmed_is_injected(
-    db_session, workspace, identity
-):
+async def test_low_confidence_confirmed_is_injected(db_session, workspace, identity):
     await _seed(
         db_session,
         workspace,
@@ -100,9 +96,7 @@ async def test_low_confidence_confirmed_is_injected(
     assert "[✓]" in rendered
 
 
-async def test_high_confidence_unconfirmed_is_injected(
-    db_session, workspace, identity
-):
+async def test_high_confidence_unconfirmed_is_injected(db_session, workspace, identity):
     await _seed(
         db_session,
         workspace,
@@ -120,9 +114,7 @@ async def test_high_confidence_unconfirmed_is_injected(
     assert "domain_expertise" in rendered
 
 
-async def test_rejected_never_injected_even_at_high_confidence(
-    db_session, workspace, identity
-):
+async def test_rejected_never_injected_even_at_high_confidence(db_session, workspace, identity):
     await _seed(
         db_session,
         workspace,
@@ -141,9 +133,7 @@ async def test_rejected_never_injected_even_at_high_confidence(
     assert "tone_preference" not in rendered
 
 
-async def test_confirmed_beats_unconfirmed_for_same_dimension(
-    db_session, workspace, identity
-):
+async def test_confirmed_beats_unconfirmed_for_same_dimension(db_session, workspace, identity):
     older_confirmed = await _seed(
         db_session,
         workspace,
@@ -187,9 +177,7 @@ async def test_one_line_per_dimension(db_session, workspace, identity):
         workspace_id=workspace.id,
         identity_id=identity.id,
     )
-    bullet_lines = [
-        line for line in rendered.splitlines() if line.startswith("- ")
-    ]
+    bullet_lines = [line for line in rendered.splitlines() if line.startswith("- ")]
     assert len(bullet_lines) == len(list(UserProfileDimension))
 
 
@@ -243,9 +231,7 @@ async def test_superseded_row_skipped(db_session, workspace, identity):
     assert "Old goal" not in rendered
 
 
-async def test_empty_state_returns_empty_string(
-    db_session, workspace, identity
-):
+async def test_empty_state_returns_empty_string(db_session, workspace, identity):
     rendered = await svc.render_facts_for_injection(
         db_session,
         workspace_id=workspace.id,

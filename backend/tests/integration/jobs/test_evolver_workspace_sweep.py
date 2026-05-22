@@ -42,7 +42,9 @@ async def test_sweep_invokes_dispatcher_per_workspace(async_client, monkeypatch)
 
     seen: list[uuid.UUID] = []
 
-    async def _stub_dispatch(db, *, workspace_id, invocation_kind, actor_identity_id, bypass_min_artifacts):
+    async def _stub_dispatch(
+        db, *, workspace_id, invocation_kind, actor_identity_id, bypass_min_artifacts
+    ):
         seen.append(workspace_id)
         return WorkflowExecutionResult(
             workspace_id=workspace_id,
@@ -72,9 +74,11 @@ async def test_sweep_invokes_dispatcher_per_workspace(async_client, monkeypatch)
 
 async def test_sweep_isolates_per_workspace_failure(async_client, monkeypatch):
     ws_a = uuid.UUID(await _bootstrap_workspace(async_client))
-    ws_b = uuid.UUID(await _bootstrap_workspace(async_client))
+    _ws_b = uuid.UUID(await _bootstrap_workspace(async_client))
 
-    async def _stub_dispatch(db, *, workspace_id, invocation_kind, actor_identity_id, bypass_min_artifacts):
+    async def _stub_dispatch(
+        db, *, workspace_id, invocation_kind, actor_identity_id, bypass_min_artifacts
+    ):
         if workspace_id == ws_a:
             raise RuntimeError("simulated dispatcher crash")
         return WorkflowExecutionResult(
@@ -98,18 +102,23 @@ async def test_sweep_isolates_per_workspace_failure(async_client, monkeypatch):
     assert summary["proposals_created"] >= 2
 
     # Audit row for the failure path lands.
-    from app.db.session import get_session_factory
     from sqlalchemy import select
+
     from app.db.models.audit import AuditEvent
+    from app.db.session import get_session_factory
 
     factory = get_session_factory()
     async with factory() as db:
         rows = (
-            await db.execute(
-                select(AuditEvent).where(
-                    AuditEvent.workspace_id == ws_a,
-                    AuditEvent.action == wf.AUDIT_FAILED,
+            (
+                await db.execute(
+                    select(AuditEvent).where(
+                        AuditEvent.workspace_id == ws_a,
+                        AuditEvent.action == wf.AUDIT_FAILED,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
     assert len(rows) >= 1

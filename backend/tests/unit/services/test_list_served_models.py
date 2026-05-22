@@ -30,9 +30,7 @@ async def _make_agent(db_session, *, workspace, served: str | None) -> None:
 async def test_empty_workspace_returns_empty_list(db_session, workspace):
     from app.services.served_model import list_served_models_for_workspace
 
-    out = await list_served_models_for_workspace(
-        db_session, workspace_id=workspace.id
-    )
+    out = await list_served_models_for_workspace(db_session, workspace_id=workspace.id)
     assert out == []
 
 
@@ -69,9 +67,7 @@ async def test_union_of_agent_field_and_alias_map(db_session, workspace):
     )
     await db_session.flush()
 
-    out = await list_served_models_for_workspace(
-        db_session, workspace_id=workspace.id
-    )
+    out = await list_served_models_for_workspace(db_session, workspace_id=workspace.id)
     served_names = [e.served_name for e in out]
 
     # 5 unique agent names + 2 unique alias-only keys = 7
@@ -96,9 +92,7 @@ async def test_union_of_agent_field_and_alias_map(db_session, workspace):
     assert by_name["ws-mini"].agent_id is not None
 
 
-async def test_dedupes_multiple_agents_sharing_served_name(
-    db_session, workspace
-):
+async def test_dedupes_multiple_agents_sharing_served_name(db_session, workspace):
     """Two agents with the same ``served_model_name`` collapse to one row."""
     from app.services.served_model import list_served_models_for_workspace
 
@@ -106,9 +100,7 @@ async def test_dedupes_multiple_agents_sharing_served_name(
     await _make_agent(db_session, workspace=workspace, served="ws-fast")
     await _make_agent(db_session, workspace=workspace, served="ws-thinking")
 
-    out = await list_served_models_for_workspace(
-        db_session, workspace_id=workspace.id
-    )
+    out = await list_served_models_for_workspace(db_session, workspace_id=workspace.id)
     assert sorted(e.served_name for e in out) == ["ws-fast", "ws-thinking"]
 
 
@@ -133,7 +125,5 @@ async def test_excludes_soft_deleted_agents(db_session, workspace):
     a.deleted_at = datetime.now(UTC).replace(tzinfo=None)
     await db_session.flush()
 
-    out = await list_served_models_for_workspace(
-        db_session, workspace_id=workspace.id
-    )
+    out = await list_served_models_for_workspace(db_session, workspace_id=workspace.id)
     assert "ws-ghost" not in [e.served_name for e in out]

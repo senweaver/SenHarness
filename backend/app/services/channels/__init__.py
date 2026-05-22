@@ -145,8 +145,7 @@ def register_provider_from_plugin(kind: str, provider: ChannelProvider) -> None:
     """
     if not isinstance(provider, ChannelProvider):
         raise TypeError(
-            f"register_provider_from_plugin expected ChannelProvider; got "
-            f"{type(provider).__name__}"
+            f"register_provider_from_plugin expected ChannelProvider; got {type(provider).__name__}"
         )
     if provider.kind != kind:
         raise ValueError(
@@ -154,9 +153,7 @@ def register_provider_from_plugin(kind: str, provider: ChannelProvider) -> None:
             f"{provider.kind!r}, register_channel_kind argument was {kind!r}"
         )
     if kind in _BUILTIN_KINDS:
-        raise ValueError(
-            f"plugin cannot override builtin channel kind: {kind!r}"
-        )
+        raise ValueError(f"plugin cannot override builtin channel kind: {kind!r}")
     if kind in _PLUGIN_REGISTERED_KINDS:
         raise ValueError(
             f"plugin channel kind {kind!r} already registered; reload the "
@@ -172,17 +169,17 @@ def is_plugin_kind(kind: str) -> bool:
 
 
 # ── Bundled providers — importing them runs register_provider(). ──
-from app.services.channels.dingtalk import DingTalkProvider  # noqa: E402
-from app.services.channels.discord import DiscordProvider  # noqa: E402
-from app.services.channels.feishu import FeishuProvider  # noqa: E402
-from app.services.channels.generic import WebhookProvider  # noqa: E402
-from app.services.channels.lark import LarkProvider  # noqa: E402
-from app.services.channels.qq import QQBotProvider  # noqa: E402
-from app.services.channels.slack import SlackProvider  # noqa: E402
-from app.services.channels.teams import TeamsProvider  # noqa: E402
-from app.services.channels.telegram import TelegramProvider  # noqa: E402
-from app.services.channels.wechat import WeChatProvider  # noqa: E402
-from app.services.channels.wecom import WeComProvider  # noqa: E402
+from app.services.channels.dingtalk import DingTalkProvider
+from app.services.channels.discord import DiscordProvider
+from app.services.channels.feishu import FeishuProvider
+from app.services.channels.generic import WebhookProvider
+from app.services.channels.lark import LarkProvider
+from app.services.channels.qq import QQBotProvider
+from app.services.channels.slack import SlackProvider
+from app.services.channels.teams import TeamsProvider
+from app.services.channels.telegram import TelegramProvider
+from app.services.channels.wechat import WeChatProvider
+from app.services.channels.wecom import WeComProvider
 
 register_provider(SlackProvider())
 register_provider(FeishuProvider())

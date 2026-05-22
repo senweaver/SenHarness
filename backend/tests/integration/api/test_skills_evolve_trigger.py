@@ -13,8 +13,8 @@ import pytest
 
 from app.core.security import create_access_token
 from app.db.models.identity import PlatformRole
-from app.db.models.role import BuiltinRole
 from app.db.models.membership import Membership, MembershipStatus
+from app.db.models.role import BuiltinRole
 from app.services import evolver_workflow as wf
 
 pytestmark = pytest.mark.asyncio
@@ -57,16 +57,16 @@ async def test_trigger_happy_path_returns_result(
 
     captured: dict[str, object] = {}
 
-    async def _stub_evolve(db, *, workspace_id, invocation_kind, actor_identity_id, bypass_min_artifacts):
+    async def _stub_evolve(
+        db, *, workspace_id, invocation_kind, actor_identity_id, bypass_min_artifacts
+    ):
         captured["workspace_id"] = workspace_id
         captured["invocation_kind"] = invocation_kind
         captured["actor_identity_id"] = actor_identity_id
         captured["bypass_min_artifacts"] = bypass_min_artifacts
         return _stub_result(workspace_id)
 
-    monkeypatch.setattr(
-        "app.api.v1.skills_evolve.evolve_workspace_skills", _stub_evolve
-    )
+    monkeypatch.setattr("app.api.v1.skills_evolve.evolve_workspace_skills", _stub_evolve)
 
     headers = _bearer(identity.id, workspace_id=workspace.id)
     resp = await async_client.post(
@@ -87,9 +87,7 @@ async def test_trigger_happy_path_returns_result(
     assert captured["actor_identity_id"] == identity.id
 
 
-async def test_trigger_member_role_returns_403(
-    async_client, db_session, workspace, monkeypatch
-):
+async def test_trigger_member_role_returns_403(async_client, db_session, workspace, monkeypatch):
     """A non-admin member must not be able to fire the trigger."""
     from app.services import auth as auth_svc
 
@@ -119,9 +117,7 @@ async def test_trigger_member_role_returns_403(
         invoked = True
         return _stub_result(workspace.id)
 
-    monkeypatch.setattr(
-        "app.api.v1.skills_evolve.evolve_workspace_skills", _stub_evolve
-    )
+    monkeypatch.setattr("app.api.v1.skills_evolve.evolve_workspace_skills", _stub_evolve)
 
     headers = _bearer(member_identity.id, workspace_id=workspace.id)
     resp = await async_client.post(
@@ -133,9 +129,7 @@ async def test_trigger_member_role_returns_403(
     assert invoked is False
 
 
-async def test_trigger_platform_admin_bypass(
-    async_client, db_session, workspace, monkeypatch
-):
+async def test_trigger_platform_admin_bypass(async_client, db_session, workspace, monkeypatch):
     """Platform admins can fire the trigger without a membership row."""
     from app.services import auth as auth_svc
 
@@ -155,9 +149,7 @@ async def test_trigger_platform_admin_bypass(
     async def _stub_evolve(db, *, workspace_id, **_kwargs):
         return _stub_result(workspace_id)
 
-    monkeypatch.setattr(
-        "app.api.v1.skills_evolve.evolve_workspace_skills", _stub_evolve
-    )
+    monkeypatch.setattr("app.api.v1.skills_evolve.evolve_workspace_skills", _stub_evolve)
 
     headers = _bearer(admin_identity.id, workspace_id=workspace.id)
     resp = await async_client.post(
@@ -183,9 +175,7 @@ async def test_trigger_rate_limited_after_two_calls(
         call_count += 1
         return _stub_result(workspace_id)
 
-    monkeypatch.setattr(
-        "app.api.v1.skills_evolve.evolve_workspace_skills", _stub_evolve
-    )
+    monkeypatch.setattr("app.api.v1.skills_evolve.evolve_workspace_skills", _stub_evolve)
 
     headers = _bearer(identity.id, workspace_id=workspace.id)
     statuses: list[int] = []

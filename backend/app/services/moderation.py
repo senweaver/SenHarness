@@ -30,9 +30,7 @@ async def submit_report(
     if agent is None or agent.deleted_at is not None:
         raise NotFound("agent_not_found", code="agent.not_found")
     if agent.visibility != AgentVisibility.PUBLIC:
-        raise PermissionDenied(
-            "agent_not_public", code="agent.not_public_for_report"
-        )
+        raise PermissionDenied("agent_not_public", code="agent.not_public_for_report")
 
     # Soft de-dup: if the same reporter filed a report in the last 24h for the
     # same agent, reject the second one so we don't clog the queue.
@@ -73,8 +71,6 @@ async def decide_report(
     if decision == ReportStatus.REMOVED:
         agent = await AgentRepository(session).get(updated.agent_id)
         if agent is not None and agent.visibility == AgentVisibility.PUBLIC:
-            await AgentRepository(session).update(
-                agent, visibility=AgentVisibility.PRIVATE
-            )
+            await AgentRepository(session).update(agent, visibility=AgentVisibility.PRIVATE)
 
     return updated

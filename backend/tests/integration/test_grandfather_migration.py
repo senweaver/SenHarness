@@ -111,9 +111,7 @@ async def test_grandfather_sql_sets_override_for_power_user(async_client):
         )
         await db.commit()
 
-        ident = (
-            await db.execute(select(Identity).where(Identity.id == identity_id))
-        ).scalar_one()
+        ident = (await db.execute(select(Identity).where(Identity.id == identity_id))).scalar_one()
         assert ident.workspace_quota_override == identity_counts[identity_id]
 
     # Cleanup: hard-delete the synthesised workspaces so they don't

@@ -15,9 +15,7 @@ pytestmark = pytest.mark.asyncio
 
 async def test_get_section_returns_default_when_db_empty(db_session):
     ps.invalidate_local()
-    value = await ps.get_section(
-        db_session, section=PlatformSettingsSection.GENERAL
-    )
+    value = await ps.get_section(db_session, section=PlatformSettingsSection.GENERAL)
     assert value.site_name
 
 
@@ -36,9 +34,7 @@ async def test_update_section_round_trips(db_session, identity):
     )
     await db_session.commit()
     ps.invalidate_local()
-    fresh = await ps.get_section(
-        db_session, section=PlatformSettingsSection.GENERAL
-    )
+    fresh = await ps.get_section(db_session, section=PlatformSettingsSection.GENERAL)
     assert fresh.site_name == "Acme"
     assert fresh.primary_color_hex == "#112233"
 
@@ -105,9 +101,7 @@ async def test_reset_section_drops_db_row(db_session, identity):
     assert meta.db_present is False
 
 
-async def test_auth_registration_round_trips_across_legacy_keys(
-    db_session, identity
-):
+async def test_auth_registration_round_trips_across_legacy_keys(db_session, identity):
     """The aggregated section must read/write four legacy keys."""
     ps.invalidate_local()
     await ps.update_section(
@@ -123,9 +117,7 @@ async def test_auth_registration_round_trips_across_legacy_keys(
     )
     await db_session.commit()
     ps.invalidate_local()
-    value = await ps.get_section(
-        db_session, section=PlatformSettingsSection.AUTH_REGISTRATION
-    )
+    value = await ps.get_section(db_session, section=PlatformSettingsSection.AUTH_REGISTRATION)
     assert value.mode == "open_invite_only"
     assert value.require_email_verification is True
     assert value.rate_limit_per_minute == 7
@@ -152,9 +144,7 @@ async def test_unknown_section_raises(db_session, identity):
         await ps.get_section(db_session, section="not-a-real-section")
 
 
-async def test_bootstrap_skips_already_populated_rows(
-    db_session, identity, monkeypatch
-):
+async def test_bootstrap_skips_already_populated_rows(db_session, identity, monkeypatch):
     """Bootstrap must NOT overwrite a value the admin already set."""
     monkeypatch.setenv("SMTP_HOST", "smtp.test")
     ps.invalidate_local()
@@ -174,8 +164,6 @@ async def test_bootstrap_skips_already_populated_rows(
     )
     await db_session.commit()
     await ps.bootstrap_from_env_if_empty(db_session)
-    fresh = await ps.get_section(
-        db_session, section=PlatformSettingsSection.EMAIL_SMTP
-    )
+    fresh = await ps.get_section(db_session, section=PlatformSettingsSection.EMAIL_SMTP)
     assert fresh.host == "operator.set"
     assert fresh.port == 25

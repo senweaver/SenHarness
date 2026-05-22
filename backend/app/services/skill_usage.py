@@ -229,9 +229,7 @@ async def update_pack_stats_from_usage(
     if pack is None:
         return None
 
-    stats = await aggregate_pack_stats(
-        db, workspace_id=workspace_id, pack_id=pack_id, since=since
-    )
+    stats = await aggregate_pack_stats(db, workspace_id=workspace_id, pack_id=pack_id, since=since)
     last_used_at: datetime | None = stats["last_used_at"]
     contribution_avg: float | None = stats["contribution_avg"]
 
@@ -251,14 +249,10 @@ async def update_pack_stats_from_usage(
         workspace_id=workspace_id,
         resource_type="skill_pack",
         resource_id=pack_id,
-        summary=(
-            f"rolled up {stats['use_count']} usage rows for pack {pack.slug!r}"
-        ),
+        summary=(f"rolled up {stats['use_count']} usage rows for pack {pack.slug!r}"),
         metadata={
             "use_count": stats["use_count"],
-            "last_used_at": (
-                last_used_at.isoformat() if last_used_at is not None else None
-            ),
+            "last_used_at": (last_used_at.isoformat() if last_used_at is not None else None),
             "contribution_avg": contribution_avg,
             "by_kind": stats["by_kind"],
             "since": since.isoformat(),

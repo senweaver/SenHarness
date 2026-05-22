@@ -133,9 +133,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # X-headers: universal, no tradeoffs
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         resp.headers.setdefault("X-Frame-Options", "DENY")
-        resp.headers.setdefault(
-            "Referrer-Policy", "strict-origin-when-cross-origin"
-        )
+        resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         resp.headers.setdefault("Permissions-Policy", _PERMISSIONS_POLICY)
 
         # CSP: tight default for JSON responses. The /docs and /redoc pages
@@ -146,10 +144,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         # HSTS: only in production + TLS deployments. Dev http://localhost
         # must not have HSTS or Safari caches the forced-https for months.
-        if (
-            str(settings.APP_ENV).lower() == "production"
-            and settings.JWT_REFRESH_COOKIE_SECURE
-        ):
+        if str(settings.APP_ENV).lower() == "production" and settings.JWT_REFRESH_COOKIE_SECURE:
             resp.headers.setdefault("Strict-Transport-Security", _HSTS)
 
         # Cross-origin isolation headers. COOP protects window.opener access
@@ -160,8 +155,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         resp.headers.setdefault("Cross-Origin-Resource-Policy", "same-site")
         # COEP would break OAuth popup flows where the browser loads the IdP
         # response into the opener window, so we use the relaxed variant.
-        resp.headers.setdefault(
-            "Cross-Origin-Embedder-Policy", "credentialless"
-        )
+        resp.headers.setdefault("Cross-Origin-Embedder-Policy", "credentialless")
 
         return resp

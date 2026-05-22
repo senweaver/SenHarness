@@ -18,9 +18,7 @@ async def _enable_verification():
 
     factory = get_session_factory()
     async with factory() as db:
-        await set_system_setting(
-            db, SystemSettingKey.AUTH_REQUIRE_EMAIL_VERIFICATION, True
-        )
+        await set_system_setting(db, SystemSettingKey.AUTH_REQUIRE_EMAIL_VERIFICATION, True)
         await db.commit()
 
 
@@ -33,9 +31,7 @@ async def _reset_verification():
 
     factory = get_session_factory()
     async with factory() as db:
-        await set_system_setting(
-            db, SystemSettingKey.AUTH_REQUIRE_EMAIL_VERIFICATION, False
-        )
+        await set_system_setting(db, SystemSettingKey.AUTH_REQUIRE_EMAIL_VERIFICATION, False)
         await db.commit()
 
 
@@ -105,9 +101,7 @@ async def test_verify_email_happy_then_login(async_client):
 async def test_verify_email_invalid_token_401(async_client):
     await _enable_verification()
     try:
-        r = await async_client.post(
-            "/api/v1/auth/verify-email/" + uuid.uuid4().hex
-        )
+        r = await async_client.post("/api/v1/auth/verify-email/" + uuid.uuid4().hex)
         assert r.status_code == 401, r.text
         assert r.json()["code"] == "auth.verify_token_invalid"
     finally:

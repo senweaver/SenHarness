@@ -54,9 +54,7 @@ async def _register(async_client, *, become_admin: bool) -> dict[str, str]:
             )
             await db.commit()
 
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     return {
         "identity_id": str(identity_id),
         "headers": {"Authorization": f"Bearer {r.json()['access_token']}"},
@@ -66,15 +64,11 @@ async def _register(async_client, *, become_admin: bool) -> dict[str, str]:
 async def test_list_admin_only(async_client):
     await _relax_rate_window()
     user = await _register(async_client, become_admin=False)
-    r = await async_client.get(
-        "/api/v1/admin/workspace-quotas", headers=user["headers"]
-    )
+    r = await async_client.get("/api/v1/admin/workspace-quotas", headers=user["headers"])
     assert r.status_code == 403
 
     admin = await _register(async_client, become_admin=True)
-    r = await async_client.get(
-        "/api/v1/admin/workspace-quotas", headers=admin["headers"]
-    )
+    r = await async_client.get("/api/v1/admin/workspace-quotas", headers=admin["headers"])
     assert r.status_code == 200
     body = r.json()
     assert "rows" in body
@@ -126,9 +120,7 @@ async def test_set_override_changes_effective_limit(async_client):
     assert r.json()["workspace_quota_override"] == 10
 
     # User sees the bump immediately.
-    r = await async_client.get(
-        "/api/v1/me/workspace-quota", headers=user["headers"]
-    )
+    r = await async_client.get("/api/v1/me/workspace-quota", headers=user["headers"])
     assert r.status_code == 200
     assert r.json()["limit"] == 10
     assert r.json()["override_active"] is True

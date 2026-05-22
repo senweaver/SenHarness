@@ -49,9 +49,7 @@ def _require_workspace(workspace_id: uuid.UUID | None) -> uuid.UUID:
     "/sessions/{session_id}/artifacts",
     response_model=list[SessionArtifactRead],
     status_code=status.HTTP_200_OK,
-    dependencies=[
-        Depends(rate_limit("session_artifact_read", limit=120, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("session_artifact_read", limit=120, period_seconds=60))],
     tags=["sessions"],
 )
 async def list_session_artifacts(
@@ -63,9 +61,7 @@ async def list_session_artifacts(
     limit: int = Query(50, ge=1, le=200),
 ) -> list[SessionArtifactRead]:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     await session_svc.get_session_or_404(db, session_id, workspace_id=ws_id)
     rows = await artifact_svc.list_artifacts_for_session(
         db,
@@ -82,9 +78,7 @@ async def list_session_artifacts(
     "/artifacts/{artifact_id}",
     response_model=SessionArtifactRead,
     status_code=status.HTTP_200_OK,
-    dependencies=[
-        Depends(rate_limit("session_artifact_read", limit=120, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("session_artifact_read", limit=120, period_seconds=60))],
     tags=["sessions"],
 )
 async def get_session_artifact(
@@ -94,12 +88,8 @@ async def get_session_artifact(
     workspace_id: CurrentWorkspaceId,
 ) -> SessionArtifactRead:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
-    row = await artifact_svc.get_artifact_by_id(
-        db, workspace_id=ws_id, artifact_id=artifact_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
+    row = await artifact_svc.get_artifact_by_id(db, workspace_id=ws_id, artifact_id=artifact_id)
     return SessionArtifactRead.model_validate(row)
 
 
@@ -108,9 +98,7 @@ async def get_session_artifact(
     "/workspaces/{workspace_id}/artifacts/recent",
     response_model=list[SessionArtifactRead],
     status_code=status.HTTP_200_OK,
-    dependencies=[
-        Depends(rate_limit("artifact_admin_read", limit=60, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("artifact_admin_read", limit=60, period_seconds=60))],
     tags=["workspaces"],
 )
 async def list_recent_workspace_artifacts(
@@ -131,9 +119,7 @@ async def list_recent_workspace_artifacts(
     active = _require_workspace(active_workspace_id)
     if active != workspace_id:
         raise NotFound("workspace not found", code="workspace.not_found")
-    await ws_svc.ensure_admin(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_admin(db, workspace_id=workspace_id, identity_id=identity_id)
     since = datetime.utcnow() - timedelta(hours=int(since_hours))
     rows = await artifact_svc.list_recent_for_workspace(
         db,
@@ -150,9 +136,7 @@ async def list_recent_workspace_artifacts(
     "/artifacts/{artifact_id}/verdict",
     response_model=JudgeVerdictRead,
     status_code=status.HTTP_200_OK,
-    dependencies=[
-        Depends(rate_limit("artifact_verdict_read", limit=120, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("artifact_verdict_read", limit=120, period_seconds=60))],
     tags=["sessions"],
 )
 async def get_artifact_verdict(
@@ -162,22 +146,14 @@ async def get_artifact_verdict(
     workspace_id: CurrentWorkspaceId,
 ) -> JudgeVerdictRead:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     # Re-use the existing artifact reader so cross-workspace probes
     # produce the same NotFound shape rather than leaking via verdict
     # absence.
-    await artifact_svc.get_artifact_by_id(
-        db, workspace_id=ws_id, artifact_id=artifact_id
-    )
-    verdict = await judge_svc.get_verdict(
-        db, workspace_id=ws_id, artifact_id=artifact_id
-    )
+    await artifact_svc.get_artifact_by_id(db, workspace_id=ws_id, artifact_id=artifact_id)
+    verdict = await judge_svc.get_verdict(db, workspace_id=ws_id, artifact_id=artifact_id)
     if verdict is None:
-        raise NotFound(
-            "verdict not found", code="judge.verdict_not_found"
-        )
+        raise NotFound("verdict not found", code="judge.verdict_not_found")
     return JudgeVerdictRead.model_validate(verdict)
 
 
@@ -185,9 +161,7 @@ async def get_artifact_verdict(
     "/artifacts/{artifact_id}/rejudge",
     response_model=SessionArtifactRead,
     status_code=status.HTTP_202_ACCEPTED,
-    dependencies=[
-        Depends(rate_limit("artifact_rejudge", limit=5, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("artifact_rejudge", limit=5, period_seconds=60))],
     tags=["sessions"],
 )
 async def rejudge_artifact(
@@ -198,9 +172,7 @@ async def rejudge_artifact(
     workspace_id: CurrentWorkspaceId,
 ) -> SessionArtifactRead:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_admin(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_admin(db, workspace_id=ws_id, identity_id=identity_id)
     artifact = await judge_svc.request_rejudge(
         db,
         workspace_id=ws_id,
@@ -247,9 +219,7 @@ async def rejudge_artifact(
     "/sessions/{session_id}/artifacts/judge-summary",
     response_model=JudgeSessionSummary,
     status_code=status.HTTP_200_OK,
-    dependencies=[
-        Depends(rate_limit("artifact_verdict_read", limit=120, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("artifact_verdict_read", limit=120, period_seconds=60))],
     tags=["sessions"],
 )
 async def get_session_judge_summary(
@@ -259,11 +229,7 @@ async def get_session_judge_summary(
     workspace_id: CurrentWorkspaceId,
 ) -> JudgeSessionSummary:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     await session_svc.get_session_or_404(db, session_id, workspace_id=ws_id)
-    counts = await judge_svc.session_summary(
-        db, workspace_id=ws_id, session_id=session_id
-    )
+    counts = await judge_svc.session_summary(db, workspace_id=ws_id, session_id=session_id)
     return JudgeSessionSummary(session_id=session_id, **counts)

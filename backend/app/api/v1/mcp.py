@@ -67,13 +67,11 @@ async def _absorb_oauth_config(
         return out
     if oauth.client_secret:
         secret_name = f"mcp.oauth_secret.{server_slug}"
-        existing = await vault_svc._lookup_workspace_secret(  # noqa: SLF001
+        existing = await vault_svc._lookup_workspace_secret(
             db, workspace_id=workspace_id, name=secret_name
         )
         if existing is not None:
-            await vault_svc.replace_secret(
-                db, item=existing, plaintext=oauth.client_secret
-            )
+            await vault_svc.replace_secret(db, item=existing, plaintext=oauth.client_secret)
         else:
             await vault_svc.create_secret(
                 db,
@@ -87,6 +85,7 @@ async def _absorb_oauth_config(
         out["client_secret_ref"] = f"${{vault://workspace/{secret_name}}}"
         out.pop("client_secret", None)
     return out
+
 
 router = APIRouter(prefix="/mcp", tags=["mcp"])
 
@@ -266,9 +265,7 @@ async def list_server_tools(
     """
     ws_id = _require_workspace(workspace_id)
     await _require_admin(db, workspace_id=ws_id, identity_id=identity_id)
-    server = await mcp_svc.get_server_or_404(
-        db, server_id=server_id, workspace_id=ws_id
-    )
+    server = await mcp_svc.get_server_or_404(db, server_id=server_id, workspace_id=ws_id)
     try:
         tools = await mcp_svc.list_tools_uniform(
             db,

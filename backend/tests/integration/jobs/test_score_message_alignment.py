@@ -28,9 +28,7 @@ async def _bootstrap_with_goal(async_client) -> dict[str, str]:
         json={"email": email, "name": "Judge Tester", "password": password},
     )
     assert r.status_code == 201, r.text
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     r = await async_client.post(
@@ -42,9 +40,7 @@ async def _bootstrap_with_goal(async_client) -> dict[str, str]:
     ws_id = r.json()["id"]
     headers["X-Workspace-Id"] = ws_id
 
-    r = await async_client.post(
-        "/api/v1/sessions", headers=headers, json={"kind": "p2p"}
-    )
+    r = await async_client.post("/api/v1/sessions", headers=headers, json={"kind": "p2p"})
     assert r.status_code in (200, 201)
     session_id = r.json()["id"]
 
@@ -95,9 +91,7 @@ async def test_aux_high_score_persists_unflagged(async_client):
         patch.object(judge_mod, "get_aux_model", fake_get_aux_model),
         patch.object(judge_mod, "call_aux_chat", fake_call_aux_chat),
     ):
-        result = await score_message_alignment(
-            {}, ctx_ids["goal_id"], ctx_ids["message_id"]
-        )
+        result = await score_message_alignment({}, ctx_ids["goal_id"], ctx_ids["message_id"])
 
     assert result["status"] == "scored"
     assert result["score"] == pytest.approx(0.92)
@@ -130,9 +124,7 @@ async def test_aux_low_score_flags_and_audits(async_client):
         patch.object(judge_mod, "get_aux_model", fake_get_aux_model),
         patch.object(judge_mod, "call_aux_chat", fake_call_aux_chat),
     ):
-        result = await score_message_alignment(
-            {}, ctx_ids["goal_id"], ctx_ids["message_id"]
-        )
+        result = await score_message_alignment({}, ctx_ids["goal_id"], ctx_ids["message_id"])
     assert result["flagged"] is True
 
     # Verify the audit breadcrumb landed for low-alignment.
@@ -156,9 +148,7 @@ async def test_aux_low_score_flags_and_audits(async_client):
         assert len(rows) >= 1
 
 
-async def test_three_consecutive_failures_trip_breaker(
-    async_client, redis_available
-):
+async def test_three_consecutive_failures_trip_breaker(async_client, redis_available):
     if not redis_available:
         pytest.skip("Redis required for breaker counter")
 
@@ -182,9 +172,7 @@ async def test_three_consecutive_failures_trip_breaker(
             await score_message_alignment({}, ctx_ids["goal_id"], ctx_ids["message_id"])
         with pytest.raises(RuntimeError):
             await score_message_alignment({}, ctx_ids["goal_id"], ctx_ids["message_id"])
-        result = await score_message_alignment(
-            {}, ctx_ids["goal_id"], ctx_ids["message_id"]
-        )
+        result = await score_message_alignment({}, ctx_ids["goal_id"], ctx_ids["message_id"])
         assert result["status"] == "scored"
         assert result["degraded"] is True
         assert result["judged_by_model"] == "heuristic:breaker"
@@ -219,7 +207,5 @@ async def test_unknown_goal_returns_skipped(async_client):
         return _aux_config()
 
     with patch.object(judge_mod, "get_aux_model", fake_get_aux_model):
-        result = await score_message_alignment(
-            {}, str(uuid.uuid4()), str(uuid.uuid4())
-        )
+        result = await score_message_alignment({}, str(uuid.uuid4()), str(uuid.uuid4()))
     assert result["status"] == "skipped_goal_missing"

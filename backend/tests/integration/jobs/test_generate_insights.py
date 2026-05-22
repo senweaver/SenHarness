@@ -35,9 +35,7 @@ async def _bootstrap_workspace(async_client) -> tuple[dict, str, str]:
         json={"email": email, "name": "Insights Job", "password": password},
     )
     assert r.status_code == 201, r.text
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     r = await async_client.post(
@@ -48,9 +46,7 @@ async def _bootstrap_workspace(async_client) -> tuple[dict, str, str]:
     assert r.status_code in (200, 201), r.text
     ws_id = r.json()["id"]
     headers["X-Workspace-Id"] = ws_id
-    r = await async_client.post(
-        "/api/v1/sessions", headers=headers, json={"kind": "p2p"}
-    )
+    r = await async_client.post("/api/v1/sessions", headers=headers, json={"kind": "p2p"})
     sid = r.json()["id"]
     return headers, ws_id, sid
 
@@ -79,9 +75,7 @@ async def _seed_artifact(
         events: list[dict] = [{"kind": "final", "data": {"text": "ok"}}]
         if invoked_tools:
             for name in invoked_tools:
-                events.insert(
-                    0, {"kind": "tool_call", "data": {"name": name, "args": {}}}
-                )
+                events.insert(0, {"kind": "tool_call", "data": {"name": name, "args": {}}})
         row = await artifact_svc.capture_artifact(
             db,
             run_id=uuid.uuid4(),
@@ -297,9 +291,7 @@ async def test_generate_insights_privacy_filters_other_identity(async_client):
 
     captured: dict = {}
 
-    async def capture_user_prompt(
-        *, config, system, user, response_format, timeout_s
-    ):
+    async def capture_user_prompt(*, config, system, user, response_format, timeout_s):
         _ = (config, system, timeout_s)
         captured["user"] = user
         return response_format.model_validate({"items": []})
@@ -370,9 +362,7 @@ async def test_generate_insights_aux_failure_falls_back_to_heuristic(
     assert result["status"] == "degraded"
     assert result["degraded"] is True
 
-    skipped = await _list_audit_actions(
-        workspace_id=ws_id, action="insights.aux_skipped"
-    )
+    skipped = await _list_audit_actions(workspace_id=ws_id, action="insights.aux_skipped")
     assert len(skipped) == 1
     assert skipped[0]["metadata"]["reason"] == "aux_failure"
 

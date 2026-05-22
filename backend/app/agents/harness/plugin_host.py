@@ -61,9 +61,7 @@ class PluginHost:
 
     def register_hook(self, hook_name: str, callback: HookCallback) -> None:
         if hook_name not in HOOK_NAMES:
-            raise ValueError(
-                f"unknown plugin hook {hook_name!r}; valid={sorted(HOOK_NAMES)}"
-            )
+            raise ValueError(f"unknown plugin hook {hook_name!r}; valid={sorted(HOOK_NAMES)}")
         self._hooks[hook_name].append(callback)
 
     def registered(self, hook_name: str) -> int:

@@ -83,9 +83,7 @@ class HubSkillPackState(StrEnum):
     TOMBSTONE = "tombstone"
 
 
-HUB_SKILL_PACK_STATE_VALUES: tuple[str, ...] = tuple(
-    s.value for s in HubSkillPackState
-)
+HUB_SKILL_PACK_STATE_VALUES: tuple[str, ...] = tuple(s.value for s in HubSkillPackState)
 HUB_SCOPE_VALUES: tuple[str, ...] = tuple(s.value for s in HubScope)
 
 

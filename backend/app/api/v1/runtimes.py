@@ -116,9 +116,7 @@ def _require_workspace(workspace_id: uuid.UUID | None) -> uuid.UUID:
     return workspace_id
 
 
-async def _load_agent(
-    db, *, agent_id: uuid.UUID, workspace_id: uuid.UUID
-):
+async def _load_agent(db, *, agent_id: uuid.UUID, workspace_id: uuid.UUID):
     repo = AgentRepository(db)
     agent = await repo.get_by(id=agent_id, workspace_id=workspace_id)
     if agent is None:
@@ -156,9 +154,7 @@ async def switch_runtime(
     ws_id = _require_workspace(workspace_id)
     await ws_svc.ensure_admin(db, workspace_id=ws_id, identity_id=identity_id)
 
-    if get_backend(body.backend_kind) is None or not is_known_backend_kind(
-        body.backend_kind
-    ):
+    if get_backend(body.backend_kind) is None or not is_known_backend_kind(body.backend_kind):
         raise HTTPException(
             status_code=400,
             detail={
@@ -187,16 +183,11 @@ async def switch_runtime(
         workspace_id=ws_id,
         resource_type="agent",
         resource_id=agent.id,
-        summary=(
-            f"switched agent {agent.name!r} runtime "
-            f"{previous!r} → {body.backend_kind!r}"
-        ),
+        summary=(f"switched agent {agent.name!r} runtime {previous!r} → {body.backend_kind!r}"),
         metadata={
             "from": previous,
             "to": body.backend_kind,
-            "adapter_id": str(body.backend_adapter_id)
-            if body.backend_adapter_id
-            else None,
+            "adapter_id": str(body.backend_adapter_id) if body.backend_adapter_id else None,
             "note": body.note,
         },
         request=request,
@@ -289,9 +280,7 @@ async def compare_runtimes(
                         tokens = ev.data.get("tokens") or tokens
                         cost = float(ev.data.get("cost") or 0.0)
                     elif ev.kind == RunEventKind.ERROR:
-                        raise RuntimeError(
-                            str(ev.data.get("message") or ev.data.get("code"))
-                        )
+                        raise RuntimeError(str(ev.data.get("message") or ev.data.get("code")))
 
             await asyncio.wait_for(_consume(), timeout=45.0)
         except TimeoutError:
@@ -304,9 +293,7 @@ async def compare_runtimes(
         verdict_dict: dict[str, Any] | None = None
         if body.include_eval and final_text and not err:
             try:
-                verdict = await evaluate_run(
-                    user_text=body.prompt, final_text=final_text
-                )
+                verdict = await evaluate_run(user_text=body.prompt, final_text=final_text)
                 verdict_dict = verdict.to_dict()
             except Exception:  # pragma: no cover
                 pass
@@ -322,9 +309,7 @@ async def compare_runtimes(
             verdict=verdict_dict,
         )
 
-    candidates = await asyncio.gather(
-        *[_run_one(k) for k in runtimes], return_exceptions=False
-    )
+    candidates = await asyncio.gather(*[_run_one(k) for k in runtimes], return_exceptions=False)
     return RuntimeCompareOut(
         agent_id=agent.id,
         prompt=body.prompt,

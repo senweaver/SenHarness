@@ -125,9 +125,7 @@ async def prepare(
         )
         return result
 
-    annotated = _apply_to_agent(
-        agent=agent, provider_kind=pk, ttl=config.ttl
-    )
+    annotated = _apply_to_agent(agent=agent, provider_kind=pk, ttl=config.ttl)
     result.enabled = True
     result.annotated = annotated
     result.ttl = config.ttl
@@ -165,9 +163,7 @@ async def finalize(
     if not result.enabled or result.workspace_id is None:
         return 0
 
-    hit_tokens = cache_ctl.extract_cache_hit_tokens(
-        usage, provider_kind=result.provider_kind
-    )
+    hit_tokens = cache_ctl.extract_cache_hit_tokens(usage, provider_kind=result.provider_kind)
     hit = hit_tokens > 0
     snapshot = await cache_adaptive.record_cache_result(
         redis,
@@ -202,9 +198,7 @@ async def finalize(
                     if snapshot.disabled_until is not None
                     else None
                 ),
-                "duration_seconds": int(
-                    cache_adaptive.ADAPTIVE_DISABLE_DURATION_SECONDS
-                ),
+                "duration_seconds": int(cache_adaptive.ADAPTIVE_DISABLE_DURATION_SECONDS),
             },
         )
         await _emit_disabled_notification(
@@ -244,24 +238,20 @@ _DEFAULT_CONFIG = _ResolvedCacheConfig(
     max_breakpoints=4,
     ttl=cache_ctl.CacheTtl.DEFAULT,
     adaptive_disable_threshold=cache_adaptive.ADAPTIVE_DISABLE_THRESHOLD,
-    adaptive_disable_duration_seconds=(
-        cache_adaptive.ADAPTIVE_DISABLE_DURATION_SECONDS
-    ),
+    adaptive_disable_duration_seconds=(cache_adaptive.ADAPTIVE_DISABLE_DURATION_SECONDS),
 )
 
 
-async def _resolve_config(
-    *, workspace_id: uuid.UUID
-) -> _ResolvedCacheConfig:
+async def _resolve_config(*, workspace_id: uuid.UUID) -> _ResolvedCacheConfig:
     """Read platform defaults + per-workspace overrides.
 
     Falls back to a safe disabled default on any DB / settings
     failure — caller treats False ``enabled`` as "skip cache wiring".
     """
     try:
-        from app.db.models.workspace import Workspace  # noqa: PLC0415
-        from app.db.session import get_session_factory  # noqa: PLC0415
-        from app.services.platform_settings import (  # noqa: PLC0415
+        from app.db.models.workspace import Workspace
+        from app.db.session import get_session_factory
+        from app.services.platform_settings import (
             PlatformSettingsSection,
             get_section,
         )
@@ -271,9 +261,7 @@ async def _resolve_config(
     factory = get_session_factory()
     try:
         async with factory() as fresh:
-            section = await get_section(
-                fresh, section=PlatformSettingsSection.CACHE_CONTROL
-            )
+            section = await get_section(fresh, section=PlatformSettingsSection.CACHE_CONTROL)
             workspace = await fresh.get(Workspace, workspace_id)
             home = (workspace.home_config_json or {}) if workspace else {}
     except Exception:  # pragma: no cover — degraded DB path
@@ -285,9 +273,7 @@ async def _resolve_config(
     max_breakpoints_default = int(section_dict.get("max_breakpoints_default", 4))
     ttl_default_raw = str(section_dict.get("ttl_default", "5m"))
     threshold_default = int(section_dict.get("adaptive_disable_threshold", 5))
-    duration_default = int(
-        section_dict.get("adaptive_disable_duration_seconds", 60)
-    )
+    duration_default = int(section_dict.get("adaptive_disable_duration_seconds", 60))
 
     providers_block = home.get(WORKSPACE_PROVIDERS_KEY)
     cache_block: dict[str, Any] = {}
@@ -298,23 +284,15 @@ async def _resolve_config(
 
     enabled = bool(cache_block.get("enabled", enabled_default))
     min_tokens = int(cache_block.get("min_prompt_tokens", min_tokens_default))
-    max_breakpoints = int(
-        cache_block.get("max_breakpoints", max_breakpoints_default)
-    )
+    max_breakpoints = int(cache_block.get("max_breakpoints", max_breakpoints_default))
     ttl_raw = str(cache_block.get("ttl", ttl_default_raw)).strip().lower()
     if ttl_raw in {"1h", "extended_1h", "extended-1h"}:
         ttl = cache_ctl.CacheTtl.EXTENDED_1H
     else:
         ttl = cache_ctl.CacheTtl.DEFAULT
 
-    threshold = int(
-        cache_block.get("adaptive_disable_threshold", threshold_default)
-    )
-    duration = int(
-        cache_block.get(
-            "adaptive_disable_duration_seconds", duration_default
-        )
-    )
+    threshold = int(cache_block.get("adaptive_disable_threshold", threshold_default))
+    duration = int(cache_block.get("adaptive_disable_duration_seconds", duration_default))
 
     return _ResolvedCacheConfig(
         enabled=enabled,
@@ -327,9 +305,7 @@ async def _resolve_config(
 
 
 # ─── Native model annotation ────────────────────────────────
-def _apply_to_agent(
-    *, agent: Any, provider_kind: str, ttl: cache_ctl.CacheTtl
-) -> bool:
+def _apply_to_agent(*, agent: Any, provider_kind: str, ttl: cache_ctl.CacheTtl) -> bool:
     """Apply provider-native cache settings to ``agent``.
 
     Anthropic exposes first-class cache knobs on the model settings
@@ -424,7 +400,7 @@ async def _audit(
     only — a degraded audit pipeline must never break the chat turn.
     """
     try:
-        from app.db.session import get_session_factory  # noqa: PLC0415
+        from app.db.session import get_session_factory
 
         factory = get_session_factory()
         async with factory() as fresh:
@@ -458,8 +434,8 @@ async def _emit_disabled_notification(
     can both fire without dedup collapsing them.
     """
     try:
-        from app.db.session import get_session_factory  # noqa: PLC0415
-        from app.services.notification_events import emit_event  # noqa: PLC0415
+        from app.db.session import get_session_factory
+        from app.services.notification_events import emit_event
 
         factory = get_session_factory()
         async with factory() as fresh:
@@ -481,9 +457,7 @@ async def _emit_disabled_notification(
             )
             await fresh.commit()
     except Exception:  # pragma: no cover — degraded notification path
-        log.debug(
-            "cache.adaptive_disabled notification emit failed", exc_info=True
-        )
+        log.debug("cache.adaptive_disabled notification emit failed", exc_info=True)
 
 
 _ = _DEFAULT_TTL  # silence unused (kept for downstream consumer extension)

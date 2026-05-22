@@ -79,16 +79,12 @@ class ModelProvider(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScope
     country_code: Mapped[str | None] = mapped_column(String(8), nullable=True)
     metadata_json: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
-    sort_order: Mapped[int] = mapped_column(
-        Integer, default=0, server_default="0", nullable=False
-    )
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
 
 
 class ProviderModel(UuidPkMixin, TimestampMixin, Base):
     __tablename__ = "provider_models"
-    __table_args__ = (
-        sa.UniqueConstraint("provider_id", "model", name="uq_provider_models_pk"),
-    )
+    __table_args__ = (sa.UniqueConstraint("provider_id", "model", name="uq_provider_models_pk"),)
 
     provider_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -103,9 +99,7 @@ class ProviderModel(UuidPkMixin, TimestampMixin, Base):
     enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
     context_window: Mapped[int | None] = mapped_column(Integer, nullable=True)
     source: Mapped[str] = mapped_column(String(16), default="manual", nullable=False)
-    sort_order: Mapped[int] = mapped_column(
-        Integer, default=0, server_default="0", nullable=False
-    )
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
     metadata_json: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
 

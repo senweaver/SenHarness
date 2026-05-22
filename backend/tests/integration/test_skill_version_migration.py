@@ -140,7 +140,4 @@ async def test_backfill_creates_v1_for_each_legacy_pack(async_client, identity):
         assert a_row.content_md == body_a
         assert b_row.content_md == body_b
         assert a_row.created_by == "migration"
-        assert (
-            a_row.content_hash
-            == hashlib.sha256(body_a.encode("utf-8")).hexdigest()
-        )
+        assert a_row.content_hash == hashlib.sha256(body_a.encode("utf-8")).hexdigest()

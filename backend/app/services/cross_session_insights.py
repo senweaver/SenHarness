@@ -84,9 +84,7 @@ class InsightsBreakerOpen(AppError):
 # (which already returns ``None`` for ``/insights …`` payloads — see
 # the unit test in ``test_goal_slash_command``).
 _INSIGHTS_BARE_RE = re.compile(r"^\s*/insights\s*$", re.IGNORECASE)
-_INSIGHTS_DAYS_RE = re.compile(
-    r"^\s*/insights\s+--days(?:\s+|=)(?P<days>-?\d+)\s*$", re.IGNORECASE
-)
+_INSIGHTS_DAYS_RE = re.compile(r"^\s*/insights\s+--days(?:\s+|=)(?P<days>-?\d+)\s*$", re.IGNORECASE)
 
 
 async def parse_insights_command(text: str) -> dict[str, Any] | None:
@@ -130,9 +128,7 @@ async def get_workspace_insights_config(
     already lives on the ``Workspace`` row so we side-load it via the
     repository to keep the read self-contained.
     """
-    raw = await get_system_setting(
-        db, SystemSettingKey.INSIGHTS_DEFAULTS, default=None
-    )
+    raw = await get_system_setting(db, SystemSettingKey.INSIGHTS_DEFAULTS, default=None)
     if not isinstance(raw, dict):
         raw = InsightsSettings().model_dump(mode="json")
     merged: dict[str, Any] = dict(raw)
@@ -178,9 +174,7 @@ async def queue_insights_generation(
     parameter is wired so M5+ admin tooling lands without a service
     rewrite).
     """
-    config = await get_workspace_insights_config(
-        db, workspace_id=workspace_id
-    )
+    config = await get_workspace_insights_config(db, workspace_id=workspace_id)
     if not config.enabled:
         raise InsightsDisabled(
             "cross-session insights are disabled for this workspace",
@@ -198,9 +192,7 @@ async def queue_insights_generation(
             },
         )
 
-    evolver_cfg = await get_workspace_evolver_config(
-        db, workspace_id=workspace_id
-    )
+    evolver_cfg = await get_workspace_evolver_config(db, workspace_id=workspace_id)
     breaker_open = await is_breaker_open(
         bucket=EVOLVER_BREAKER_BUCKET,
         workspace_id=str(workspace_id),

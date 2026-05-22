@@ -37,9 +37,7 @@ def test_dm_allowed_when_flag_on() -> None:
 
 
 def test_empty_allowlist_passes_any_guild() -> None:
-    assert _should_dispatch(
-        allowed_guild_ids=set(), allow_dms=False, guild=_StubGuild(id="g1")
-    )
+    assert _should_dispatch(allowed_guild_ids=set(), allow_dms=False, guild=_StubGuild(id="g1"))
 
 
 def test_allowlist_match_passes() -> None:

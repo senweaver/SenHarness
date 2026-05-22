@@ -27,8 +27,6 @@ class EmailVerificationToken(UuidPkMixin, TimestampMixin, Base):
         nullable=False,
         index=True,
     )
-    token_hash: Mapped[str] = mapped_column(
-        String(64), unique=True, index=True, nullable=False
-    )
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(nullable=False, index=True)
     consumed_at: Mapped[datetime | None] = mapped_column(nullable=True)

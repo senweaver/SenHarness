@@ -41,9 +41,7 @@ async def _bootstrap(async_client) -> dict[str, str]:
     )
     assert r.status_code == 201, r.text
     identity_id = r.json()["identity_id"]
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     r = await async_client.post(
@@ -145,10 +143,7 @@ async def _reset_watermarks_to_far_past() -> None:
     factory = get_session_factory()
     async with factory() as db:
         await db.execute(
-            text(
-                "UPDATE retention_watermarks "
-                "SET last_seen_deleted_at = now() - interval '1 hour'"
-            )
+            text("UPDATE retention_watermarks SET last_seen_deleted_at = now() - interval '1 hour'")
         )
         await db.commit()
 
@@ -168,17 +163,13 @@ async def test_sweep_cascades_and_advances_watermark(async_client):
     factory = get_session_factory()
     async with factory() as db:
         goal = (
-            await db.execute(
-                select(SessionGoal).where(SessionGoal.id == seeded["goal"])
-            )
+            await db.execute(select(SessionGoal).where(SessionGoal.id == seeded["goal"]))
         ).scalar_one()
         assert goal.deleted_at is not None
 
         artifact = (
             await db.execute(
-                select(SessionArtifact).where(
-                    SessionArtifact.id == seeded["artifact"]
-                )
+                select(SessionArtifact).where(SessionArtifact.id == seeded["artifact"])
             )
         ).scalar_one()
         assert artifact.deleted_at is not None
@@ -186,9 +177,7 @@ async def test_sweep_cascades_and_advances_watermark(async_client):
         # Hard-delete cascade target.
         token = (
             await db.execute(
-                select(EmailVerificationToken).where(
-                    EmailVerificationToken.id == seeded["token"]
-                )
+                select(EmailVerificationToken).where(EmailVerificationToken.id == seeded["token"])
             )
         ).scalar_one_or_none()
         assert token is None
@@ -202,9 +191,7 @@ async def test_sweep_cascades_and_advances_watermark(async_client):
         ).scalar_one()
         # Watermark must have advanced past our identity's deleted_at.
         ident = (
-            await db.execute(
-                select(Identity).where(Identity.id == uuid.UUID(ctx["identity_id"]))
-            )
+            await db.execute(select(Identity).where(Identity.id == uuid.UUID(ctx["identity_id"])))
         ).scalar_one()
         assert wm.last_seen_deleted_at >= ident.deleted_at
         assert wm.last_run_at is not None
@@ -214,9 +201,7 @@ async def test_sweep_cascades_and_advances_watermark(async_client):
         audits = (
             (
                 await db.execute(
-                    select(AuditEvent).where(
-                        AuditEvent.action == "data.cascade_soft_delete"
-                    )
+                    select(AuditEvent).where(AuditEvent.action == "data.cascade_soft_delete")
                 )
             )
             .scalars()
@@ -295,9 +280,7 @@ async def test_sweep_records_permanent_failure_after_three_attempts(
         # advance so the next tick doesn't immediately re-enter the
         # broken row.
         ident = (
-            await db.execute(
-                select(Identity).where(Identity.id == uuid.UUID(ctx["identity_id"]))
-            )
+            await db.execute(select(Identity).where(Identity.id == uuid.UUID(ctx["identity_id"])))
         ).scalar_one()
         assert wm.last_seen_deleted_at >= ident.deleted_at
         assert wm.last_error == "job.failed_permanent"

@@ -111,9 +111,7 @@ def make_approval_callback(
         )
 
         # 3) Wait.
-        approved, timed_out = await APPROVAL_MANAGER.wait(
-            approval_id, timeout_s=ttl_seconds + 5
-        )
+        approved, timed_out = await APPROVAL_MANAGER.wait(approval_id, timeout_s=ttl_seconds + 5)
 
         # 4) Persist decision (if not already written by the decide endpoint).
         #    Timeout path writes status=EXPIRED explicitly so the audit feed
@@ -128,9 +126,7 @@ def make_approval_callback(
                     reason="timeout" if timed_out else None,
                     decided_by_identity_id=None,
                     now=utcnow_naive(),
-                    status_override=(
-                        ApprovalStatus.EXPIRED if timed_out else None
-                    ),
+                    status_override=(ApprovalStatus.EXPIRED if timed_out else None),
                 )
                 if row is not None and row.status == ApprovalStatus.PENDING:
                     # Decide moved it to approved/denied — if it's still pending
@@ -302,7 +298,7 @@ async def reject_approval(
     # is a no-op when the spine row is already terminal (race against
     # the reaper) so this stays safe across all reject sources.
     if row.resource_type == "subagent_hallucination_review":
-        from app.services import subagent_run as subagent_svc  # noqa: PLC0415
+        from app.services import subagent_run as subagent_svc
 
         await subagent_svc.apply_hallucination_decision(
             db,
@@ -329,4 +325,3 @@ async def reject_approval(
 # approval_dispatch module exists.
 __all__.append("DispatchError")
 _ = DispatchError  # silence unused-import lint when re-exported above
-

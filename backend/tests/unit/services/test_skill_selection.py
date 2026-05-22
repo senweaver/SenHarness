@@ -72,9 +72,7 @@ def test_empty_packs_returns_empty_result():
 
 
 def test_all_under_cap_no_drops():
-    cfg = SkillSelectionConfig(
-        max_active_injected=10, max_injected_chars_total=10_000
-    )
+    cfg = SkillSelectionConfig(max_active_injected=10, max_injected_chars_total=10_000)
     packs = [_pack(f"p{i}", eff=0.5, body_chars=50) for i in range(5)]
 
     result = select_active_set(packs, cap=cfg)
@@ -87,15 +85,11 @@ def test_all_under_cap_no_drops():
 
 
 def test_count_cap_drops_overflow_unpinned():
-    cfg = SkillSelectionConfig(
-        max_active_injected=30, max_injected_chars_total=10_000_000
-    )
+    cfg = SkillSelectionConfig(max_active_injected=30, max_injected_chars_total=10_000_000)
     # 50 packs ranked by descending effectiveness — top 30 must
     # survive, bottom 20 must drop. Body kept tiny so chars cap
     # cannot fire first.
-    packs = [
-        _pack(f"p{i:02d}", eff=1.0 - i / 100.0, body_chars=10) for i in range(50)
-    ]
+    packs = [_pack(f"p{i:02d}", eff=1.0 - i / 100.0, body_chars=10) for i in range(50)]
 
     result = select_active_set(packs, cap=cfg)
 
@@ -111,9 +105,7 @@ def test_count_cap_drops_overflow_unpinned():
 
 
 def test_char_cap_fires_before_count_cap():
-    cfg = SkillSelectionConfig(
-        max_active_injected=100, max_injected_chars_total=300
-    )
+    cfg = SkillSelectionConfig(max_active_injected=100, max_injected_chars_total=300)
     # Each pack is 100 chars; 4 packs = 400 chars > 300 so the third
     # one fits and the fourth is dropped by char cap (not count).
     packs = [_pack(f"p{i}", eff=1.0 - i / 100.0, body_chars=100) for i in range(10)]
@@ -128,9 +120,7 @@ def test_char_cap_fires_before_count_cap():
 
 
 def test_pinned_packs_exempt_from_count_cap(caplog):
-    cfg = SkillSelectionConfig(
-        max_active_injected=3, max_injected_chars_total=10_000
-    )
+    cfg = SkillSelectionConfig(max_active_injected=3, max_injected_chars_total=10_000)
     packs = [_pack(f"pin{i}", pinned=True, body_chars=10) for i in range(5)]
 
     with caplog.at_level(logging.WARNING):
@@ -143,15 +133,11 @@ def test_pinned_packs_exempt_from_count_cap(caplog):
     # truncated; the warn log is the auditor's signal.
     assert result.truncated_by_count is False
     assert result.truncated_by_chars is False
-    assert any(
-        "skill.cap_pinned_above_count_cap" in rec.message for rec in caplog.records
-    )
+    assert any("skill.cap_pinned_above_count_cap" in rec.message for rec in caplog.records)
 
 
 def test_effectiveness_then_recency_tiebreak_is_stable():
-    cfg = SkillSelectionConfig(
-        max_active_injected=2, max_injected_chars_total=10_000
-    )
+    cfg = SkillSelectionConfig(max_active_injected=2, max_injected_chars_total=10_000)
     base = _NOW
     packs = [
         # Same effectiveness — recency wins; "newer" pack should be first.
@@ -211,9 +197,7 @@ def test_default_config_uses_30_count_cap():
 
 
 def test_null_effectiveness_sorts_after_scored_packs():
-    cfg = SkillSelectionConfig(
-        max_active_injected=2, max_injected_chars_total=10_000
-    )
+    cfg = SkillSelectionConfig(max_active_injected=2, max_injected_chars_total=10_000)
     packs = [
         _pack("no-score", eff=None, body_chars=10),
         _pack("low-score", eff=0.1, body_chars=10),
@@ -236,9 +220,7 @@ def test_pinned_pack_preserves_position_relative_to_unpinned():
     must put pinned packs first so a downstream replay tool can
     always identify the operator-anchored anchors.
     """
-    cfg = SkillSelectionConfig(
-        max_active_injected=4, max_injected_chars_total=10_000
-    )
+    cfg = SkillSelectionConfig(max_active_injected=4, max_injected_chars_total=10_000)
     packs = [
         _pack("ranked-low", eff=0.1, body_chars=10),
         _pack("pinned-mid", pinned=True, eff=0.5, body_chars=10),

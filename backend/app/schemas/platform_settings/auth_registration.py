@@ -18,9 +18,7 @@ from pydantic import BaseModel, Field
 
 
 class AuthRegistrationSettings(BaseModel):
-    mode: Literal["open_personal", "open_invite_only", "closed"] = (
-        "open_personal"
-    )
+    mode: Literal["open_personal", "open_invite_only", "closed"] = "open_personal"
     require_email_verification: bool = False
     rate_limit_per_minute: int = Field(default=3, ge=1, le=200)
     invitation_expiry_days: int = Field(default=30, ge=1, le=365)

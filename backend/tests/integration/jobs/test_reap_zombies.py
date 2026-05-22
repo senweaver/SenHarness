@@ -98,21 +98,29 @@ async def test_reap_zombies_marks_stale_rows_only(async_client):
             assert row.state == SubAgentRunState.RUNNING
 
         audit = (
-            await db.execute(
-                select(AuditEvent)
-                .where(AuditEvent.action == "subagent.zombie_reaped")
-                .where(AuditEvent.workspace_id == uuid.UUID(ws_id))
+            (
+                await db.execute(
+                    select(AuditEvent)
+                    .where(AuditEvent.action == "subagent.zombie_reaped")
+                    .where(AuditEvent.workspace_id == uuid.UUID(ws_id))
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(audit) >= 3
 
         notif = (
-            await db.execute(
-                select(AuditEvent)
-                .where(AuditEvent.action == "notification.emitted")
-                .where(AuditEvent.workspace_id == uuid.UUID(ws_id))
+            (
+                await db.execute(
+                    select(AuditEvent)
+                    .where(AuditEvent.action == "notification.emitted")
+                    .where(AuditEvent.workspace_id == uuid.UUID(ws_id))
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         # M0.10 fan-out writes one ``notification.emitted`` per emit;
         # at minimum 3 zombie events should produce >= 3 emit rows
         # (cooldown_resource_id is the spine row id so siblings don't

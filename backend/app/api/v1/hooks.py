@@ -50,9 +50,7 @@ _BACKGROUND_TASKS: set[Any] = set()
 # still stopping a leaked token from flooding us.
 @router.post(
     "/ingress/{channel_id}",
-    dependencies=[
-        Depends(rate_limit("hook_ingress", limit=60, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("hook_ingress", limit=60, period_seconds=60))],
 )
 async def channel_ingress(
     channel_id: uuid.UUID,
@@ -79,9 +77,7 @@ async def channel_ingress(
     if ch is None or ch.inbound_token != supplied or ch.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="invalid_token")
     if not ch.enabled:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="channel_disabled"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="channel_disabled")
 
     # Read the raw body ONCE — signature verification needs the exact bytes
     # Slack / Discord signed, and JSON parsers re-serialize whitespace which
@@ -298,9 +294,7 @@ async def channel_ingress(
                 request=request,
             )
         except Exception:  # pragma: no cover
-            log.exception(
-                "notify channel.sender_blocked failed for channel=%s", ch.id
-            )
+            log.exception("notify channel.sender_blocked failed for channel=%s", ch.id)
         await db.commit()
         return ChannelIngressAck(accepted=False, reason="sender_blocked")
     if not is_known_mode(rules):
@@ -414,9 +408,7 @@ async def _run_and_reply(
 @router.post(
     "/flow/{flow_id}",
     response_model=FlowRunRead,
-    dependencies=[
-        Depends(rate_limit("hook_flow", limit=30, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("hook_flow", limit=30, period_seconds=60))],
 )
 async def flow_webhook(
     flow_id: uuid.UUID,

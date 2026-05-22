@@ -5,12 +5,16 @@ from __future__ import annotations
 import uuid
 from collections.abc import Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Query, Request, status
 from pydantic import BaseModel
 
 from app.agents.harness.skills import BUNDLED_SKILLS_DIR
 from app.agents.kernels.model_catalog import CatalogModel, list_models_for_provider
+
+if TYPE_CHECKING:
+    from app.db.models.model_provider import ProviderModel
 from app.agents.kernels.model_client import ResolvedModel, resolve_for_agent
 from app.agents.kernels.provider_catalog import get_entry as get_provider_entry
 from app.agents.kernels.registry import describe as describe_runtimes
@@ -607,9 +611,7 @@ async def list_agent_models(
     out: list[AgentModelOption] = []
     seen_ids: set[str] = set()
     for prov in providers:
-        kind = (
-            prov.kind.value if hasattr(prov.kind, "value") else str(prov.kind)
-        )
+        kind = prov.kind.value if hasattr(prov.kind, "value") else str(prov.kind)
         display = _display_for(kind, prov.name or kind)
         catalog_index = {e.model: e for e in list_models_for_provider(kind)}
         persisted = list(
@@ -623,9 +625,7 @@ async def list_agent_models(
             )
         )
         enabled_rows = [row for row in persisted if row.enabled]
-        entries = _composer_entries_for_provider(
-            persisted, list(catalog_index.values())
-        )
+        entries = _composer_entries_for_provider(persisted, list(catalog_index.values()))
 
         for entry in entries:
             if isinstance(entry, ProviderModel):
@@ -638,8 +638,7 @@ async def list_agent_models(
                     model=model_id,
                     name=entry.label or (meta.name if meta else model_id),
                     family=entry.family or (meta.family if meta else "custom"),
-                    recommended=entry.recommended
-                    or (meta.recommended if meta else False),
+                    recommended=entry.recommended or (meta.recommended if meta else False),
                     description=meta.description if meta else "",
                     is_default=_is_resolved_default(resolved, kind, model_id),
                 )
@@ -663,8 +662,7 @@ async def list_agent_models(
         if prov.default_model:
             default_id = f"{kind}:{prov.default_model}"
             if default_id not in seen_ids and (
-                not persisted
-                or prov.default_model in {row.model for row in enabled_rows}
+                not persisted or prov.default_model in {row.model for row in enabled_rows}
             ):
                 seen_ids.add(default_id)
                 out.append(
@@ -677,9 +675,7 @@ async def list_agent_models(
                         family="custom",
                         recommended=False,
                         description="",
-                        is_default=_is_resolved_default(
-                            resolved, kind, prov.default_model
-                        ),
+                        is_default=_is_resolved_default(resolved, kind, prov.default_model),
                     )
                 )
 

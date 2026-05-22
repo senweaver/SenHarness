@@ -84,9 +84,7 @@ async def test_reap_marks_stale_rows_lost(async_client):
         (await _seed_run(ws_id=ws_id, identity_id=identity_id, last_seen_age_seconds=2000))[0],
         (await _seed_run(ws_id=ws_id, identity_id=identity_id, last_seen_age_seconds=3600))[0],
     ]
-    fresh_id, _ = await _seed_run(
-        ws_id=ws_id, identity_id=identity_id, last_seen_age_seconds=30
-    )
+    fresh_id, _ = await _seed_run(ws_id=ws_id, identity_id=identity_id, last_seen_age_seconds=30)
 
     summary = await reap_stale_inflight_runs({})
     assert summary["status"] == "ok"
@@ -107,23 +105,29 @@ async def test_reap_marks_stale_rows_lost(async_client):
         assert fresh.state == InflightRunState.RUNNING
 
         audit = (
-            await db.execute(
-                select(AuditEvent)
-                .where(
-                    AuditEvent.action == "inflight_run.timed_out_to_lost"
+            (
+                await db.execute(
+                    select(AuditEvent)
+                    .where(AuditEvent.action == "inflight_run.timed_out_to_lost")
+                    .where(AuditEvent.workspace_id == uuid.UUID(ws_id))
                 )
-                .where(AuditEvent.workspace_id == uuid.UUID(ws_id))
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(audit) >= 2
 
         notif = (
-            await db.execute(
-                select(AuditEvent)
-                .where(AuditEvent.action == "notification.emitted")
-                .where(AuditEvent.workspace_id == uuid.UUID(ws_id))
+            (
+                await db.execute(
+                    select(AuditEvent)
+                    .where(AuditEvent.action == "notification.emitted")
+                    .where(AuditEvent.workspace_id == uuid.UUID(ws_id))
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(notif) >= 2
 
 

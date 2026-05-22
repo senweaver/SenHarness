@@ -24,13 +24,10 @@ from app.core.errors import ValidationFailed
 from app.db.models.audit import AuditEvent
 from app.services import cross_session_insights as insights_svc
 
-
 pytestmark = pytest.mark.asyncio
 
 
-async def _override_workspace_insights_settings(
-    db_session, workspace, **fields
-):
+async def _override_workspace_insights_settings(db_session, workspace, **fields):
     """Stash a partial override on the workspace's home_config_json."""
     home = dict(workspace.home_config_json or {})
     insights_block = dict(home.get(insights_svc.INSIGHTS_WORKSPACE_KEY) or {})
@@ -98,9 +95,7 @@ async def test_queue_insights_uses_workspace_default_when_days_unset(
     assert result["days"] == 7
 
 
-async def test_queue_insights_rejects_days_above_max(
-    db_session, workspace, identity
-):
+async def test_queue_insights_rejects_days_above_max(db_session, workspace, identity):
     with pytest.raises(ValidationFailed) as exc:
         await insights_svc.queue_insights_generation(
             db_session,
@@ -112,9 +107,7 @@ async def test_queue_insights_rejects_days_above_max(
     assert exc.value.code == "insights.days_out_of_range"
 
 
-async def test_queue_insights_rejects_zero_days(
-    db_session, workspace, identity
-):
+async def test_queue_insights_rejects_zero_days(db_session, workspace, identity):
     with pytest.raises(ValidationFailed) as exc:
         await insights_svc.queue_insights_generation(
             db_session,
@@ -126,9 +119,7 @@ async def test_queue_insights_rejects_zero_days(
     assert exc.value.code == "insights.days_out_of_range"
 
 
-async def test_queue_insights_disabled_workspace_short_circuits(
-    db_session, workspace, identity
-):
+async def test_queue_insights_disabled_workspace_short_circuits(db_session, workspace, identity):
     await _override_workspace_insights_settings(db_session, workspace, enabled=False)
     with pytest.raises(insights_svc.InsightsDisabled):
         await insights_svc.queue_insights_generation(
@@ -140,9 +131,7 @@ async def test_queue_insights_disabled_workspace_short_circuits(
         )
 
 
-async def test_queue_insights_breaker_open_audits_and_raises(
-    db_session, workspace, identity
-):
+async def test_queue_insights_breaker_open_audits_and_raises(db_session, workspace, identity):
     """Force the shared evolver breaker to read open and assert the
     service raises ``InsightsBreakerOpen`` + writes the audit row.
 

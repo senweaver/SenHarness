@@ -107,9 +107,7 @@ class SkillPackVersionRepository(AsyncRepository[SkillPackVersion]):
         )
         return (await self.session.execute(stmt)).scalars().all()
 
-    async def next_version_no(
-        self, *, workspace_id: uuid.UUID, pack_id: uuid.UUID
-    ) -> int:
+    async def next_version_no(self, *, workspace_id: uuid.UUID, pack_id: uuid.UUID) -> int:
         """One more than the current MAX(version_no) for the pack.
 
         Returns 1 when no rows exist. Race-safe enough for the M1.2

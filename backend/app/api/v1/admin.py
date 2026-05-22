@@ -174,12 +174,8 @@ async def get_global_stats(
         select(func.count(SessionModel.id)).where(SessionModel.deleted_at.is_(None))
     )
     messages_total = await _count(select(func.count(Message.id)))
-    agents_total = await _count(
-        select(func.count(Agent.id)).where(Agent.deleted_at.is_(None))
-    )
-    flows_total = await _count(
-        select(func.count(Flow.id)).where(Flow.deleted_at.is_(None))
-    )
+    agents_total = await _count(select(func.count(Agent.id)).where(Agent.deleted_at.is_(None)))
+    flows_total = await _count(select(func.count(Flow.id)).where(Flow.deleted_at.is_(None)))
     channels_total = await _count(
         select(func.count(Channel.id)).where(Channel.deleted_at.is_(None))
     )
@@ -269,9 +265,7 @@ async def get_identity_detail(
 ) -> IdentityAdminDetail:
     ident = await IdentityRepository(db).get(identity_id)
     if ident is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="identity_not_found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="identity_not_found")
     stmt = (
         select(Membership, Workspace)
         .join(Workspace, Workspace.id == Membership.workspace_id)
@@ -286,8 +280,7 @@ async def get_identity_detail(
     detail = IdentityAdminDetail.model_validate(ident)
     detail.workspace_count = len(ws_rows)
     detail.workspaces = [
-        WorkspaceBrief(id=ws.id, name=ws.name, slug=ws.slug, role=mem.role)
-        for mem, ws in ws_rows
+        WorkspaceBrief(id=ws.id, name=ws.name, slug=ws.slug, role=mem.role) for mem, ws in ws_rows
     ]
     return detail
 
@@ -303,9 +296,7 @@ async def update_identity(
     repo = IdentityRepository(db)
     ident = await repo.get(identity_id)
     if ident is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="identity_not_found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="identity_not_found")
     patch = body.model_dump(exclude_none=True)
     if ident.id == admin.id and patch.get("platform_role") == PlatformRole.USER:
         raise HTTPException(
@@ -402,9 +393,7 @@ async def list_workspaces(
     return out
 
 
-async def _workspace_counts(
-    db, workspace_id: uuid.UUID
-) -> tuple[int, int, int]:
+async def _workspace_counts(db, workspace_id: uuid.UUID) -> tuple[int, int, int]:
     """Return ``(member_count, agent_count, session_count)`` for one workspace."""
     member_count = int(
         (
@@ -450,9 +439,7 @@ async def get_workspace_detail(
 ) -> WorkspaceAdminDetail:
     ws = await WorkspaceRepository(db).get(workspace_id)
     if ws is None or ws.deleted_at is not None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="workspace_not_found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="workspace_not_found")
     m, a, s = await _workspace_counts(db, workspace_id)
     card = WorkspaceAdminDetail.model_validate(ws)
     card.member_count = m
@@ -472,9 +459,7 @@ async def update_workspace(
     repo = WorkspaceRepository(db)
     ws = await repo.get(workspace_id)
     if ws is None or ws.deleted_at is not None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="workspace_not_found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="workspace_not_found")
     patch = body.model_dump(exclude_none=True)
     updated = await repo.update(ws, **patch)
     await audit_svc.record(
@@ -492,9 +477,7 @@ async def update_workspace(
     return await get_workspace_detail(updated.id, db, admin)
 
 
-@router.delete(
-    "/workspaces/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT
-)
+@router.delete("/workspaces/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_workspace(
     workspace_id: uuid.UUID,
     db: DBSession,
@@ -504,9 +487,7 @@ async def delete_workspace(
     repo = WorkspaceRepository(db)
     ws = await repo.get(workspace_id)
     if ws is None or ws.deleted_at is not None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="workspace_not_found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="workspace_not_found")
     await repo.soft_delete(ws)
     await audit_svc.record(
         db,
@@ -633,9 +614,7 @@ async def admin_decide_approval(
     repo = ApprovalRepository(db)
     row = await repo.get(approval_id)
     if row is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="approval_not_found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="approval_not_found")
 
     approved = payload.action == "approve"
     decided = await repo.decide(
@@ -647,9 +626,7 @@ async def admin_decide_approval(
         now=utcnow_naive(),
     )
     if decided is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="approval_not_found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="approval_not_found")
 
     await audit_svc.record(
         db,

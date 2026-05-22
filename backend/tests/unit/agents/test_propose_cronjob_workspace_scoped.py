@@ -112,9 +112,7 @@ async def test_target_agent_in_other_workspace_rejected(
         owner_identity_id=identity.id,
     )
     await db_session.flush()
-    foreign_agent = await _make_agent_in(
-        db_session, workspace=other_ws, identity=identity
-    )
+    foreign_agent = await _make_agent_in(db_session, workspace=other_ws, identity=identity)
 
     _set_ctx(workspace, identity)
     monkeypatch.setattr(
@@ -141,8 +139,7 @@ async def test_target_agent_in_other_workspace_rejected(
             await db_session.execute(
                 select(Approval).where(
                     Approval.workspace_id == workspace.id,
-                    Approval.resource_type
-                    == ApprovalResourceType.FLOW_CREATE.value,
+                    Approval.resource_type == ApprovalResourceType.FLOW_CREATE.value,
                 )
             )
         ).scalars()
@@ -177,9 +174,7 @@ async def test_delivery_channel_in_other_workspace_rejected(
         owner_identity_id=identity.id,
     )
     await db_session.flush()
-    foreign_channel = await _make_channel_in(
-        db_session, workspace=other_ws, identity=identity
-    )
+    foreign_channel = await _make_channel_in(db_session, workspace=other_ws, identity=identity)
 
     _set_ctx(workspace, identity, agent_id=agent.id)
     monkeypatch.setattr(
@@ -243,8 +238,7 @@ async def test_workspace_disabled_rejected_before_any_db_write(
             await db_session.execute(
                 select(Approval).where(
                     Approval.workspace_id == workspace.id,
-                    Approval.resource_type
-                    == ApprovalResourceType.FLOW_CREATE.value,
+                    Approval.resource_type == ApprovalResourceType.FLOW_CREATE.value,
                 )
             )
         ).scalars()

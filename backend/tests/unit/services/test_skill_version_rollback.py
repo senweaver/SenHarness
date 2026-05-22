@@ -73,9 +73,7 @@ async def _bootstrap(db, *, workspace_id, identity):
 async def test_rollback_promotes_old_version_back_to_active(
     db_session, workspace, identity
 ) -> None:
-    pack, v1, v2 = await _bootstrap(
-        db_session, workspace_id=workspace.id, identity=identity
-    )
+    pack, v1, v2 = await _bootstrap(db_session, workspace_id=workspace.id, identity=identity)
     rolled = await svc.rollback_to_version(
         db_session,
         workspace_id=workspace.id,
@@ -92,12 +90,8 @@ async def test_rollback_promotes_old_version_back_to_active(
     assert pack.content_hash == v1.content_hash
 
 
-async def test_rollback_writes_dedicated_audit_row(
-    db_session, workspace, identity
-) -> None:
-    pack, v1, _v2 = await _bootstrap(
-        db_session, workspace_id=workspace.id, identity=identity
-    )
+async def test_rollback_writes_dedicated_audit_row(db_session, workspace, identity) -> None:
+    pack, v1, _v2 = await _bootstrap(db_session, workspace_id=workspace.id, identity=identity)
     await svc.rollback_to_version(
         db_session,
         workspace_id=workspace.id,
@@ -129,9 +123,7 @@ async def test_rollback_writes_dedicated_audit_row(
 async def test_rollback_to_unknown_version_raises_not_found(
     db_session, workspace, identity
 ) -> None:
-    pack, _v1, _v2 = await _bootstrap(
-        db_session, workspace_id=workspace.id, identity=identity
-    )
+    pack, _v1, _v2 = await _bootstrap(db_session, workspace_id=workspace.id, identity=identity)
     from app.core.errors import NotFound
 
     with pytest.raises(NotFound):
@@ -145,12 +137,8 @@ async def test_rollback_to_unknown_version_raises_not_found(
         )
 
 
-async def test_rollback_target_must_belong_to_pack(
-    db_session, workspace, identity
-) -> None:
-    pack_a, v1_a, _ = await _bootstrap(
-        db_session, workspace_id=workspace.id, identity=identity
-    )
+async def test_rollback_target_must_belong_to_pack(db_session, workspace, identity) -> None:
+    pack_a, v1_a, _ = await _bootstrap(db_session, workspace_id=workspace.id, identity=identity)
     pack_b, _v1_b, _v2_b = await _bootstrap(
         db_session, workspace_id=workspace.id, identity=identity
     )

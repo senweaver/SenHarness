@@ -132,36 +132,40 @@ async def test_run_writes_artifact_pack_ids_and_skill_usage_rows(
 
     from app.services import session_artifact as artifact_svc
 
-    artifact = await artifact_svc.get_artifact(
-        db_session, workspace_id=workspace.id, run_id=run_id
-    )
+    artifact = await artifact_svc.get_artifact(db_session, workspace_id=workspace.id, run_id=run_id)
     assert artifact is not None
     assert set(artifact.injected_skill_pack_ids) == {str(p1.id), str(p2.id)}
 
     usage_rows = (
-        await db_session.execute(
-            select(SkillUsage).where(
-                SkillUsage.workspace_id == workspace.id,
-                SkillUsage.run_id == run_id,
+        (
+            await db_session.execute(
+                select(SkillUsage).where(
+                    SkillUsage.workspace_id == workspace.id,
+                    SkillUsage.run_id == run_id,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(usage_rows) == 2
     assert {row.pack_id for row in usage_rows} == {p1.id, p2.id}
-    assert all(
-        row.event_kind == SkillUsageEventKind.INJECTED for row in usage_rows
-    )
+    assert all(row.event_kind == SkillUsageEventKind.INJECTED for row in usage_rows)
     assert all(row.session_id == sess.id for row in usage_rows)
 
     audits = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.workspace_id == workspace.id,
-                AuditEvent.action == "skill.usage_batch_recorded",
-                AuditEvent.resource_id == run_id,
+        (
+            await db_session.execute(
+                select(AuditEvent).where(
+                    AuditEvent.workspace_id == workspace.id,
+                    AuditEvent.action == "skill.usage_batch_recorded",
+                    AuditEvent.resource_id == run_id,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(audits) == 1
     assert audits[0].metadata_json["batch_size"] == 2
     assert audits[0].metadata_json["event_kind"] == "injected"
@@ -204,20 +208,28 @@ async def test_run_without_injected_packs_writes_no_usage_rows(
     await db_session.commit()
 
     rows = (
-        await db_session.execute(
-            select(SkillUsage).where(SkillUsage.workspace_id == workspace.id)
+        (
+            await db_session.execute(
+                select(SkillUsage).where(SkillUsage.workspace_id == workspace.id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert rows == []
 
     audits = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.workspace_id == workspace.id,
-                AuditEvent.action == "skill.usage_batch_recorded",
+        (
+            await db_session.execute(
+                select(AuditEvent).where(
+                    AuditEvent.workspace_id == workspace.id,
+                    AuditEvent.action == "skill.usage_batch_recorded",
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert audits == []
 
 
@@ -268,8 +280,12 @@ async def test_run_with_non_native_backend_does_not_break_capture(
     await db_session.commit()
 
     rows = (
-        await db_session.execute(
-            select(SkillUsage).where(SkillUsage.workspace_id == workspace.id)
+        (
+            await db_session.execute(
+                select(SkillUsage).where(SkillUsage.workspace_id == workspace.id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert rows == []

@@ -115,9 +115,7 @@ async def notify_runtime_restart(channel: Channel) -> None:
     except Exception:  # pragma: no cover
         import logging
 
-        logging.getLogger(__name__).exception(
-            "channel runtime restart for %s failed", channel.id
-        )
+        logging.getLogger(__name__).exception("channel runtime restart for %s failed", channel.id)
 
 
 async def create_channel(
@@ -224,12 +222,8 @@ async def get_or_404(
     return row
 
 
-async def rotate_token(
-    session: AsyncSession, *, channel: Channel
-) -> Channel:
-    return await ChannelRepository(session).update(
-        channel, inbound_token=_new_inbound_token()
-    )
+async def rotate_token(session: AsyncSession, *, channel: Channel) -> Channel:
+    return await ChannelRepository(session).update(channel, inbound_token=_new_inbound_token())
 
 
 def _new_inbound_token() -> str:

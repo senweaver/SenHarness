@@ -64,7 +64,9 @@ async def test_sweep_visits_every_agent(async_client, monkeypatch):
 
     seen: list[tuple[uuid.UUID, uuid.UUID]] = []
 
-    async def _stub_update(db, *, workspace_id, agent_id, since_days, invocation_kind, actor_identity_id=None):
+    async def _stub_update(
+        db, *, workspace_id, agent_id, since_days, invocation_kind, actor_identity_id=None
+    ):
         _ = db, since_days, invocation_kind, actor_identity_id
         seen.append((workspace_id, agent_id))
 
@@ -91,7 +93,9 @@ async def test_sweep_isolates_per_agent_failure(async_client, monkeypatch):
 
     target_failure = uuid.UUID(agent_a)
 
-    async def _stub_update(db, *, workspace_id, agent_id, since_days, invocation_kind, actor_identity_id=None):
+    async def _stub_update(
+        db, *, workspace_id, agent_id, since_days, invocation_kind, actor_identity_id=None
+    ):
         _ = db, workspace_id, since_days, invocation_kind, actor_identity_id
         if agent_id == target_failure:
             raise RuntimeError("simulated agent_profile crash")
@@ -119,12 +123,16 @@ async def test_sweep_isolates_per_agent_failure(async_client, monkeypatch):
     factory = get_session_factory()
     async with factory() as db:
         rows = (
-            await db.execute(
-                select(AuditEvent).where(
-                    AuditEvent.action == job.AUDIT_UPDATE_FAILED,
-                    AuditEvent.workspace_id == uuid.UUID(ws_a),
+            (
+                await db.execute(
+                    select(AuditEvent).where(
+                        AuditEvent.action == job.AUDIT_UPDATE_FAILED,
+                        AuditEvent.workspace_id == uuid.UUID(ws_a),
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
     assert any(uuid.UUID(agent_a) == row.resource_id for row in rows)
     _ = ws_b, agent_b  # signal coverage of the unaffected pair

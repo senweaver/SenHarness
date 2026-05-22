@@ -49,7 +49,7 @@ def _reset_plugin_host():
 def _write_six_hook_plugin(root: Path, name: str = "all_hooks") -> Path:
     folder = root / name
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / "__init__.py").write_text("\"\"\"test plugin.\"\"\"\n", encoding="utf-8")
+    (folder / "__init__.py").write_text('"""test plugin."""\n', encoding="utf-8")
     (folder / "plugin.json").write_text(
         json.dumps(
             {
@@ -71,9 +71,7 @@ def _write_six_hook_plugin(root: Path, name: str = "all_hooks") -> Path:
         "    return _cb\n"
         "\n"
         "def register(ctx):\n"
-        + "\n".join(
-            f"    ctx.register_hook({h!r}, _make({h!r}))" for h in _ALL_HOOKS
-        )
+        + "\n".join(f"    ctx.register_hook({h!r}, _make({h!r}))" for h in _ALL_HOOKS)
         + "\n"
     )
     (folder / "entry.py").write_text(body, encoding="utf-8")
@@ -120,37 +118,56 @@ async def test_fire_invokes_loaded_callbacks(db_session, tmp_path: Path) -> None
         "on_session_start", identity_id=uuid.uuid4(), served_model="x", **common
     )
     await plugin_host.plugin_host.fire(
-        "pre_llm_call", iteration=1, served_model="x", upstream_model="y",
-        provider_kind="z", **common,
+        "pre_llm_call",
+        iteration=1,
+        served_model="x",
+        upstream_model="y",
+        provider_kind="z",
+        **common,
     )
     await plugin_host.plugin_host.fire(
-        "post_llm_call", iteration=1, served_model="x", upstream_model="y",
-        provider_kind="z", text_chars=10, **common,
+        "post_llm_call",
+        iteration=1,
+        served_model="x",
+        upstream_model="y",
+        provider_kind="z",
+        text_chars=10,
+        **common,
     )
     await plugin_host.plugin_host.fire(
-        "pre_tool_call", tool_name="echo", tool_call_id="abc", args={}, **common,
+        "pre_tool_call",
+        tool_name="echo",
+        tool_call_id="abc",
+        args={},
+        **common,
     )
     await plugin_host.plugin_host.fire(
-        "post_tool_call", tool_name="echo", tool_call_id="abc", result={}, ok=True,
-        truncated=False, **common,
+        "post_tool_call",
+        tool_name="echo",
+        tool_call_id="abc",
+        result={},
+        ok=True,
+        truncated=False,
+        **common,
     )
     await plugin_host.plugin_host.fire(
-        "on_session_end", identity_id=uuid.uuid4(), final_outcome="completed", **common,
+        "on_session_end",
+        identity_id=uuid.uuid4(),
+        final_outcome="completed",
+        **common,
     )
 
     seen = {hook for hook, _ in fired}
     assert seen == set(_ALL_HOOKS), f"missing hooks: {set(_ALL_HOOKS) - seen}"
 
 
-async def test_failing_callback_does_not_break_runner_path(
-    db_session, tmp_path: Path
-) -> None:
+async def test_failing_callback_does_not_break_runner_path(db_session, tmp_path: Path) -> None:
     """A plugin that explodes on every hook still leaves the runner's
     fire-and-forget surface intact: no exception bubbles up.
     """
     folder = tmp_path / "explosive"
     folder.mkdir()
-    (folder / "__init__.py").write_text("\"\"\"x\"\"\"\n", encoding="utf-8")
+    (folder / "__init__.py").write_text('"""x"""\n', encoding="utf-8")
     (folder / "plugin.json").write_text(
         json.dumps(
             {
@@ -168,9 +185,7 @@ async def test_failing_callback_does_not_break_runner_path(
         "    raise RuntimeError('plugin tried to break the runner')\n"
         "\n"
         "def register(ctx):\n"
-        + "\n".join(
-            f"    ctx.register_hook({h!r}, _boom)" for h in _ALL_HOOKS
-        )
+        + "\n".join(f"    ctx.register_hook({h!r}, _boom)" for h in _ALL_HOOKS)
         + "\n",
         encoding="utf-8",
     )
@@ -185,9 +200,7 @@ async def test_failing_callback_does_not_break_runner_path(
         await plugin_host.plugin_host.fire(hook, dummy=True)
 
 
-async def test_disabled_setting_keeps_registry_empty(
-    db_session, tmp_path: Path
-) -> None:
+async def test_disabled_setting_keeps_registry_empty(db_session, tmp_path: Path) -> None:
     """Default-deny: when the platform setting is False we never load
     even valid plugins. Runner stays a no-op fan-out.
     """
@@ -219,26 +232,19 @@ async def test_hook_names_match_runner_call_sites() -> None:
     PR.
     """
     src = (
-        Path(__file__).resolve().parents[2]
-        / "app"
-        / "agents"
-        / "kernels"
-        / "native"
-        / "runner.py"
+        Path(__file__).resolve().parents[2] / "app" / "agents" / "kernels" / "native" / "runner.py"
     ).read_text(encoding="utf-8")
     for hook in _ALL_HOOKS:
         assert f'"{hook}"' in src, f"runner.py missing fire site for hook {hook}"
 
 
-async def test_six_hook_payload_contract_with_sync_callback(
-    db_session, tmp_path: Path
-) -> None:
+async def test_six_hook_payload_contract_with_sync_callback(db_session, tmp_path: Path) -> None:
     """Plain (non-async) plugin callbacks are bridged transparently.
     The runner cannot tell whether a plugin used ``def`` or ``async def``.
     """
     folder = tmp_path / "sync_cb"
     folder.mkdir()
-    (folder / "__init__.py").write_text("\"\"\"x\"\"\"\n", encoding="utf-8")
+    (folder / "__init__.py").write_text('"""x"""\n', encoding="utf-8")
     (folder / "plugin.json").write_text(
         json.dumps(
             {

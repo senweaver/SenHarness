@@ -64,9 +64,7 @@ async def check_rate_limit(
     broken Redis mustn't block normal traffic. A single WARNING per failure
     is logged so operators notice.
     """
-    q = quota or Quota(
-        settings.RATE_LIMIT_DEFAULT_LIMIT, settings.RATE_LIMIT_DEFAULT_PERIOD
-    )
+    q = quota or Quota(settings.RATE_LIMIT_DEFAULT_LIMIT, settings.RATE_LIMIT_DEFAULT_PERIOD)
     window = int(time.time()) // q.period_seconds
     key = f"rl:{identifier}:{path}:{window}"
     try:

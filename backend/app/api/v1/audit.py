@@ -37,10 +37,7 @@ def _require_workspace(workspace_id: uuid.UUID | None) -> uuid.UUID:
 
 async def _is_platform_admin(db, identity_id: uuid.UUID) -> bool:
     ident = await IdentityRepository(db).get(identity_id)
-    return (
-        ident is not None
-        and ident.platform_role == PlatformRole.PLATFORM_ADMIN
-    )
+    return ident is not None and ident.platform_role == PlatformRole.PLATFORM_ADMIN
 
 
 def _parse_window(
@@ -181,23 +178,17 @@ async def _resolve_scope(
     """
     if scope == "platform":
         if not await _is_platform_admin(db, identity_id):
-            raise PermissionDenied(
-                "platform_admin_required", code="audit.platform_admin_required"
-            )
+            raise PermissionDenied("platform_admin_required", code="audit.platform_admin_required")
         return None
 
     ws_id = _require_workspace(workspace_id)
-    mem = await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    mem = await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     if mem.role not in {
         BuiltinRole.OWNER.value,
         BuiltinRole.ADMIN.value,
         BuiltinRole.AUDITOR.value,
     }:
-        raise PermissionDenied(
-            "admin_or_auditor_required", code="audit.admin_or_auditor_required"
-        )
+        raise PermissionDenied("admin_or_auditor_required", code="audit.admin_or_auditor_required")
     return ws_id
 
 

@@ -76,9 +76,7 @@ def topo_order(nodes: list[dict], edges: list[dict]) -> list[str]:
                 ready.append(nxt)
 
     if len(order) != len(node_ids):
-        raise CycleError(
-            f"cycle detected; {len(node_ids) - len(order)} nodes unresolved"
-        )
+        raise CycleError(f"cycle detected; {len(node_ids) - len(order)} nodes unresolved")
     return order
 
 
@@ -179,10 +177,7 @@ async def run_graph(
         # under its own id. Let the runner return the payload so the context
         # is keyed symmetrically.
         node_input: dict[str, Any] = {
-            "parents": {
-                pid: context.get(pid, {})
-                for pid in parents_of.get(node_id, [])
-            },
+            "parents": {pid: context.get(pid, {}) for pid in parents_of.get(node_id, [])},
             "data": node_data,
         }
 
@@ -216,9 +211,7 @@ async def run_graph(
 
             # ``end`` nodes may return a text to surface on the FlowRun row.
             if ntype == "end":
-                final_output = (
-                    output.get("text") if isinstance(output, dict) else None
-                )
+                final_output = output.get("text") if isinstance(output, dict) else None
 
             event["status"] = "success"
             event["output"] = _truncate(output)
@@ -289,8 +282,10 @@ def _truncate(v: Any, max_chars: int = 2000) -> Any:
         out: dict[str, Any] = {}
         size = 0
         for k, val in v.items():
-            sv = val if not isinstance(val, str) else (
-                val if len(val) <= max_chars else val[:max_chars] + "…"
+            sv = (
+                val
+                if not isinstance(val, str)
+                else (val if len(val) <= max_chars else val[:max_chars] + "…")
             )
             out[k] = sv
             size += 1

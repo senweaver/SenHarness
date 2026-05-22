@@ -72,9 +72,7 @@ async def _seed_pack_with_version(db, *, identity, body: str, slug_prefix: str):
     return workspace, pack, version
 
 
-async def test_apply_creates_new_hub_pack_and_subscription(
-    db_session, identity
-):
+async def test_apply_creates_new_hub_pack_and_subscription(db_session, identity):
     workspace, pack, version = await _seed_pack_with_version(
         db_session, identity=identity, body="# fresh content", slug_prefix="new"
     )
@@ -105,9 +103,7 @@ async def test_apply_creates_new_hub_pack_and_subscription(
     assert hub_pack.tenant_id == workspace.id  # fallback resolution
     assert hub_pack.promoted_from_pack_id == pack.id
 
-    active = await HubSkillPackVersionRepository(db_session).get_active(
-        hub_pack_id=hub_pack.id
-    )
+    active = await HubSkillPackVersionRepository(db_session).get_active(hub_pack_id=hub_pack.id)
     assert active is not None
     assert active.id == result["hub_version_id"]
     assert active.is_active is True

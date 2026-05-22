@@ -144,9 +144,7 @@ class TestSandboxRequired:
 class TestNoSandbox:
     """``sandbox.kind=docker`` but no live backend registered → no_sandbox."""
 
-    async def test_missing_active_backend(
-        self, fresh_run_id: uuid.UUID
-    ) -> None:
+    async def test_missing_active_backend(self, fresh_run_id: uuid.UUID) -> None:
         # Note: we deliberately DO NOT call ``register_active_backend``.
         set_context(
             _ctx(
@@ -162,12 +160,8 @@ class TestNoSandbox:
 class TestHappyPath:
     """Docker sandbox + live backend + command returns ok."""
 
-    async def test_sync_backend_with_split_streams(
-        self, fresh_run_id: uuid.UUID
-    ) -> None:
-        backend = _SyncBackend(
-            _ExecResp(stdout="hello\n", stderr="", exit_code=0)
-        )
+    async def test_sync_backend_with_split_streams(self, fresh_run_id: uuid.UUID) -> None:
+        backend = _SyncBackend(_ExecResp(stdout="hello\n", stderr="", exit_code=0))
         register_active_backend(fresh_run_id, backend)
         set_context(
             _ctx(
@@ -182,12 +176,8 @@ class TestHappyPath:
         assert result["stdout"] == "hello\n"
         assert backend.calls == [("echo hello", 60)]
 
-    async def test_async_backend_with_combined_output(
-        self, fresh_run_id: uuid.UUID
-    ) -> None:
-        backend = _AsyncBackend(
-            _ExecResp(output="combined", exit_code=0)
-        )
+    async def test_async_backend_with_combined_output(self, fresh_run_id: uuid.UUID) -> None:
+        backend = _AsyncBackend(_ExecResp(output="combined", exit_code=0))
         register_active_backend(fresh_run_id, backend)
         set_context(
             _ctx(
@@ -202,9 +192,7 @@ class TestHappyPath:
         assert result["stdout"] == "combined"
         assert result["stderr"] == ""
 
-    async def test_cwd_is_prepended_to_command(
-        self, fresh_run_id: uuid.UUID
-    ) -> None:
+    async def test_cwd_is_prepended_to_command(self, fresh_run_id: uuid.UUID) -> None:
         backend = _SyncBackend(_ExecResp(stdout="ok", exit_code=0))
         register_active_backend(fresh_run_id, backend)
         set_context(
@@ -213,9 +201,7 @@ class TestHappyPath:
                 run_id=fresh_run_id,
             )
         )
-        result = await run_shell(
-            ShellArgs(command="pwd", cwd="/workspace/sub")
-        )
+        result = await run_shell(ShellArgs(command="pwd", cwd="/workspace/sub"))
         assert result["ok"] is True
         assert result["cwd"] == "/workspace/sub"
         # The composed command should chdir before running ``pwd``.
@@ -223,12 +209,8 @@ class TestHappyPath:
         assert "/workspace/sub" in backend.calls[0][0]
         assert backend.calls[0][0].endswith("&& pwd")
 
-    async def test_non_zero_exit_marks_failure(
-        self, fresh_run_id: uuid.UUID
-    ) -> None:
-        backend = _SyncBackend(
-            _ExecResp(stdout="", stderr="boom\n", exit_code=2)
-        )
+    async def test_non_zero_exit_marks_failure(self, fresh_run_id: uuid.UUID) -> None:
+        backend = _SyncBackend(_ExecResp(stdout="", stderr="boom\n", exit_code=2))
         register_active_backend(fresh_run_id, backend)
         set_context(
             _ctx(
@@ -243,12 +225,8 @@ class TestHappyPath:
         assert "reason" not in result
         assert result["stderr"] == "boom\n"
 
-    async def test_truncated_flag_passes_through(
-        self, fresh_run_id: uuid.UUID
-    ) -> None:
-        backend = _SyncBackend(
-            _ExecResp(stdout="x", exit_code=0, truncated=True)
-        )
+    async def test_truncated_flag_passes_through(self, fresh_run_id: uuid.UUID) -> None:
+        backend = _SyncBackend(_ExecResp(stdout="x", exit_code=0, truncated=True))
         register_active_backend(fresh_run_id, backend)
         set_context(
             _ctx(

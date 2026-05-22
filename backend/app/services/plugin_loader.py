@@ -172,8 +172,7 @@ class PluginContext:
             )
         if not isinstance(name, str) or not name:
             raise ValueError(
-                f"plugin {self._manifest.name!r}: register_tool requires a "
-                "non-empty name"
+                f"plugin {self._manifest.name!r}: register_tool requires a non-empty name"
             )
         log.info(
             "plugin %s requested tool %s (deferred to M4)",
@@ -204,13 +203,11 @@ class PluginContext:
             )
         if not isinstance(kind, str) or not kind:
             raise ValueError(
-                f"plugin {self._manifest.name!r}: register_channel_kind "
-                "requires a non-empty kind"
+                f"plugin {self._manifest.name!r}: register_channel_kind requires a non-empty kind"
             )
         if not callable(factory):
             raise ValueError(
-                f"plugin {self._manifest.name!r}: register_channel_kind "
-                "requires a callable factory"
+                f"plugin {self._manifest.name!r}: register_channel_kind requires a callable factory"
             )
 
         from app.services.channels import register_provider_from_plugin
@@ -241,8 +238,7 @@ class PluginContext:
             )
         if not isinstance(kind, str) or not kind:
             raise ValueError(
-                f"plugin {self._manifest.name!r}: register_model_provider "
-                "requires a non-empty kind"
+                f"plugin {self._manifest.name!r}: register_model_provider requires a non-empty kind"
             )
         if not callable(factory):
             raise ValueError(
@@ -269,8 +265,7 @@ class PluginContext:
     ) -> None:
         if not isinstance(kind, str) or not kind:
             raise ValueError(
-                f"plugin {self._manifest.name!r}: register_provider requires "
-                "a non-empty kind"
+                f"plugin {self._manifest.name!r}: register_provider requires a non-empty kind"
             )
         log.info(
             "plugin %s requested provider kind=%s via legacy register_provider; "
@@ -334,9 +329,7 @@ def _coerce_manifest(raw: dict[str, Any]) -> PluginManifest:
 
     scopes_raw = raw["capability_scopes"]
     if not isinstance(scopes_raw, (list, tuple)) or not scopes_raw:
-        raise ValueError(
-            "capability_scopes must be a non-empty list of hook / extension names"
-        )
+        raise ValueError("capability_scopes must be a non-empty list of hook / extension names")
     scopes: list[str] = []
     for scope in scopes_raw:
         scope_str = str(scope).strip()
@@ -476,9 +469,7 @@ async def discover_plugins(plugin_dir: Path) -> list[LoadedPlugin]:
                 )
             )
         except Exception as exc:
-            log.warning(
-                "plugin discovery failed for %s: %s", entry.name, exc, exc_info=True
-            )
+            log.warning("plugin discovery failed for %s: %s", entry.name, exc, exc_info=True)
             try:
                 sha = _hash_plugin_folder(entry)
             except Exception:  # pragma: no cover - hashing should not fail twice
@@ -573,11 +564,13 @@ async def _sync_registry_row(
         # plus REJECTED as a sticky terminal state. Never overwrite
         # APPROVED / REJECTED with DISCOVERED on a re-scan.
         sticky = {PluginRegistryStatus.APPROVED, PluginRegistryStatus.REJECTED}
-        if row.status in sticky and status == PluginRegistryStatus.DISCOVERED:
-            pass
-        elif row.status == PluginRegistryStatus.LOADED and status in (
-            PluginRegistryStatus.SIGNED_VERIFIED,
-            PluginRegistryStatus.DISCOVERED,
+        if (row.status in sticky and status == PluginRegistryStatus.DISCOVERED) or (
+            row.status == PluginRegistryStatus.LOADED
+            and status
+            in (
+                PluginRegistryStatus.SIGNED_VERIFIED,
+                PluginRegistryStatus.DISCOVERED,
+            )
         ):
             pass
         else:
@@ -678,9 +671,7 @@ async def load_and_register_plugins(
             continue
 
         if not legacy_mode:
-            await _sync_registry_row(
-                db, plugin, status=PluginRegistryStatus.DISCOVERED
-            )
+            await _sync_registry_row(db, plugin, status=PluginRegistryStatus.DISCOVERED)
             await audit_svc.record(
                 db,
                 action="plugin.discovered",
@@ -710,10 +701,7 @@ async def load_and_register_plugins(
                     db,
                     plugin,
                     reason=reason,
-                    summary=(
-                        f"plugin {plugin.manifest.name!r} skipped "
-                        f"(reason={reason})"
-                    ),
+                    summary=(f"plugin {plugin.manifest.name!r} skipped (reason={reason})"),
                 )
                 continue
             # On the approved path, advance the registry row to
@@ -729,19 +717,14 @@ async def load_and_register_plugins(
                 db,
                 plugin,
                 reason="approved",
-                summary=(
-                    f"plugin {plugin.manifest.name!r} signature verified "
-                    "and admin-approved"
-                ),
+                summary=(f"plugin {plugin.manifest.name!r} signature verified and admin-approved"),
             )
 
         ctx = PluginContext(manifest=plugin.manifest)
         try:
             plugin.register_func(ctx)
         except Exception as exc:
-            log.exception(
-                "plugin register() crashed for %s", plugin.manifest.name
-            )
+            log.exception("plugin register() crashed for %s", plugin.manifest.name)
             if not legacy_mode:
                 await _sync_registry_row(
                     db,
@@ -771,9 +754,7 @@ async def load_and_register_plugins(
         registered.append(plugin)
 
         if not legacy_mode:
-            await _sync_registry_row(
-                db, plugin, status=PluginRegistryStatus.LOADED
-            )
+            await _sync_registry_row(db, plugin, status=PluginRegistryStatus.LOADED)
 
         await audit_svc.record(
             db,

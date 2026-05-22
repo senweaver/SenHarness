@@ -108,9 +108,7 @@ class ApprovalManager:
                 log.warning("approval queue full for session %s", session_id)
         return entry
 
-    async def wait(
-        self, approval_id: uuid.UUID, *, timeout_s: float
-    ) -> tuple[bool, bool]:
+    async def wait(self, approval_id: uuid.UUID, *, timeout_s: float) -> tuple[bool, bool]:
         """Block until a decision lands (or the TTL elapses).
 
         Returns ``(approved, timed_out)``. When ``timed_out`` is True the caller
@@ -144,9 +142,7 @@ class ApprovalManager:
         if not entry.future.done():
             entry.future.set_result(approved)
         entry.extra["decided_reason"] = reason
-        entry.extra["decided_by_identity_id"] = (
-            str(decided_by) if decided_by is not None else None
-        )
+        entry.extra["decided_by_identity_id"] = str(decided_by) if decided_by is not None else None
         return entry
 
     async def subscribe_session(self, session_id: uuid.UUID) -> asyncio.Queue[PendingApproval]:

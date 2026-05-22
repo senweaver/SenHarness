@@ -58,9 +58,7 @@ class SessionGoal(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedM
         nullable=False,
         index=True,
     )
-    locked_at: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now()
-    )
+    locked_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
     unlocked_at: Mapped[datetime | None] = mapped_column(nullable=True)
     unlocked_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),

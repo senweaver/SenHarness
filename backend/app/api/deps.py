@@ -104,6 +104,8 @@ def require_roles(*required: str):
         payload = decode_token(creds.split(" ", 1)[1], expected_kind="access")
         roles = set(payload.get("roles") or [])
         if not roles.intersection(required):
-            raise PermissionDenied("role_missing", code="auth.role_missing", extras={"required": list(required)})
+            raise PermissionDenied(
+                "role_missing", code="auth.role_missing", extras={"required": list(required)}
+            )
 
     return _check

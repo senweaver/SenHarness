@@ -425,9 +425,7 @@ def openai_responses_to_normalized(body: dict[str, Any]) -> NormalizedMessageReq
     function_outputs: list[dict[str, Any]] = []
 
     if isinstance(raw_input, str) and raw_input:
-        messages.append(
-            {"role": "user", "content": [{"type": "text", "text": raw_input}]}
-        )
+        messages.append({"role": "user", "content": [{"type": "text", "text": raw_input}]})
     elif isinstance(raw_input, list):
         for entry in raw_input:
             if not isinstance(entry, dict):
@@ -439,7 +437,9 @@ def openai_responses_to_normalized(body: dict[str, Any]) -> NormalizedMessageReq
                     continue
                 if norm["role"] in ("system", "developer"):
                     system_chunks.append(
-                        "\n".join(p.get("text", "") for p in norm["content"] if p.get("type") == "text")
+                        "\n".join(
+                            p.get("text", "") for p in norm["content"] if p.get("type") == "text"
+                        )
                     )
                     continue
                 messages.append({"role": norm["role"], "content": norm["content"]})
@@ -541,11 +541,7 @@ def _coerce_openai_tools(raw: Any) -> list[NormalizedTool]:
             schema = spec.get("parameters") if isinstance(spec, dict) else None
             if not isinstance(schema, dict):
                 schema = {"type": "object", "properties": {}}
-            out.append(
-                NormalizedTool(
-                    name=name, description=description, parameters_schema=schema
-                )
-            )
+            out.append(NormalizedTool(name=name, description=description, parameters_schema=schema))
         elif kind in ("file_search", "web_search", "web_search_preview"):
             # Schema-only translation: pass through as a tool the
             # external framework can recognise. Real execution lives
@@ -627,9 +623,7 @@ def estimate_tokens_for_normalized(req: NormalizedMessageRequest) -> int:
                 total += 64
     for tool in req.tools:
         total += estimate_tokens_char_div_4(tool.description)
-        total += estimate_tokens_char_div_4(
-            json.dumps(tool.parameters_schema, ensure_ascii=False)
-        )
+        total += estimate_tokens_char_div_4(json.dumps(tool.parameters_schema, ensure_ascii=False))
     return total
 
 
@@ -884,9 +878,7 @@ async def stream_anthropic_messages(
                     {
                         "type": "message_delta",
                         "delta": {
-                            "stop_reason": str(
-                                frame.get("stop_reason") or "end_turn"
-                            ),
+                            "stop_reason": str(frame.get("stop_reason") or "end_turn"),
                             "stop_sequence": frame.get("stop_sequence"),
                         },
                         "usage": {
@@ -972,9 +964,7 @@ async def stream_openai_responses(
                     "response.created",
                     {
                         "type": "response.created",
-                        "response": _response_envelope(
-                            status="in_progress", completed=False
-                        ),
+                        "response": _response_envelope(status="in_progress", completed=False),
                     },
                 )
             elif kind == "text_delta":

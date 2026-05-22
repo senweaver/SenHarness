@@ -16,7 +16,6 @@ from pydantic import ValidationError
 from app.core.errors import SandboxKindDisabled, SshConfigInvalid
 from app.services.sandbox_ssh import (
     SshSandboxConfig,
-    assert_ssh_backend_allowed,
     parse_vault_ref,
     validate_runtime_config,
 )
@@ -28,9 +27,7 @@ def _base_config(**overrides):
         "port": 22,
         "user": "deploy",
         "private_key_ref": "vault://workspace/ops_ed25519",
-        "known_hosts_pin": (
-            "ops-bastion.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH"
-        ),
+        "known_hosts_pin": ("ops-bastion.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH"),
     }
     payload.update(overrides)
     return payload
@@ -52,9 +49,7 @@ def test_plaintext_private_key_rejected():
         SshSandboxConfig.model_validate(
             _base_config(private_key_ref="-----BEGIN OPENSSH PRIVATE KEY-----")
         )
-    assert any(
-        err["loc"] == ("private_key_ref",) for err in exc.value.errors()
-    )
+    assert any(err["loc"] == ("private_key_ref",) for err in exc.value.errors())
 
 
 def test_filesystem_path_rejected():
@@ -69,9 +64,7 @@ def test_known_hosts_pin_required():
     payload.pop("known_hosts_pin")
     with pytest.raises(ValidationError) as exc:
         SshSandboxConfig.model_validate(payload)
-    assert any(
-        err["loc"] == ("known_hosts_pin",) for err in exc.value.errors()
-    )
+    assert any(err["loc"] == ("known_hosts_pin",) for err in exc.value.errors())
 
 
 def test_known_hosts_pin_empty_rejected():
@@ -122,9 +115,7 @@ def test_runtime_validation_dev_empty_allowlist_ok(monkeypatch):
     from app.core import config as cfg
 
     cfg.get_settings.cache_clear()
-    config = SshSandboxConfig.model_validate(
-        _base_config(execute=True, command_allowlist=[])
-    )
+    config = SshSandboxConfig.model_validate(_base_config(execute=True, command_allowlist=[]))
     validate_runtime_config(config)
 
 
@@ -138,9 +129,7 @@ def test_runtime_validation_production_empty_allowlist_blocked(monkeypatch):
     from app.services import sandbox_ssh as svc
 
     svc.app_settings = cfg.get_settings()
-    config = SshSandboxConfig.model_validate(
-        _base_config(execute=True, command_allowlist=[])
-    )
+    config = SshSandboxConfig.model_validate(_base_config(execute=True, command_allowlist=[]))
     with pytest.raises(SshConfigInvalid) as exc:
         validate_runtime_config(config)
     assert exc.value.code == "sandbox.ssh_config_invalid"

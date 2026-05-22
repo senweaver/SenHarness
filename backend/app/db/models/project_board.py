@@ -29,14 +29,10 @@ from app.db.base import Base
 from app.db.mixins import SoftDeleteMixin, TimestampMixin, UuidPkMixin, WorkspaceScopedMixin
 
 
-class ProjectBoard(
-    UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base
-):
+class ProjectBoard(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "project_boards"
     __table_args__ = (
-        UniqueConstraint(
-            "workspace_id", "name", name="uq_project_boards_workspace_name"
-        ),
+        UniqueConstraint("workspace_id", "name", name="uq_project_boards_workspace_name"),
     )
 
     name: Mapped[str] = mapped_column(String(120), nullable=False)

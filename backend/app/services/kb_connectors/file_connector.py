@@ -51,9 +51,7 @@ class FileConnector(KbConnector):
     def validate_config(self, config: dict) -> None:
         ids = self._coerce_ids(config)
         if not ids:
-            raise ValueError(
-                "connector 'file' requires attachment_ids (non-empty list)"
-            )
+            raise ValueError("connector 'file' requires attachment_ids (non-empty list)")
 
     @staticmethod
     def _coerce_ids(config: dict) -> list[uuid.UUID]:
@@ -70,9 +68,7 @@ class FileConnector(KbConnector):
                 continue
         return out
 
-    async def sync(
-        self, *, config: dict
-    ) -> AsyncIterator[ConnectorDocument | SyncProgressEvent]:
+    async def sync(self, *, config: dict) -> AsyncIterator[ConnectorDocument | SyncProgressEvent]:
         ids = self._coerce_ids(config)
         yield SyncProgressEvent(
             level="info",

@@ -48,7 +48,9 @@ def _safe(rel_path: str) -> Path:
 # ─── read_file ─────────────────────────────────────────────
 class ReadFileArgs(BaseModel):
     path: str = Field(..., description="Relative path under the session scratch root.")
-    encoding: str = Field(default="utf-8", description="Text encoding; pass 'binary' for raw bytes summary.")
+    encoding: str = Field(
+        default="utf-8", description="Text encoding; pass 'binary' for raw bytes summary."
+    )
     start_line: int = Field(default=1, ge=1, description="1-based line number to start from.")
     end_line: int | None = Field(default=None, description="Inclusive end line; None = until EOF.")
 

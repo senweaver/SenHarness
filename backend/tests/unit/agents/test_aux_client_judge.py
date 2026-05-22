@@ -31,9 +31,7 @@ def test_serialise_artifact_turns_compacts_and_marks_tool_results():
             "role": "assistant",
             "iteration": 1,
             "text": "Looking it up.",
-            "tool_calls": [
-                {"name": "search", "args": {"q": "Tokyo population"}}
-            ],
+            "tool_calls": [{"name": "search", "args": {"q": "Tokyo population"}}],
             "tool_results": [
                 {"call_id": "1", "ok": True, "data": "13M"},
                 {"call_id": "2", "ok": False, "error": "rate limited"},

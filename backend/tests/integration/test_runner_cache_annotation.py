@@ -17,7 +17,6 @@ end-to-end coverage of:
 
 from __future__ import annotations
 
-import uuid
 from typing import Any
 
 import pytest
@@ -100,9 +99,7 @@ def _reset_state():
 
 
 # ─── Tests ─────────────────────────────────────────────────
-async def test_anthropic_prepare_lands_settings_and_audit(
-    db_session, workspace
-):
+async def test_anthropic_prepare_lands_settings_and_audit(db_session, workspace):
     await _enable_cache_for_workspace(workspace, db_session)
 
     redis = _FakeRedis()
@@ -120,10 +117,10 @@ async def test_anthropic_prepare_lands_settings_and_audit(
     assert agent.model_settings["anthropic_cache_messages"] == "5m"
 
     rows = (
-        await db_session.execute(
-            select(AuditEvent).where(AuditEvent.action == "cache.annotated")
-        )
-    ).scalars().all()
+        (await db_session.execute(select(AuditEvent).where(AuditEvent.action == "cache.annotated")))
+        .scalars()
+        .all()
+    )
     assert any(r.workspace_id == workspace.id for r in rows)
 
 
@@ -141,16 +138,14 @@ async def test_unsupported_provider_skips_silently(db_session, workspace):
     assert agent.model_settings == {}
 
     rows = (
-        await db_session.execute(
-            select(AuditEvent).where(AuditEvent.action == "cache.annotated")
-        )
-    ).scalars().all()
+        (await db_session.execute(select(AuditEvent).where(AuditEvent.action == "cache.annotated")))
+        .scalars()
+        .all()
+    )
     assert all(r.workspace_id != workspace.id for r in rows)
 
 
-async def test_finalize_records_hit_and_writes_audit(
-    db_session, workspace
-):
+async def test_finalize_records_hit_and_writes_audit(db_session, workspace):
     await _enable_cache_for_workspace(workspace, db_session)
     redis = _FakeRedis()
     agent = _FakeAgent()
@@ -179,16 +174,14 @@ async def test_finalize_records_hit_and_writes_audit(
     assert snapshot.consecutive_misses == 0
 
     rows = (
-        await db_session.execute(
-            select(AuditEvent).where(AuditEvent.action == "cache.hit")
-        )
-    ).scalars().all()
+        (await db_session.execute(select(AuditEvent).where(AuditEvent.action == "cache.hit")))
+        .scalars()
+        .all()
+    )
     assert any(r.workspace_id == workspace.id for r in rows)
 
 
-async def test_five_consecutive_misses_disable_and_short_circuit(
-    db_session, workspace
-):
+async def test_five_consecutive_misses_disable_and_short_circuit(db_session, workspace):
     await _enable_cache_for_workspace(workspace, db_session)
     redis = _FakeRedis()
 
@@ -208,12 +201,14 @@ async def test_five_consecutive_misses_disable_and_short_circuit(
         )
 
     rows = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.action == "cache.adaptive_disabled"
+        (
+            await db_session.execute(
+                select(AuditEvent).where(AuditEvent.action == "cache.adaptive_disabled")
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert any(r.workspace_id == workspace.id for r in rows)
 
     next_agent = _FakeAgent()
@@ -228,12 +223,14 @@ async def test_five_consecutive_misses_disable_and_short_circuit(
     assert next_agent.model_settings == {}
 
     skip_rows = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.action == "cache.adaptive_skipped"
+        (
+            await db_session.execute(
+                select(AuditEvent).where(AuditEvent.action == "cache.adaptive_skipped")
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert any(r.workspace_id == workspace.id for r in skip_rows)
 
 

@@ -121,9 +121,7 @@ async def test_no_agent_default_falls_through_to_workspace(monkeypatch):
     monkeypatch.setattr(model_client, "_resolve_from_db", _from_db)
 
     ws = uuid.uuid4()
-    resolved = await model_client.resolve_for_agent(
-        workspace_id=ws, agent_id=uuid.uuid4()
-    )
+    resolved = await model_client.resolve_for_agent(workspace_id=ws, agent_id=uuid.uuid4())
     assert resolved is not None
     assert resolved.provider_kind == "openai"
     assert captured["prefer_kind"] is None

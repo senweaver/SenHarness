@@ -64,9 +64,7 @@ class PendingMemoryStatus(StrEnum):
     FAILED = "failed"
 
 
-class PendingMemory(
-    UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base
-):
+class PendingMemory(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "pending_memories"
     __table_args__ = (
         Index(
@@ -107,12 +105,6 @@ class PendingMemory(
         index=True,
     )
     promoted_at: Mapped[datetime | None] = mapped_column(nullable=True)
-    promoted_target_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True
-    )
-    failure_reason: Mapped[str | None] = mapped_column(
-        String(200), nullable=True
-    )
-    failure_count: Mapped[int] = mapped_column(
-        default=0, server_default="0", nullable=False
-    )
+    promoted_target_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    failure_reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    failure_count: Mapped[int] = mapped_column(default=0, server_default="0", nullable=False)

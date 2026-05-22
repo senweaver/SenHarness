@@ -50,9 +50,7 @@ async def create_squad(
     )
 
     if members:
-        await SquadMemberRepository(session).replace_members(
-            squad_id=squad.id, members=members
-        )
+        await SquadMemberRepository(session).replace_members(squad_id=squad.id, members=members)
 
     await session.flush()
     await stars_svc.fan_out_squad_to_workspace_members(
@@ -73,14 +71,10 @@ async def get_or_404(
 async def list_squads(
     session: AsyncSession, *, workspace_id: uuid.UUID, limit: int = 100
 ) -> list[Squad]:
-    return list(
-        await SquadRepository(session).list(workspace_id=workspace_id, limit=limit)
-    )
+    return list(await SquadRepository(session).list(workspace_id=workspace_id, limit=limit))
 
 
-async def update_squad(
-    session: AsyncSession, *, squad: Squad, **patch
-) -> Squad:
+async def update_squad(session: AsyncSession, *, squad: Squad, **patch) -> Squad:
     return await SquadRepository(session).update(squad, **patch)
 
 
@@ -90,9 +84,7 @@ async def replace_members(
     squad_id: uuid.UUID,
     members: list[tuple[uuid.UUID, str, int]],
 ) -> None:
-    await SquadMemberRepository(session).replace_members(
-        squad_id=squad_id, members=members
-    )
+    await SquadMemberRepository(session).replace_members(squad_id=squad_id, members=members)
 
 
 async def star_squad(

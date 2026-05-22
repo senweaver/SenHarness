@@ -192,8 +192,7 @@ async def aggregate_strengths(
     successful: list[SessionArtifact] = [
         r
         for r in rows
-        if r.final_outcome == "success"
-        and (r.judge_score is None or float(r.judge_score) >= 0.0)
+        if r.final_outcome == "success" and (r.judge_score is None or float(r.judge_score) >= 0.0)
     ]
 
     tool_count: Counter[str] = Counter()
@@ -339,9 +338,7 @@ async def _bucket_skill_categories(
 
     return [
         {"category": cat, "use_count": int(count)}
-        for cat, count in sorted(
-            by_category.items(), key=lambda kv: (-kv[1], kv[0])
-        )[:15]
+        for cat, count in sorted(by_category.items(), key=lambda kv: (-kv[1], kv[0]))[:15]
     ]
 
 
@@ -388,9 +385,7 @@ async def aggregate_failure_modes(
         )
 
     artifact_ids = [a.id for a in artifacts]
-    verdicts = await _list_verdicts(
-        db, workspace_id=workspace_id, artifact_ids=artifact_ids
-    )
+    verdicts = await _list_verdicts(db, workspace_id=workspace_id, artifact_ids=artifact_ids)
 
     # Count common error_kinds straight off the artifacts so the
     # heuristic baseline is non-empty even when no aux model is
@@ -423,9 +418,7 @@ async def aggregate_failure_modes(
             artifacts_examined=len(artifacts),
         )
 
-    aux_config = await get_aux_model(
-        db, workspace_id=workspace_id, task=AuxiliaryTask.SKILL_REVIEW
-    )
+    aux_config = await get_aux_model(db, workspace_id=workspace_id, task=AuxiliaryTask.SKILL_REVIEW)
     if aux_config is None:
         return FailureModeUpdate(
             failure_modes={
@@ -511,9 +504,7 @@ async def _list_verdicts(
     return {row.artifact_id: row for row in rows}
 
 
-def _shape_dict_list(
-    items: list[Any], *, primary_key: str
-) -> list[dict[str, Any]]:
+def _shape_dict_list(items: list[Any], *, primary_key: str) -> list[dict[str, Any]]:
     """Coerce aux output into a stable list-of-dicts shape.
 
     The aux model occasionally returns bare strings or partial
@@ -573,10 +564,10 @@ _CLUSTER_SYSTEM_PROMPT = (
     "auth, validation, parse).\n"
     " * error_patterns — recurring behavioural mistakes that span "
     "multiple kinds (e.g. 'forgets to handle empty results').\n"
-    "Return JSON of the form {\"hallucination_kinds\":[{\"kind\":"
-    "...,\"count\":N}], \"common_errors\":[{\"error_kind\":...,"
-    "\"count\":N}], \"error_patterns\":[{\"pattern_summary\":...,"
-    "\"frequency\":N}]}. Only include buckets with at least 2 "
+    'Return JSON of the form {"hallucination_kinds":[{"kind":'
+    '...,"count":N}], "common_errors":[{"error_kind":...,'
+    '"count":N}], "error_patterns":[{"pattern_summary":...,'
+    '"frequency":N}]}. Only include buckets with at least 2 '
     "matching runs. Be specific; avoid generic English."
 )
 
@@ -625,16 +616,11 @@ async def compute_cross_workspace_stats(
     count_stmt = select(func.count()).select_from(SessionArtifact).where(*base_filter)
     total_runs = int((await db.execute(count_stmt)).scalar() or 0)
 
-    score_stmt = (
-        select(SessionArtifact.judge_score)
-        .where(
-            *base_filter,
-            SessionArtifact.judge_score.is_not(None),
-        )
+    score_stmt = select(SessionArtifact.judge_score).where(
+        *base_filter,
+        SessionArtifact.judge_score.is_not(None),
     )
-    raw_scores = [
-        float(s) for s in (await db.execute(score_stmt)).scalars().all()
-    ]
+    raw_scores = [float(s) for s in (await db.execute(score_stmt)).scalars().all()]
 
     median_score: float | None = None
     if raw_scores:
@@ -652,18 +638,13 @@ async def compute_cross_workspace_stats(
     )
     err_rows = (await db.execute(err_stmt)).all()
     top_failure_kinds = [
-        {"error_kind": str(row[0]), "count": int(row[1])}
-        for row in err_rows
-        if row[0] is not None
+        {"error_kind": str(row[0]), "count": int(row[1])} for row in err_rows if row[0] is not None
     ]
 
-    workspace_count_stmt = (
-        select(func.count(func.distinct(SessionArtifact.workspace_id)))
-        .where(*base_filter)
+    workspace_count_stmt = select(func.count(func.distinct(SessionArtifact.workspace_id))).where(
+        *base_filter
     )
-    workspace_count = int(
-        (await db.execute(workspace_count_stmt)).scalar() or 0
-    )
+    workspace_count = int((await db.execute(workspace_count_stmt)).scalar() or 0)
 
     return {
         "total_runs_across_tenants": total_runs,
@@ -731,12 +712,8 @@ async def get_profile_with_cross_workspace_stats(
         summary="platform admin read agent_profile cross_workspace stats",
         metadata={
             "agent_id": str(agent_id),
-            "workspace_count": int(
-                fresh_stats.get("workspace_count", 0) or 0
-            ),
-            "total_runs": int(
-                fresh_stats.get("total_runs_across_tenants", 0) or 0
-            ),
+            "workspace_count": int(fresh_stats.get("workspace_count", 0) or 0),
+            "total_runs": int(fresh_stats.get("total_runs_across_tenants", 0) or 0),
         },
     )
     return profile
@@ -789,9 +766,7 @@ async def update_profile_for_agent(
     )
 
     repo = AgentProfileRepository(db)
-    profile = await repo.get_by_agent(
-        workspace_id=workspace_id, agent_id=agent_id
-    )
+    profile = await repo.get_by_agent(workspace_id=workspace_id, agent_id=agent_id)
     aggregated_run_count = int(strengths.get("sample_artifact_count", 0)) + int(
         failure.artifacts_examined
     )
@@ -841,8 +816,7 @@ async def update_profile_for_agent(
         resource_type="agent_profile",
         resource_id=profile.id,
         summary=(
-            f"agent_profile updated ({invocation_kind}): "
-            f"{aggregated_run_count} runs aggregated"
+            f"agent_profile updated ({invocation_kind}): {aggregated_run_count} runs aggregated"
         ),
         metadata=audit_meta,
     )

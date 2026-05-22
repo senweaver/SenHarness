@@ -7,7 +7,7 @@ contract:
 * :func:`build_evolver_agent` registers exactly the 9 tools the
   brief specifies;
 * :func:`invoke_evolver_subagent` short-circuits with
-  :class:`EvolverDisabled` when the workspace is opted out;
+  :class:`EvolverDisabledError` when the workspace is opted out;
 * :func:`_resolve_aux_config` walks the documented fallthrough
   (``aux_model_evolver`` → ``SKILL_REVIEW`` → ``JUDGE``).
 """
@@ -23,7 +23,7 @@ from app.agents.builtin import evolver_agent as ev
 from app.agents.builtin.evolver_agent import (
     EVOLVER_AGENT_TIMEOUT_SECONDS,
     EVOLVER_TOOL_NAMES,
-    EvolverDisabled,
+    EvolverDisabledError,
     build_evolver_agent,
     invoke_evolver_subagent,
     load_evolver_persona,
@@ -47,9 +47,7 @@ def test_tool_registry_includes_all_nine_evolver_tools():
     assert len(EVOLVER_TOOL_NAMES) == 9
     for name in EVOLVER_TOOL_NAMES:
         tool = BUILTIN_TOOL_REGISTRY[name]
-        assert tool.available_for_kinds == ("evolver",), (
-            f"{name} must be evolver-gated"
-        )
+        assert tool.available_for_kinds == ("evolver",), f"{name} must be evolver-gated"
 
 
 def test_build_evolver_agent_attaches_nine_tools():
@@ -63,18 +61,14 @@ def test_build_evolver_agent_attaches_nine_tools():
     agent = build_evolver_agent(model=TestModel())
     toolset = agent._function_toolset
     registered = list(toolset.tools)
-    assert len(registered) == 9, (
-        f"expected 9 registered tools, got {len(registered)}: {registered}"
-    )
+    assert len(registered) == 9, f"expected 9 registered tools, got {len(registered)}: {registered}"
     for name in EVOLVER_TOOL_NAMES:
         assert name in registered, f"{name} should be registered"
 
 
-async def test_invoke_disabled_workspace_raises(
-    db_session, workspace, monkeypatch
-):
+async def test_invoke_disabled_workspace_raises(db_session, workspace, monkeypatch):
     """A workspace with ``evolver.enabled=False`` must short-circuit
-    before the model is invoked and surface :class:`EvolverDisabled`.
+    before the model is invoked and surface :class:`EvolverDisabledError`.
     """
     workspace.home_config_json = {"evolver": {"enabled": False}}
     await db_session.flush()
@@ -85,7 +79,7 @@ async def test_invoke_disabled_workspace_raises(
 
     monkeypatch.setattr(ev, "get_session_factory", lambda: _factory)
 
-    with pytest.raises(EvolverDisabled):
+    with pytest.raises(EvolverDisabledError):
         await invoke_evolver_subagent(workspace_id=workspace.id)
 
 

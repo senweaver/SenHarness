@@ -46,9 +46,9 @@ def is_known_backend_kind(kind: str) -> bool:
 
 
 class AgentVisibility(StrEnum):
-    PRIVATE = "private"          # only creator
-    WORKSPACE = "workspace"      # all workspace members
-    PUBLIC = "public"            # marketplace
+    PRIVATE = "private"  # only creator
+    WORKSPACE = "workspace"  # all workspace members
+    PUBLIC = "public"  # marketplace
 
 
 class AutonomyLevel(StrEnum):
@@ -102,9 +102,7 @@ class Agent(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, 
     # an upstream provider model. ``NULL`` means "no rename" — the
     # upstream model name flows through unchanged. Indexed because
     # ``/v1/models`` builds its response from a DISTINCT scan.
-    served_model_name: Mapped[str | None] = mapped_column(
-        String(120), nullable=True, index=True
-    )
+    served_model_name: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
 
     # Per-agent default model (``"provider:model"`` string). NULL falls
     # through to ``Identity.profile_json.chat_model_prefs`` for the
@@ -116,9 +114,7 @@ class Agent(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, 
     # Preferred ``search_providers.kind`` for this agent's web_search
     # calls. NULL keeps the workspace-wide priority order (existing
     # behaviour).
-    default_search_provider_kind: Mapped[str | None] = mapped_column(
-        String(32), nullable=True
-    )
+    default_search_provider_kind: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     visibility: Mapped[AgentVisibility] = mapped_column(
         String(32), default=AgentVisibility.WORKSPACE, nullable=False

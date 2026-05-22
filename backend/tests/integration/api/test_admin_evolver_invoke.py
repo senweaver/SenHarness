@@ -13,13 +13,13 @@ import pytest
 
 from app.agents.builtin import evolver_agent as ev
 from app.agents.builtin.evolver_agent import (
-    EvolverDisabled,
+    EvolverDisabledError,
     EvolverInvokeResult,
 )
 from app.core.security import create_access_token
 from app.db.models.identity import PlatformRole
-from app.db.models.role import BuiltinRole
 from app.db.models.membership import Membership, MembershipStatus
+from app.db.models.role import BuiltinRole
 
 pytestmark = pytest.mark.asyncio
 
@@ -73,9 +73,7 @@ async def test_invoke_happy_path_returns_result(
             timed_out=False,
         )
 
-    monkeypatch.setattr(
-        "app.api.v1.admin_evolver.invoke_evolver_subagent", _stub_invoke
-    )
+    monkeypatch.setattr("app.api.v1.admin_evolver.invoke_evolver_subagent", _stub_invoke)
 
     headers = _bearer(identity.id, workspace_id=workspace.id)
     resp = await async_client.post(
@@ -101,11 +99,9 @@ async def test_invoke_disabled_workspace_returns_409(
     await _make_workspace_admin(db_session, workspace, identity)
 
     async def _stub_invoke(**_kwargs):
-        raise EvolverDisabled("workspace disabled")
+        raise EvolverDisabledError("workspace disabled")
 
-    monkeypatch.setattr(
-        "app.api.v1.admin_evolver.invoke_evolver_subagent", _stub_invoke
-    )
+    monkeypatch.setattr("app.api.v1.admin_evolver.invoke_evolver_subagent", _stub_invoke)
 
     headers = _bearer(identity.id, workspace_id=workspace.id)
     resp = await async_client.post(
@@ -116,9 +112,7 @@ async def test_invoke_disabled_workspace_returns_409(
     assert resp.status_code == 409, resp.text
 
 
-async def test_invoke_rejects_member_role(
-    async_client, db_session, workspace, monkeypatch
-):
+async def test_invoke_rejects_member_role(async_client, db_session, workspace, monkeypatch):
     """A regular MEMBER must not be able to fire the evolver."""
     from app.services import auth as auth_svc
 
@@ -154,9 +148,7 @@ async def test_invoke_rejects_member_role(
             final_message=None,
         )
 
-    monkeypatch.setattr(
-        "app.api.v1.admin_evolver.invoke_evolver_subagent", _stub_invoke
-    )
+    monkeypatch.setattr("app.api.v1.admin_evolver.invoke_evolver_subagent", _stub_invoke)
 
     headers = _bearer(member_identity.id, workspace_id=workspace.id)
     resp = await async_client.post(
@@ -203,9 +195,7 @@ async def test_invoke_platform_admin_bypasses_workspace_membership(
             timed_out=False,
         )
 
-    monkeypatch.setattr(
-        "app.api.v1.admin_evolver.invoke_evolver_subagent", _stub_invoke
-    )
+    monkeypatch.setattr("app.api.v1.admin_evolver.invoke_evolver_subagent", _stub_invoke)
 
     headers = _bearer(admin_identity.id, workspace_id=workspace.id)
     resp = await async_client.post(
@@ -242,9 +232,7 @@ async def test_invoke_rate_limited_after_three_calls(
             final_message=None,
         )
 
-    monkeypatch.setattr(
-        "app.api.v1.admin_evolver.invoke_evolver_subagent", _stub_invoke
-    )
+    monkeypatch.setattr("app.api.v1.admin_evolver.invoke_evolver_subagent", _stub_invoke)
 
     headers = _bearer(identity.id, workspace_id=workspace.id)
     statuses: list[int] = []

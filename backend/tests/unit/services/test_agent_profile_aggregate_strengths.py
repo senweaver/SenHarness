@@ -101,9 +101,7 @@ async def test_empty_returns_empty_buckets(db_session, workspace, agent):
 
 
 async def test_toolsets_count_and_avg_score(db_session, workspace, agent, identity):
-    sess = await _ensure_session(
-        db_session, workspace_id=workspace.id, identity_id=identity.id
-    )
+    sess = await _ensure_session(db_session, workspace_id=workspace.id, identity_id=identity.id)
     now = utcnow_naive()
     await _seed_artifact(
         db_session,
@@ -151,9 +149,7 @@ async def test_toolsets_count_and_avg_score(db_session, workspace, agent, identi
     assert by_name["search"]["effectiveness_avg"] == pytest.approx(1.0)
 
 
-async def test_skill_categories_bucket_by_manifest_tags(
-    db_session, workspace, agent, identity
-):
+async def test_skill_categories_bucket_by_manifest_tags(db_session, workspace, agent, identity):
     pack_a = await _make_pack(
         db_session,
         workspace_id=workspace.id,
@@ -166,9 +162,7 @@ async def test_skill_categories_bucket_by_manifest_tags(
         slug="pack-b",
     )
 
-    sess = await _ensure_session(
-        db_session, workspace_id=workspace.id, identity_id=identity.id
-    )
+    sess = await _ensure_session(db_session, workspace_id=workspace.id, identity_id=identity.id)
     now = utcnow_naive()
     await _seed_artifact(
         db_session,
@@ -194,17 +188,13 @@ async def test_skill_categories_bucket_by_manifest_tags(
     assert by_cat["general"] == 1
 
 
-async def test_other_agent_artifacts_are_filtered_out(
-    db_session, workspace, agent, identity
-):
+async def test_other_agent_artifacts_are_filtered_out(db_session, workspace, agent, identity):
     """An artifact owned by a different agent in the same workspace
     must not contribute to the buckets — the unique ``agent_id``
     filter is what makes the row 1:1 with agents.
     """
     other_agent = uuid.uuid4()
-    sess = await _ensure_session(
-        db_session, workspace_id=workspace.id, identity_id=identity.id
-    )
+    sess = await _ensure_session(db_session, workspace_id=workspace.id, identity_id=identity.id)
     now = utcnow_naive()
     await _seed_artifact(
         db_session,

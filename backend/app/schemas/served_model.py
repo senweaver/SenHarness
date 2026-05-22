@@ -47,18 +47,14 @@ _UPSTREAM_PATTERN = re.compile(r"^[A-Za-z0-9._:/-]{1,200}$")
 def validate_served_name(value: str) -> str:
     cleaned = (value or "").strip()
     if not _SERVED_NAME_PATTERN.match(cleaned):
-        raise ValueError(
-            "served_name must be 1-120 chars matching [A-Za-z0-9._:/-]"
-        )
+        raise ValueError("served_name must be 1-120 chars matching [A-Za-z0-9._:/-]")
     return cleaned
 
 
 def validate_upstream(value: str) -> str:
     cleaned = (value or "").strip()
     if not _UPSTREAM_PATTERN.match(cleaned):
-        raise ValueError(
-            "upstream must be 1-200 chars matching [A-Za-z0-9._:/-]"
-        )
+        raise ValueError("upstream must be 1-200 chars matching [A-Za-z0-9._:/-]")
     return cleaned
 
 

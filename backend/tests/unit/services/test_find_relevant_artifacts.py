@@ -51,9 +51,7 @@ async def _make_artifact(
         owner_identity_id=identity.id,
     )
     repo = SessionArtifactRepository(db)
-    finished = datetime.now(UTC).replace(tzinfo=None) - timedelta(
-        minutes=finished_offset_minutes
-    )
+    finished = datetime.now(UTC).replace(tzinfo=None) - timedelta(minutes=finished_offset_minutes)
     turns_payload = []
     if turns_text:
         turns_payload = [
@@ -79,9 +77,7 @@ async def _make_artifact(
     return row
 
 
-async def test_find_returns_empty_when_no_artifacts(
-    db_session, workspace
-) -> None:
+async def test_find_returns_empty_when_no_artifacts(db_session, workspace) -> None:
     pack = await _make_pack(db_session, workspace_id=workspace.id)
     rows = await verifier_svc.find_relevant_artifacts(
         db_session,
@@ -93,9 +89,7 @@ async def test_find_returns_empty_when_no_artifacts(
     assert rows == []
 
 
-async def test_find_matches_injected_pack_id(
-    db_session, workspace, identity
-) -> None:
+async def test_find_matches_injected_pack_id(db_session, workspace, identity) -> None:
     pack = await _make_pack(db_session, workspace_id=workspace.id)
     art = await _make_artifact(
         db_session,
@@ -114,12 +108,8 @@ async def test_find_matches_injected_pack_id(
     assert rows[0].id == art.id
 
 
-async def test_find_matches_invoked_tool_slug(
-    db_session, workspace, identity
-) -> None:
-    pack = await _make_pack(
-        db_session, workspace_id=workspace.id, slug="my-skill"
-    )
+async def test_find_matches_invoked_tool_slug(db_session, workspace, identity) -> None:
+    pack = await _make_pack(db_session, workspace_id=workspace.id, slug="my-skill")
     art = await _make_artifact(
         db_session,
         workspace=workspace,
@@ -137,12 +127,8 @@ async def test_find_matches_invoked_tool_slug(
     assert rows[0].id == art.id
 
 
-async def test_find_matches_turns_json_substring(
-    db_session, workspace, identity
-) -> None:
-    pack = await _make_pack(
-        db_session, workspace_id=workspace.id, slug="zoom-search"
-    )
+async def test_find_matches_turns_json_substring(db_session, workspace, identity) -> None:
+    pack = await _make_pack(db_session, workspace_id=workspace.id, slug="zoom-search")
     art = await _make_artifact(
         db_session,
         workspace=workspace,
@@ -160,9 +146,7 @@ async def test_find_matches_turns_json_substring(
     assert rows[0].id == art.id
 
 
-async def test_find_isolates_across_workspaces(
-    db_session, workspace, identity
-) -> None:
+async def test_find_isolates_across_workspaces(db_session, workspace, identity) -> None:
     from app.services import workspace as ws_svc
 
     other_ws = await ws_svc.create_workspace(
@@ -171,12 +155,8 @@ async def test_find_isolates_across_workspaces(
         slug=f"other-{uuid.uuid4().hex[:8]}",
         owner_identity_id=identity.id,
     )
-    pack_a = await _make_pack(
-        db_session, workspace_id=workspace.id, slug="shared-slug"
-    )
-    pack_b = await _make_pack(
-        db_session, workspace_id=other_ws.id, slug="shared-slug"
-    )
+    pack_a = await _make_pack(db_session, workspace_id=workspace.id, slug="shared-slug")
+    pack_b = await _make_pack(db_session, workspace_id=other_ws.id, slug="shared-slug")
     await _make_artifact(
         db_session,
         workspace=workspace,
@@ -204,9 +184,7 @@ async def test_find_isolates_across_workspaces(
     assert rows_b == []
 
 
-async def test_find_orders_by_finished_at_desc(
-    db_session, workspace, identity
-) -> None:
+async def test_find_orders_by_finished_at_desc(db_session, workspace, identity) -> None:
     pack = await _make_pack(db_session, workspace_id=workspace.id)
     older = await _make_artifact(
         db_session,

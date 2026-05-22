@@ -31,18 +31,26 @@ class BuiltinTool:
 
 
 # ─── Import tool implementations ─────────────────────────────
-from app.agents.tools.calculator import CalculatorArgs, run_calculator  # noqa: E402
-from app.agents.tools.cronjob_propose import (  # noqa: E402
+from app.agents.tools.calculator import CalculatorArgs, run_calculator
+from app.agents.tools.cronjob_propose import (
     ProposeCronjobArgs,
     run_propose_cronjob,
 )
-from app.agents.tools.current_time import CurrentTimeArgs, run_current_time  # noqa: E402
-from app.agents.tools.delegate_batch import (  # noqa: E402
+from app.agents.tools.current_time import CurrentTimeArgs, run_current_time
+from app.agents.tools.delegate_batch import (
     DelegateBatchArgs,
     run_delegate_batch,
 )
-from app.agents.tools.echo import EchoArgs, run_echo  # noqa: E402
-from app.agents.tools.filesystem import (  # noqa: E402
+from app.agents.tools.echo import EchoArgs, run_echo
+from app.agents.tools.evolver_helpers import (
+    ListSessionArtifactsArgs,
+    MarkSkipArgs,
+    ReadSkillPackArgs,
+    run_list_session_artifacts,
+    run_mark_skip,
+    run_read_skill_pack,
+)
+from app.agents.tools.filesystem import (
     DeleteFileArgs,
     ListFilesArgs,
     ReadFileArgs,
@@ -54,8 +62,8 @@ from app.agents.tools.filesystem import (  # noqa: E402
     run_search_files,
     run_write_file,
 )
-from app.agents.tools.knowledge import KnowledgeSearchArgs, run_knowledge_search  # noqa: E402
-from app.agents.tools.memory import (  # noqa: E402
+from app.agents.tools.knowledge import KnowledgeSearchArgs, run_knowledge_search
+from app.agents.tools.memory import (
     ForgetArgs,
     ListMemoriesArgs,
     MemorizeArgs,
@@ -65,7 +73,7 @@ from app.agents.tools.memory import (  # noqa: E402
     run_memorize,
     run_recall,
 )
-from app.agents.tools.multimedia import (  # noqa: E402
+from app.agents.tools.multimedia import (
     GenerateImageArgs,
     SpeakArgs,
     TranscribeArgs,
@@ -73,18 +81,10 @@ from app.agents.tools.multimedia import (  # noqa: E402
     run_speak,
     run_transcribe,
 )
-from app.agents.tools.run_tests import RunTestsArgs, run_run_tests  # noqa: E402
-from app.agents.tools.session_search import SessionSearchArgs, run_session_search  # noqa: E402
-from app.agents.tools.shell import ShellArgs, run_shell  # noqa: E402
-from app.agents.tools.evolver_helpers import (  # noqa: E402
-    ListSessionArtifactsArgs,
-    MarkSkipArgs,
-    ReadSkillPackArgs,
-    run_list_session_artifacts,
-    run_mark_skip,
-    run_read_skill_pack,
-)
-from app.agents.tools.skill_propose import (  # noqa: E402
+from app.agents.tools.run_tests import RunTestsArgs, run_run_tests
+from app.agents.tools.session_search import SessionSearchArgs, run_session_search
+from app.agents.tools.shell import ShellArgs, run_shell
+from app.agents.tools.skill_propose import (
     ProposeSkillCreateArgs,
     ProposeSkillDeleteArgs,
     ProposeSkillEditArgs,
@@ -98,9 +98,9 @@ from app.agents.tools.skill_propose import (  # noqa: E402
     run_propose_skill_remove_file,
     run_propose_skill_write_file,
 )
-from app.agents.tools.toolbox_search import FindToolsArgs, run_find_tools  # noqa: E402
-from app.agents.tools.web_fetch import WebFetchArgs, run_web_fetch  # noqa: E402
-from app.agents.tools.web_search import WebSearchArgs, run_web_search  # noqa: E402
+from app.agents.tools.toolbox_search import FindToolsArgs, run_find_tools
+from app.agents.tools.web_fetch import WebFetchArgs, run_web_fetch
+from app.agents.tools.web_search import WebSearchArgs, run_web_search
 
 BUILTIN_TOOL_REGISTRY: dict[str, BuiltinTool] = {
     # ── Lightweight utilities ─────────────────────────────
@@ -128,7 +128,6 @@ BUILTIN_TOOL_REGISTRY: dict[str, BuiltinTool] = {
         args_model=CalculatorArgs,
         runner=run_calculator,
     ),
-
     # ── Sub-agent batch spawn (M2.5.6) ────────────────────
     "delegate_batch": BuiltinTool(
         name="delegate_batch",
@@ -148,7 +147,6 @@ BUILTIN_TOOL_REGISTRY: dict[str, BuiltinTool] = {
         args_model=DelegateBatchArgs,
         runner=run_delegate_batch,
     ),
-
     # ── Web ───────────────────────────────────────────────
     "web_search": BuiltinTool(
         name="web_search",
@@ -173,7 +171,6 @@ BUILTIN_TOOL_REGISTRY: dict[str, BuiltinTool] = {
         args_model=WebFetchArgs,
         runner=run_web_fetch,
     ),
-
     # ── Filesystem (session-scoped scratch) ───────────────
     "read_file": BuiltinTool(
         name="read_file",
@@ -221,7 +218,6 @@ BUILTIN_TOOL_REGISTRY: dict[str, BuiltinTool] = {
         args_model=DeleteFileArgs,
         runner=run_delete_file,
     ),
-
     # ── Long-term memory ─────────────────────────────────
     "memorize": BuiltinTool(
         name="memorize",
@@ -269,7 +265,6 @@ BUILTIN_TOOL_REGISTRY: dict[str, BuiltinTool] = {
         args_model=SessionSearchArgs,
         runner=run_session_search,
     ),
-
     # ── Knowledge (RAG) ──────────────────────────────────
     "knowledge_search": BuiltinTool(
         name="knowledge_search",
@@ -282,7 +277,6 @@ BUILTIN_TOOL_REGISTRY: dict[str, BuiltinTool] = {
         args_model=KnowledgeSearchArgs,
         runner=run_knowledge_search,
     ),
-
     # ── Multimedia (images / speech) ──────────────────────
     "generate_image": BuiltinTool(
         name="generate_image",
@@ -313,7 +307,6 @@ BUILTIN_TOOL_REGISTRY: dict[str, BuiltinTool] = {
         args_model=TranscribeArgs,
         runner=run_transcribe,
     ),
-
     # ── Coding agent support ─────────────────────────────
     "find_tools": BuiltinTool(
         name="find_tools",
@@ -337,7 +330,6 @@ BUILTIN_TOOL_REGISTRY: dict[str, BuiltinTool] = {
         args_model=RunTestsArgs,
         runner=run_run_tests,
     ),
-
     # ── Dangerous: arbitrary shell ────────────────────────
     # Default-OFF. Not in CODING_TOOLBOX or DEFAULT_TOOLBOX. An agent
     # must opt in via metadata.tools.builtin and *also* set
@@ -357,7 +349,6 @@ BUILTIN_TOOL_REGISTRY: dict[str, BuiltinTool] = {
         args_model=ShellArgs,
         runner=run_shell,
     ),
-
     # ── Evolver-only proposal verbs (M2.1 + M2.7) ─────────────
     # Restricted via ``available_for_kinds=("evolver",)``: every other
     # agent skips registration. Each verb files an Approval row + (for
@@ -439,7 +430,6 @@ BUILTIN_TOOL_REGISTRY: dict[str, BuiltinTool] = {
         runner=run_propose_skill_remove_file,
         available_for_kinds=("evolver",),
     ),
-
     # ── Evolver-only helpers (M2.2) ─────────────────────────
     # The platform-builtin evolver agent reads recent low-scoring
     # artifacts via ``list_session_artifacts`` (structural metadata
@@ -485,7 +475,6 @@ BUILTIN_TOOL_REGISTRY: dict[str, BuiltinTool] = {
         runner=run_mark_skip,
         available_for_kinds=("evolver",),
     ),
-
     # ── Evolver-only cronjob proposal verb (M2.8) ─────────────
     # File a flow_create Approval row asking an admin to materialise
     # a recurring or one-shot Flow. NEVER calls flow_svc.create_flow

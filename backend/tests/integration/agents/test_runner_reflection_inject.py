@@ -40,9 +40,7 @@ def _make_request_node():
 
 
 # ─── Periodic trigger end-to-end ──────────────────────────────────
-async def test_eight_iterations_inject_one_audit_row(
-    db_session, workspace, identity
-):
+async def test_eight_iterations_inject_one_audit_row(db_session, workspace, identity):
     """Eight ticks → one PERIODIC injection → exactly one audit row."""
     cfg = ReflectionConfig(interval_iterations=8, interval_tool_calls=999)
     state = build_state(policy={}, max_iterations=12, reflection_config=cfg)
@@ -67,13 +65,17 @@ async def test_eight_iterations_inject_one_audit_row(
             )
     assert fired == 1
     rows = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.workspace_id == workspace.id,
-                AuditEvent.action == "reflection.injected",
+        (
+            await db_session.execute(
+                select(AuditEvent).where(
+                    AuditEvent.workspace_id == workspace.id,
+                    AuditEvent.action == "reflection.injected",
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(rows) == 1
     meta = rows[0].metadata_json
     assert meta["kind"] == "periodic"
@@ -82,9 +84,7 @@ async def test_eight_iterations_inject_one_audit_row(
     assert meta["prompt_chars"] > 0
 
 
-async def test_sixteen_tool_calls_inject_one_audit_row(
-    db_session, workspace, identity
-):
+async def test_sixteen_tool_calls_inject_one_audit_row(db_session, workspace, identity):
     """16 tool calls (with no iter trigger) → one TOOL_CALL injection."""
     cfg = ReflectionConfig(interval_iterations=999, interval_tool_calls=15)
     state = build_state(policy={}, max_iterations=12, reflection_config=cfg)
@@ -108,20 +108,22 @@ async def test_sixteen_tool_calls_inject_one_audit_row(
             )
     assert fired == 1
     rows = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.workspace_id == workspace.id,
-                AuditEvent.action == "reflection.injected",
+        (
+            await db_session.execute(
+                select(AuditEvent).where(
+                    AuditEvent.workspace_id == workspace.id,
+                    AuditEvent.action == "reflection.injected",
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(rows) == 1
     assert rows[0].metadata_json["kind"] == "tool_call"
 
 
-async def test_audit_metadata_never_includes_prompt_body(
-    db_session, workspace, identity
-):
+async def test_audit_metadata_never_includes_prompt_body(db_session, workspace, identity):
     """The audit row must hold ``prompt_chars`` but NEVER the rendered body."""
     await audit_reflection(
         workspace_id=workspace.id,
@@ -137,13 +139,17 @@ async def test_audit_metadata_never_includes_prompt_body(
         truncated=False,
     )
     rows = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.action == "reflection.injected",
-                AuditEvent.workspace_id == workspace.id,
+        (
+            await db_session.execute(
+                select(AuditEvent).where(
+                    AuditEvent.action == "reflection.injected",
+                    AuditEvent.workspace_id == workspace.id,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert rows
     for row in rows:
         assert "prompt" not in (row.metadata_json or {}) or (
@@ -153,9 +159,7 @@ async def test_audit_metadata_never_includes_prompt_body(
 
 
 # ─── Workspace-level disable ──────────────────────────────────────
-async def test_workspace_disable_blocks_inject(
-    db_session, workspace, identity
-):
+async def test_workspace_disable_blocks_inject(db_session, workspace, identity):
     """Setting ``home_config_json.reflection.enabled=False`` short-circuits
     injection regardless of agent policy."""
     workspace.home_config_json = {
@@ -165,9 +169,7 @@ async def test_workspace_disable_blocks_inject(
     await db_session.flush()
     await db_session.commit()
 
-    cfg = await build_reflection_config(
-        workspace_id=workspace.id, agent_policy={}
-    )
+    cfg = await build_reflection_config(workspace_id=workspace.id, agent_policy={})
     assert cfg.enabled is False
     state = build_state(policy={}, max_iterations=12, reflection_config=cfg)
     for _ in range(20):
@@ -177,11 +179,10 @@ async def test_workspace_disable_blocks_inject(
         assert decision.should_inject is False
 
 
-async def test_workspace_settings_loader_returns_dict(
-    db_session, workspace
-):
+async def test_workspace_settings_loader_returns_dict(db_session, workspace):
     workspace.home_config_json = {
-        "reflection": {"interval_iterations": 4}, "other": "x",
+        "reflection": {"interval_iterations": 4},
+        "other": "x",
     }
     await db_session.flush()
     await db_session.commit()

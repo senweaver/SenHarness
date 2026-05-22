@@ -24,9 +24,7 @@ async def _bootstrap_session(async_client) -> tuple[dict, str, str]:
         json={"email": email, "name": "Judge Sweep", "password": password},
     )
     assert r.status_code == 201, r.text
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -38,9 +36,7 @@ async def _bootstrap_session(async_client) -> tuple[dict, str, str]:
     assert r.status_code in (200, 201)
     ws_id = r.json()["id"]
     headers["X-Workspace-Id"] = ws_id
-    r = await async_client.post(
-        "/api/v1/sessions", headers=headers, json={"kind": "p2p"}
-    )
+    r = await async_client.post("/api/v1/sessions", headers=headers, json={"kind": "p2p"})
     sid = r.json()["id"]
     return headers, ws_id, sid
 
@@ -86,9 +82,7 @@ async def test_periodic_sweep_enqueues_unjudged(async_client):
     aids = []
     for _ in range(3):
         aids.append(
-            await _seed_aged_artifact(
-                workspace_id=ws_id, session_id=sid, identity_id=actor
-            )
+            await _seed_aged_artifact(workspace_id=ws_id, session_id=sid, identity_id=actor)
         )
     # One cancelled — must NOT be enqueued.
     cancelled_aid = await _seed_aged_artifact(
@@ -116,9 +110,7 @@ async def test_periodic_sweep_enqueues_unjudged(async_client):
     assert cancelled_aid not in enqueued
 
 
-async def test_periodic_sweep_skips_degraded_workspace(
-    async_client, redis_available
-):
+async def test_periodic_sweep_skips_degraded_workspace(async_client, redis_available):
     if not redis_available:
         pytest.skip("Redis required for breaker state")
 
@@ -126,9 +118,7 @@ async def test_periodic_sweep_skips_degraded_workspace(
 
     headers, ws_id, sid = await _bootstrap_session(async_client)
     actor = _identity_id_from_token(headers)
-    await _seed_aged_artifact(
-        workspace_id=ws_id, session_id=sid, identity_id=actor
-    )
+    await _seed_aged_artifact(workspace_id=ws_id, session_id=sid, identity_id=actor)
 
     for _ in range(6):
         await judge_mod.bump_failure(  # type: ignore[attr-defined]

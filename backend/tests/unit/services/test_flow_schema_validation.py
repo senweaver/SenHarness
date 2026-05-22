@@ -41,9 +41,7 @@ class TestScriptModeConfig:
             )
 
     def test_escalate_flag_passthrough(self):
-        cfg = ScriptModeConfig(
-            script_command="x", escalate_on_nonempty_output=False
-        )
+        cfg = ScriptModeConfig(script_command="x", escalate_on_nonempty_output=False)
         assert cfg.escalate_on_nonempty_output is False
 
 
@@ -63,9 +61,7 @@ class TestHttpModeConfig:
     )
     def test_method_allowlist(self, bad_method):
         with pytest.raises(ValidationError):
-            HttpModeConfig(
-                http_url="https://example.com/", http_method=bad_method
-            )
+            HttpModeConfig(http_url="https://example.com/", http_method=bad_method)
 
     def test_body_only_for_post(self):
         with pytest.raises(ValidationError):

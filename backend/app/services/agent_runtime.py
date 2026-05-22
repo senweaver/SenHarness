@@ -22,7 +22,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
 
@@ -42,9 +42,9 @@ StuckReason = Literal["idle_silent", "tool_silent", "hard_cap"]
 # ─── Heuristics ─────────────────────────────────────────────
 # Aligns with the plan §C1 cut-offs. ``ms`` units throughout so the
 # frontend doesn't have to flip seconds/milliseconds.
-IDLE_SILENT_MS = 30_000          # no first delta after 30s
-TOOL_SILENT_MS = 60_000          # tool running but silent for 60s
-HARD_CAP_MS = 600_000            # 10 minutes wall-clock
+IDLE_SILENT_MS = 30_000  # no first delta after 30s
+TOOL_SILENT_MS = 60_000  # tool running but silent for 60s
+HARD_CAP_MS = 600_000  # 10 minutes wall-clock
 
 
 @dataclass(slots=True, frozen=True)
@@ -117,9 +117,7 @@ class RuntimeEventBus:
         self._lock = asyncio.Lock()
         self._subs: dict[uuid.UUID, set[asyncio.Queue[dict[str, Any]]]] = {}
 
-    async def subscribe(
-        self, workspace_id: uuid.UUID
-    ) -> asyncio.Queue[dict[str, Any]]:
+    async def subscribe(self, workspace_id: uuid.UUID) -> asyncio.Queue[dict[str, Any]]:
         queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(self.QUEUE_MAX)
         async with self._lock:
             self._subs.setdefault(workspace_id, set()).add(queue)
@@ -141,9 +139,7 @@ class RuntimeEventBus:
     def subscriber_count(self, workspace_id: uuid.UUID) -> int:
         return len(self._subs.get(workspace_id, ()))
 
-    def publish_nowait(
-        self, workspace_id: uuid.UUID, payload: dict[str, Any]
-    ) -> None:
+    def publish_nowait(self, workspace_id: uuid.UUID, payload: dict[str, Any]) -> None:
         """Fan an event out without blocking.
 
         Called from the native runner (which is already inside an
@@ -194,13 +190,9 @@ def _row_to_card(
     orphan: bool,
 ) -> RuntimeRunCard:
     age_ms = int((now - row.started_at).total_seconds() * 1000)
-    ms_since_last_event = int(
-        (now - row.last_seen_at).total_seconds() * 1000
-    )
+    ms_since_last_event = int((now - row.last_seen_at).total_seconds() * 1000)
     snapshot = row.request_snapshot or {}
-    first_token_received = bool(
-        snapshot.get("first_token_received")
-    ) or row.last_event_seq > 0
+    first_token_received = bool(snapshot.get("first_token_received")) or row.last_event_seq > 0
     queue_len = int(snapshot.get("queue_len") or 0)
     return RuntimeRunCard(
         session_id=row.session_id,
@@ -233,14 +225,13 @@ async def build_snapshot(
     workspace_id: uuid.UUID,
 ) -> RuntimeSnapshot:
     """Pull all active inflight runs for ``workspace_id``."""
-    from app.db.models.agent import Agent
-    from app.db.models.identity import Identity
     from sqlalchemy import select
 
+    from app.db.models.agent import Agent
+    from app.db.models.identity import Identity
+
     repo = InflightRunRepository(db)
-    rows = list(
-        await repo.list_active_for_workspace(workspace_id=workspace_id, limit=200)
-    )
+    rows = list(await repo.list_active_for_workspace(workspace_id=workspace_id, limit=200))
     now = utcnow_naive()
 
     # Join: agent name + avatar + originating identity email.
@@ -253,9 +244,7 @@ async def build_snapshot(
         for a in result.scalars():
             agent_lookup[a.id] = a
     if identity_ids:
-        result = await db.execute(
-            select(Identity).where(Identity.id.in_(identity_ids))
-        )
+        result = await db.execute(select(Identity).where(Identity.id.in_(identity_ids)))
         for ident in result.scalars():
             identity_lookup[ident.id] = ident
 
@@ -400,8 +389,7 @@ async def build_workspace_summaries(
     now = utcnow_naive()
 
     counters: dict[uuid.UUID, dict[str, int]] = {
-        ws_id: {"running": 0, "stuck": 0, "orphan": 0, "queued": 0}
-        for ws_id in workspace_ids
+        ws_id: {"running": 0, "stuck": 0, "orphan": 0, "queued": 0} for ws_id in workspace_ids
     }
 
     for row in rows:
@@ -409,13 +397,9 @@ async def build_workspace_summaries(
         if bucket is None:
             continue
         age_ms = int((now - row.started_at).total_seconds() * 1000)
-        ms_since_last_event = int(
-            (now - row.last_seen_at).total_seconds() * 1000
-        )
+        ms_since_last_event = int((now - row.last_seen_at).total_seconds() * 1000)
         snapshot = row.request_snapshot or {}
-        first_token_received = bool(
-            snapshot.get("first_token_received")
-        ) or row.last_event_seq > 0
+        first_token_received = bool(snapshot.get("first_token_received")) or row.last_event_seq > 0
         queue_len = int(snapshot.get("queue_len") or 0)
         stuck_reason = _derive_stuck_reason(
             age_ms=max(0, age_ms),
@@ -456,9 +440,7 @@ async def publish_workspace_summary_for(
     """
     try:
         summary = await build_workspace_summary(db, workspace_id=workspace_id)
-        publish_workspace_summary_delta(
-            workspace_id=workspace_id, summary=summary
-        )
+        publish_workspace_summary_delta(workspace_id=workspace_id, summary=summary)
     except Exception:  # pragma: no cover - best-effort
         log.exception(
             "agent_runtime publish_workspace_summary_for failed workspace=%s",
@@ -478,22 +460,16 @@ async def build_workspace_summary(
     derivation as :func:`build_workspace_summaries`.
     """
     repo = InflightRunRepository(db)
-    rows = await repo.list_active_for_workspaces(
-        workspace_ids=[workspace_id]
-    )
+    rows = await repo.list_active_for_workspaces(workspace_ids=[workspace_id])
     now = utcnow_naive()
     counters = {"running": 0, "stuck": 0, "orphan": 0, "queued": 0}
     subscribers = RUNTIME_BUS.subscriber_count(workspace_id)
 
     for row in rows:
         age_ms = int((now - row.started_at).total_seconds() * 1000)
-        ms_since_last_event = int(
-            (now - row.last_seen_at).total_seconds() * 1000
-        )
+        ms_since_last_event = int((now - row.last_seen_at).total_seconds() * 1000)
         snapshot = row.request_snapshot or {}
-        first_token_received = bool(
-            snapshot.get("first_token_received")
-        ) or row.last_event_seq > 0
+        first_token_received = bool(snapshot.get("first_token_received")) or row.last_event_seq > 0
         queue_len = int(snapshot.get("queue_len") or 0)
         stuck_reason = _derive_stuck_reason(
             age_ms=max(0, age_ms),
@@ -522,12 +498,12 @@ __all__ = [
     "HARD_CAP_MS",
     "IDLE_SILENT_MS",
     "RUNTIME_BUS",
+    "TOOL_SILENT_MS",
     "RuntimeEventBus",
     "RuntimeRunCard",
     "RuntimeSnapshot",
     "RuntimeSubagentCard",
     "StuckReason",
-    "TOOL_SILENT_MS",
     "WorkspaceRuntimeSummary",
     "build_snapshot",
     "build_workspace_summaries",

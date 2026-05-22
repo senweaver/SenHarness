@@ -100,9 +100,7 @@ def test_periodic_wins_tie() -> None:
 
 
 def test_truncation_marker_in_reason() -> None:
-    cfg = ReflectionConfig(
-        interval_iterations=1, interval_tool_calls=999, max_prompt_chars=20
-    )
+    cfg = ReflectionConfig(interval_iterations=1, interval_tool_calls=999, max_prompt_chars=20)
     state = _state(cfg)
     state.tick_iteration()
     decision = state.should_reflect()
@@ -156,18 +154,14 @@ def test_disabled_skips_template_load(monkeypatch) -> None:
 def test_resolve_uses_workspace_then_agent_override() -> None:
     workspace = {"reflection": {"interval_iterations": 4, "enabled": True}}
     agent = {"reflection": {"interval_iterations": 2}}
-    cfg = resolve_reflection_config(
-        workspace_settings=workspace, agent_policy=agent
-    )
+    cfg = resolve_reflection_config(workspace_settings=workspace, agent_policy=agent)
     assert cfg.interval_iterations == 2
     assert cfg.enabled is True
 
 
 def test_resolve_drops_unknown_fields() -> None:
     cfg = resolve_reflection_config(
-        workspace_settings={
-            "reflection": {"foo": "bar", "interval_iterations": 5}
-        },
+        workspace_settings={"reflection": {"foo": "bar", "interval_iterations": 5}},
         agent_policy=None,
     )
     assert cfg.interval_iterations == 5
@@ -215,9 +209,7 @@ def test_both_enabled_unblocks_periodic_trigger() -> None:
     """Workspace + agent both ``enabled=True`` and the configured iteration
     interval must still drive a PERIODIC injection."""
     cfg = resolve_reflection_config(
-        workspace_settings={
-            "reflection": {"enabled": True, "interval_iterations": 8}
-        },
+        workspace_settings={"reflection": {"enabled": True, "interval_iterations": 8}},
         agent_policy={"reflection": {"enabled": True}},
     )
     assert cfg.enabled is True

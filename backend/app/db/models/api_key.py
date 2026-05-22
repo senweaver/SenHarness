@@ -17,7 +17,10 @@ class ApiKey(UuidPkMixin, TimestampMixin, Base):
     __tablename__ = "api_keys"
 
     owner_identity_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("identities.id", ondelete="CASCADE"), index=True, nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("identities.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
     )
     workspace_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),

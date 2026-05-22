@@ -39,7 +39,7 @@ class TestRegistry:
         class _Dummy(BaseKbConnector):
             kind = "dummy_for_test"
 
-            def metadata(self) -> ConnectorMeta:  # noqa: D401
+            def metadata(self) -> ConnectorMeta:
                 return ConnectorMeta(display_name="Dummy", description="x")
 
             async def sync(self, *, config):

@@ -14,8 +14,7 @@ CAPABILITIES = BackendCapabilities(
     notes="Native in-process backend with harness middleware plugin host.",
     display_name="NativeRuntime",
     description=(
-        "In-process runtime. Fastest path — no network hop. Recommended "
-        "default for new agents."
+        "In-process runtime. Fastest path — no network hop. Recommended default for new agents."
     ),
     docs_url="",
     requires_adapter=False,

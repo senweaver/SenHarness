@@ -94,9 +94,7 @@ async def _seed_subscription(
 async def _resolve_tenant(workspace_id: str) -> str:
     factory = get_session_factory()
     async with factory() as db:
-        tid = await hub_svc.resolve_caller_tenant(
-            db, workspace_id=uuid.UUID(workspace_id)
-        )
+        tid = await hub_svc.resolve_caller_tenant(db, workspace_id=uuid.UUID(workspace_id))
     return str(tid) if tid else ""
 
 
@@ -149,24 +147,19 @@ async def test_auto_pull_sweep_pulls_all_subscribed_workspaces(async_client):
             )
             assert any(
                 lp.state == SkillPackState.DRAFT
-                and (lp.metadata_json or {}).get("hub", {}).get("hub_pack_id")
-                == hub_pack_id
+                and (lp.metadata_json or {}).get("hub", {}).get("hub_pack_id") == hub_pack_id
                 for lp in local_packs
             )
 
             local_versions: list = []
             for lp in local_packs:
-                if (lp.metadata_json or {}).get("hub", {}).get(
-                    "hub_pack_id"
-                ) == hub_pack_id:
+                if (lp.metadata_json or {}).get("hub", {}).get("hub_pack_id") == hub_pack_id:
                     versions = await SkillPackVersionRepository(db).list_for_pack(
                         workspace_id=uuid.UUID(ws_id), pack_id=lp.id
                     )
                     local_versions.extend(versions)
             assert local_versions
-            assert all(
-                v.state == SkillPackVersionState.PROPOSED for v in local_versions
-            )
+            assert all(v.state == SkillPackVersionState.PROPOSED for v in local_versions)
 
 
 async def test_auto_pull_sweep_skips_disabled_subscriptions(async_client):
@@ -197,13 +190,10 @@ async def test_auto_pull_sweep_skips_disabled_subscriptions(async_client):
         # Cursor never advanced — the sweep didn't touch this row.
         assert sub.last_pulled_version_no is None
 
-        local = await SkillPackRepository(db).list_for_workspace(
-            workspace_id=uuid.UUID(ws)
-        )
+        local = await SkillPackRepository(db).list_for_workspace(workspace_id=uuid.UUID(ws))
         # No DRAFT pack from this hub.
         assert not any(
-            (lp.metadata_json or {}).get("hub", {}).get("hub_pack_id")
-            == hub_pack_id
+            (lp.metadata_json or {}).get("hub", {}).get("hub_pack_id") == hub_pack_id
             and lp.state == SkillPackState.DRAFT
             for lp in local
         )

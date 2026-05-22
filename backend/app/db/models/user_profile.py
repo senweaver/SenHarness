@@ -54,9 +54,7 @@ class UserProfileDimension(StrEnum):
     GOAL_PATTERN = "goal_pattern"
 
 
-USER_PROFILE_DIMENSIONS: tuple[UserProfileDimension, ...] = tuple(
-    UserProfileDimension
-)
+USER_PROFILE_DIMENSIONS: tuple[UserProfileDimension, ...] = tuple(UserProfileDimension)
 
 # Hard cap on each fact body. The renderer may further trim per-line so the
 # always-on memory hard cap (M0.7 = 4000 chars total) is respected, but a
@@ -69,9 +67,7 @@ MAX_FACT_CHARS: int = 500
 AUTO_INJECT_CONFIDENCE_THRESHOLD: float = 0.7
 
 
-class UserProfileFact(
-    UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base
-):
+class UserProfileFact(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "user_profile_facts"
     __table_args__ = (
         Index(

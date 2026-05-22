@@ -71,9 +71,7 @@ def test_evolver_settings_clamps_out_of_range():
 # tests automatically; no pytestmark needed.
 
 
-async def test_workspace_override_wins_over_platform_default(
-    db_session, workspace
-):
+async def test_workspace_override_wins_over_platform_default(db_session, workspace):
     from app.services.evolver_config import get_workspace_evolver_config
 
     workspace.home_config_json = {
@@ -85,9 +83,7 @@ async def test_workspace_override_wins_over_platform_default(
     }
     await db_session.flush()
 
-    cfg = await get_workspace_evolver_config(
-        db_session, workspace_id=workspace.id
-    )
+    cfg = await get_workspace_evolver_config(db_session, workspace_id=workspace.id)
     assert cfg.enabled is True
     assert cfg.evolver_rate_per_minute == 30
     assert cfg.approval_ttl_days.skill_pack_delete == 14
@@ -96,9 +92,7 @@ async def test_workspace_override_wins_over_platform_default(
     assert cfg.approval_ttl_days.skill_pack_create == 14
 
 
-async def test_workspace_default_falls_back_to_platform(
-    db_session, workspace
-):
+async def test_workspace_default_falls_back_to_platform(db_session, workspace):
     from app.services import system_settings as svc
     from app.services.evolver_config import get_workspace_evolver_config
 
@@ -113,17 +107,13 @@ async def test_workspace_default_falls_back_to_platform(
     )
     await db_session.flush()
 
-    cfg = await get_workspace_evolver_config(
-        db_session, workspace_id=workspace.id
-    )
+    cfg = await get_workspace_evolver_config(db_session, workspace_id=workspace.id)
     assert cfg.enabled is True
     assert cfg.aux_model_evolver == "openai:gpt-4o"
     assert cfg.evolver_rate_per_minute == 25
 
 
-async def test_legacy_evolver_row_used_when_new_key_absent(
-    db_session, workspace
-):
+async def test_legacy_evolver_row_used_when_new_key_absent(db_session, workspace):
     """A deployment that ran M0.13 → M1.x sees the legacy row migrate
     transparently on the first read.
     """
@@ -144,9 +134,7 @@ async def test_legacy_evolver_row_used_when_new_key_absent(
     )
     await db_session.flush()
 
-    cfg = await get_workspace_evolver_config(
-        db_session, workspace_id=workspace.id
-    )
+    cfg = await get_workspace_evolver_config(db_session, workspace_id=workspace.id)
     # legacy ``workspace_can_enable=True`` does NOT flip enabled; the
     # admin must explicitly opt the workspace in via the new shape.
     assert cfg.enabled is False

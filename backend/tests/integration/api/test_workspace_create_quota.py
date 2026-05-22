@@ -39,9 +39,7 @@ async def _relax_rate_window(per_period: int = 100) -> None:
         await set_system_setting(
             db,
             SystemSettingKey.WORKSPACE_QUOTA,
-            WorkspaceQuotaSettings(
-                creation_rate_per_period=per_period
-            ).model_dump(),
+            WorkspaceQuotaSettings(creation_rate_per_period=per_period).model_dump(),
         )
         await db.commit()
     quota_svc.reset_attempt_ledger()
@@ -75,14 +73,10 @@ async def _register_user(
         if override is not None:
             values["workspace_quota_override"] = override
         if values:
-            await db.execute(
-                update(Identity).where(Identity.id == identity_id).values(**values)
-            )
+            await db.execute(update(Identity).where(Identity.id == identity_id).values(**values))
             await db.commit()
 
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     headers = {"Authorization": f"Bearer {r.json()['access_token']}"}
     return identity_id, headers
 
@@ -159,20 +153,14 @@ async def test_delete_workspace_releases_quota_and_tombstones_slug(async_client)
     assert r.status_code == 201, r.text
     workspace_id = r.json()["id"]
 
-    quota_before = await async_client.get(
-        "/api/v1/me/workspace-quota", headers=headers
-    )
+    quota_before = await async_client.get("/api/v1/me/workspace-quota", headers=headers)
     assert quota_before.status_code == 200
     used_before = quota_before.json()["used"]
 
-    d = await async_client.delete(
-        f"/api/v1/workspaces/{workspace_id}", headers=headers
-    )
+    d = await async_client.delete(f"/api/v1/workspaces/{workspace_id}", headers=headers)
     assert d.status_code == 204
 
-    quota_after = await async_client.get(
-        "/api/v1/me/workspace-quota", headers=headers
-    )
+    quota_after = await async_client.get("/api/v1/me/workspace-quota", headers=headers)
     assert quota_after.status_code == 200
     assert quota_after.json()["used"] == used_before - 1
 

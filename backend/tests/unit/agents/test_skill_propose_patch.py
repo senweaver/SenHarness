@@ -95,9 +95,7 @@ async def _enable_evolver(db_session, workspace):
     await db_session.flush()
 
 
-async def test_propose_patch_happy_path(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_propose_patch_happy_path(db_session, workspace, identity, monkeypatch):
     await _enable_evolver(db_session, workspace)
     pack = await _make_active_pack(
         db_session,
@@ -126,9 +124,7 @@ async def test_propose_patch_happy_path(
     assert result["pack_id"] == str(pack.id)
     assert result["version_no"] == 2
 
-    version = await db_session.get(
-        SkillPackVersion, uuid.UUID(result["version_id"])
-    )
+    version = await db_session.get(SkillPackVersion, uuid.UUID(result["version_id"]))
     assert version is not None
     # Critical: the candidate version is PROPOSED, never ACTIVE.
     assert version.state == SkillPackVersionState.PROPOSED
@@ -143,9 +139,7 @@ async def test_propose_patch_happy_path(
     assert active is not None
     assert active.version_no == 1
 
-    approval = await db_session.get(
-        Approval, uuid.UUID(result["approval_id"])
-    )
+    approval = await db_session.get(Approval, uuid.UUID(result["approval_id"]))
     assert approval is not None
     assert approval.status == ApprovalStatus.PENDING
     assert approval.resource_type == ApprovalResourceType.SKILL_PACK_PATCH.value
@@ -189,8 +183,7 @@ async def test_propose_patch_conflict_when_old_text_missing(
             await db_session.execute(
                 select(Approval).where(
                     Approval.workspace_id == workspace.id,
-                    Approval.resource_type
-                    == ApprovalResourceType.SKILL_PACK_PATCH.value,
+                    Approval.resource_type == ApprovalResourceType.SKILL_PACK_PATCH.value,
                 )
             )
         ).scalars()
@@ -229,9 +222,7 @@ async def test_propose_patch_dedup_when_result_unchanged(
     assert result["code"] == "evolver.duplicate_content_hash"
 
 
-async def test_propose_patch_unknown_pack_rejects(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_propose_patch_unknown_pack_rejects(db_session, workspace, identity, monkeypatch):
     await _enable_evolver(db_session, workspace)
     _set_ctx(workspace, identity)
     monkeypatch.setattr(

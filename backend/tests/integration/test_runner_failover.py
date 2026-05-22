@@ -67,9 +67,7 @@ def _entry(provider: str, model: str) -> ProviderChainEntry:
     )
 
 
-def _config(
-    *, threshold: int = 3, cooldown_seconds: int = 300
-) -> ProviderFailoverConfig:
+def _config(*, threshold: int = 3, cooldown_seconds: int = 300) -> ProviderFailoverConfig:
     return ProviderFailoverConfig(
         enabled=True,
         chain_raw=[],
@@ -185,12 +183,8 @@ async def test_first_provider_timeout_failover_to_second(
     assert captured_history == [[], []]
 
     # Provider health: openai bumped, deepseek cleared.
-    openai = await health_svc.get_health(
-        None, provider_kind="openai", model_id="gpt-5"
-    )
-    deepseek = await health_svc.get_health(
-        None, provider_kind="deepseek", model_id="v3"
-    )
+    openai = await health_svc.get_health(None, provider_kind="openai", model_id="gpt-5")
+    deepseek = await health_svc.get_health(None, provider_kind="deepseek", model_id="v3")
     assert openai.consecutive_failures == 1
     assert openai.last_failure_kind == health_svc.FailureKind.TIMEOUT
     assert deepseek.consecutive_failures == 0
@@ -262,9 +256,7 @@ async def test_cooldown_audit_when_threshold_reached(
         _stub_resolve,
     )
 
-    async def fake_inner_stream(
-        req, *, model, resolved, served_name, raise_provider_errors
-    ):
+    async def fake_inner_stream(req, *, model, resolved, served_name, raise_provider_errors):
         if resolved.provider_kind == "openai":
             raise ProviderFailoverHint(
                 original=ConnectionError("ECONNRESET"),
@@ -348,9 +340,7 @@ async def test_chain_exhausted_raises_typed_error(
         _stub_resolve,
     )
 
-    async def fake_inner_stream(
-        req, *, model, resolved, served_name, raise_provider_errors
-    ):
+    async def fake_inner_stream(req, *, model, resolved, served_name, raise_provider_errors):
         raise ProviderFailoverHint(
             original=Exception("503 service unavailable"),
             failure_kind=health_svc.FailureKind.SERVER_5XX,

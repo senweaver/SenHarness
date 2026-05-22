@@ -1,4 +1,5 @@
 """Approval repository — CRUD + queries for HITL audit log."""
+
 from __future__ import annotations
 
 import uuid
@@ -158,9 +159,7 @@ class ApprovalRepository(AsyncRepository[Approval]):
         if status_override is not None:
             row.status = status_override
         else:
-            row.status = (
-                ApprovalStatus.APPROVED if approved else ApprovalStatus.DENIED
-            )
+            row.status = ApprovalStatus.APPROVED if approved else ApprovalStatus.DENIED
         row.decided_at = now
         row.decided_reason = reason
         row.decided_by_identity_id = decided_by_identity_id

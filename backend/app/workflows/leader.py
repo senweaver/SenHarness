@@ -41,9 +41,9 @@ import redis.asyncio as aioredis
 log = logging.getLogger(__name__)
 
 
-LEASE_TTL_S = 30          # lease length
-RENEW_INTERVAL_S = 10     # refresh every 1/3 TTL — 2 missed renewals tolerate
-ACQUIRE_POLL_S = 5        # standby polling cadence when not leader
+LEASE_TTL_S = 30  # lease length
+RENEW_INTERVAL_S = 10  # refresh every 1/3 TTL — 2 missed renewals tolerate
+ACQUIRE_POLL_S = 5  # standby polling cadence when not leader
 
 
 # Lua: atomically delete the lease only if we're still the holder.
@@ -87,16 +87,12 @@ async def run_as_leader(
     inside a dedicated container. See ``cli.commands scheduler run``.
     """
     worker = _worker_id()
-    log.info(
-        "leader candidate %s starting (key=%s, ttl=%ds)", worker, lease_key, lease_ttl_s
-    )
+    log.info("leader candidate %s starting (key=%s, ttl=%ds)", worker, lease_key, lease_ttl_s)
 
     election_task: asyncio.Task[None] | None = None
     try:
         while True:
-            acquired = await redis_client.set(
-                lease_key, worker, nx=True, ex=lease_ttl_s
-            )
+            acquired = await redis_client.set(lease_key, worker, nx=True, ex=lease_ttl_s)
             if acquired:
                 log.info("leader elected: %s", worker)
                 election_task = asyncio.create_task(
@@ -150,9 +146,7 @@ async def _run_with_renewal(
             # XX = only renew if the key still exists AND holds our
             # worker id. If either fails, someone else has taken over.
             # Using SET with both XX and EX is equivalent to a CAS renew.
-            ok = await redis_client.set(
-                lease_key, worker, xx=True, ex=lease_ttl_s
-            )
+            ok = await redis_client.set(lease_key, worker, xx=True, ex=lease_ttl_s)
             if not ok:
                 log.warning("lease %s renew failed — stepping down", lease_key)
                 return

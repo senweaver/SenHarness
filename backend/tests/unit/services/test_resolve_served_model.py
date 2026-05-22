@@ -54,9 +54,7 @@ def test_alias_map_rejects_illegal_chars():
 async def test_empty_envelope_when_no_input(db_session, workspace):
     from app.services.served_model import resolve_served_model
 
-    out = await resolve_served_model(
-        db_session, workspace_id=workspace.id, agent=None
-    )
+    out = await resolve_served_model(db_session, workspace_id=workspace.id, agent=None)
     assert out.served_name == ""
     assert out.upstream == ""
     assert out.matched_via == "fallback"
@@ -76,9 +74,7 @@ async def test_fallback_path_when_agent_field_absent(db_session, workspace, agen
     assert out.matched_via == "fallback"
 
 
-async def test_agent_field_passes_through_when_no_alias(
-    db_session, workspace, agent
-):
+async def test_agent_field_passes_through_when_no_alias(db_session, workspace, agent):
     from app.services.served_model import resolve_served_model
 
     agent.served_model_name = "ws-fast"
@@ -121,9 +117,7 @@ async def test_workspace_alias_redirects_upstream(db_session, workspace, agent):
     assert out.matched_via == "workspace_alias"
 
 
-async def test_alias_map_does_not_leak_across_workspaces(
-    db_session, workspace, identity
-):
+async def test_alias_map_does_not_leak_across_workspaces(db_session, workspace, identity):
     """An alias on workspace A must not affect workspace B."""
     from app.services import workspace as ws_svc
     from app.services.served_model import (
@@ -188,16 +182,12 @@ async def test_upsert_then_delete_round_trip(db_session, workspace):
         "ws-thinking": "openai:gpt-5",
     }
 
-    await delete_alias(
-        db_session, workspace_id=workspace.id, served_name="ws-fast"
-    )
+    await delete_alias(db_session, workspace_id=workspace.id, served_name="ws-fast")
     await db_session.flush()
     aliases = await get_alias_map(db_session, workspace_id=workspace.id)
     assert aliases == {"ws-thinking": "openai:gpt-5"}
 
     # Idempotent: deleting an unknown key is a no-op.
-    await delete_alias(
-        db_session, workspace_id=workspace.id, served_name="never-existed"
-    )
+    await delete_alias(db_session, workspace_id=workspace.id, served_name="never-existed")
     aliases = await get_alias_map(db_session, workspace_id=workspace.id)
     assert aliases == {"ws-thinking": "openai:gpt-5"}

@@ -120,9 +120,7 @@ async def build_skills_capability(
 
     try:
         repo = SkillPackRepository(db)
-        packs = list(
-            await repo.list_active(workspace_id=workspace_id, ids=bind_ids)
-        )
+        packs = list(await repo.list_active(workspace_id=workspace_id, ids=bind_ids))
     except Exception:
         log.exception(
             "skills.discovery_failed workspace=%s pack_count=%d",
@@ -175,9 +173,7 @@ async def build_skills_capability(
     injected_ids = [p.id for p in survivors]
 
     try:
-        materialized = _materialize_skills_for_runtime(
-            survivors, body_by_pack=body_by_pack
-        )
+        materialized = _materialize_skills_for_runtime(survivors, body_by_pack=body_by_pack)
     except Exception:
         log.exception(
             "skills.materialize_failed workspace=%s pack_count=%d",
@@ -231,14 +227,18 @@ async def _load_skill_md_bodies(
     pack_ids = [p.id for p in packs]
     try:
         rows = (
-            await db.execute(
-                sa_select(SkillFile).where(
-                    SkillFile.skill_pack_id.in_(pack_ids),
-                    SkillFile.path == "SKILL.md",
-                    SkillFile.deleted_at.is_(None),
+            (
+                await db.execute(
+                    sa_select(SkillFile).where(
+                        SkillFile.skill_pack_id.in_(pack_ids),
+                        SkillFile.path == "SKILL.md",
+                        SkillFile.deleted_at.is_(None),
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
     except Exception:
         log.warning(
             "skills.skill_md_bulk_load_failed workspace_pack_count=%d",
@@ -402,9 +402,7 @@ def _instantiate_skills_capability(materialized: list[Any]) -> Any | None:
         log.info("pydantic-ai-skills not installed; skills capability disabled")
         return None
     try:
-        return SkillsCapability(
-            skills=materialized, validate=False, auto_reload=False
-        )
+        return SkillsCapability(skills=materialized, validate=False, auto_reload=False)
     except TypeError:
         try:
             return SkillsCapability(skills=materialized)

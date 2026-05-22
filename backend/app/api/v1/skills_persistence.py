@@ -14,7 +14,6 @@ from app.core.errors import (
     Unauthorized,
 )
 from app.core.rate_limit import rate_limit
-from app.db.models.skill_pack_version import SkillPackVersionState
 from app.db.models.skills import SkillPackState
 from app.repositories.agent import AgentRepository
 from app.repositories.skill_pack_version import SkillPackVersionRepository
@@ -215,9 +214,7 @@ async def update_pack(
         # reflects the body too.
         if new_content_md is None:
             file_repo = SkillFileRepository(db)
-            files = await file_repo.list_for_pack(
-                workspace_id=ws_id, skill_pack_id=row.id
-            )
+            files = await file_repo.list_for_pack(workspace_id=ws_id, skill_pack_id=row.id)
             skill_md = next((f for f in files if f.path == "SKILL.md"), None)
             new_content_md = skill_md.content_md if skill_md else ""
         try:
@@ -610,9 +607,7 @@ _VERSION_READ = Depends(rate_limit("skill_version_read", limit=60, period_second
 _VERSION_WRITE = Depends(rate_limit("skill_version_write", limit=20, period_seconds=60))
 
 
-async def _ensure_pack_in_workspace(
-    db, *, ws_id: uuid.UUID, pack_id: uuid.UUID
-):
+async def _ensure_pack_in_workspace(db, *, ws_id: uuid.UUID, pack_id: uuid.UUID):
     pack = await SkillPackRepository(db).get(pack_id, include_deleted=True)
     if pack is None or pack.workspace_id != ws_id:
         raise NotFound("skill_pack_not_found", code="skill_pack.not_found")
@@ -664,13 +659,9 @@ async def get_active_version_route(
     ws_id = _require_workspace(workspace_id)
     await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     await _ensure_pack_in_workspace(db, ws_id=ws_id, pack_id=pack_id)
-    row = await SkillPackVersionRepository(db).get_active(
-        workspace_id=ws_id, pack_id=pack_id
-    )
+    row = await SkillPackVersionRepository(db).get_active(workspace_id=ws_id, pack_id=pack_id)
     if row is None:
-        raise NotFound(
-            "skill_pack_version_not_found", code="skill_version.not_found"
-        )
+        raise NotFound("skill_pack_version_not_found", code="skill_version.not_found")
     return SkillPackVersionWithContent.model_validate(row)
 
 
@@ -693,9 +684,7 @@ async def get_pack_version_route(
         workspace_id=ws_id, pack_id=pack_id, version_no=version_no
     )
     if row is None:
-        raise NotFound(
-            "skill_pack_version_not_found", code="skill_version.not_found"
-        )
+        raise NotFound("skill_pack_version_not_found", code="skill_version.not_found")
     return SkillPackVersionWithContent.model_validate(row)
 
 
@@ -724,9 +713,7 @@ async def activate_pack_version_route(
     pack = await _ensure_pack_in_workspace(db, ws_id=ws_id, pack_id=pack_id)
     target = await SkillPackVersionRepository(db).get(version_id)
     if target is None or target.workspace_id != ws_id or target.pack_id != pack.id:
-        raise NotFound(
-            "skill_pack_version_not_found", code="skill_version.not_found"
-        )
+        raise NotFound("skill_pack_version_not_found", code="skill_version.not_found")
 
     reason = (body.reason if body else None) or "admin activated"
     activated = await skill_version_svc.activate_version(
@@ -767,9 +754,7 @@ async def transition_pack_version_route(
     pack = await _ensure_pack_in_workspace(db, ws_id=ws_id, pack_id=pack_id)
     target = await SkillPackVersionRepository(db).get(version_id)
     if target is None or target.workspace_id != ws_id or target.pack_id != pack.id:
-        raise NotFound(
-            "skill_pack_version_not_found", code="skill_version.not_found"
-        )
+        raise NotFound("skill_pack_version_not_found", code="skill_version.not_found")
 
     updated = await skill_version_svc.transition_version(
         db,
@@ -884,12 +869,8 @@ async def get_skill_version_diff(
         raise NotFound("skill_pack_not_found", code="skill_pack.not_found")
 
     repo = SkillPackVersionRepository(db)
-    ver_a = await repo.get_by_label(
-        workspace_id=workspace_id, pack_id=pack_id, label=version_a
-    )
-    ver_b = await repo.get_by_label(
-        workspace_id=workspace_id, pack_id=pack_id, label=version_b
-    )
+    ver_a = await repo.get_by_label(workspace_id=workspace_id, pack_id=pack_id, label=version_a)
+    ver_b = await repo.get_by_label(workspace_id=workspace_id, pack_id=pack_id, label=version_b)
     if ver_a is None or ver_b is None:
         raise NotFound(
             "skill_pack_version_not_found",
@@ -955,9 +936,7 @@ async def get_skill_version_diff(
     "/{pack_id}/versions/{version_id}/rollback",
     response_model=SkillPackVersionRead,
     status_code=status.HTTP_200_OK,
-    dependencies=[
-        Depends(rate_limit("skill_version_rollback", limit=10, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("skill_version_rollback", limit=10, period_seconds=60))],
 )
 async def rollback_to_version_endpoint(
     pack_id: uuid.UUID,
@@ -985,14 +964,8 @@ async def rollback_to_version_endpoint(
     await ws_svc.ensure_admin(db, workspace_id=ws_id, identity_id=identity_id)
     pack = await _ensure_pack_in_workspace(db, ws_id=ws_id, pack_id=pack_id)
     target = await SkillPackVersionRepository(db).get(version_id)
-    if (
-        target is None
-        or target.workspace_id != ws_id
-        or target.pack_id != pack.id
-    ):
-        raise NotFound(
-            "skill_pack_version_not_found", code="skill_version.not_found"
-        )
+    if target is None or target.workspace_id != ws_id or target.pack_id != pack.id:
+        raise NotFound("skill_pack_version_not_found", code="skill_version.not_found")
 
     activated = await skill_version_svc.rollback_to_version(
         db,

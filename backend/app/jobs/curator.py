@@ -118,8 +118,10 @@ async def curator_tick(ctx: dict[str, Any]) -> dict[str, Any]:
 
     async with factory() as db:
         ws_rows = (
-            await db.execute(select(Workspace.id).where(Workspace.deleted_at.is_(None)))
-        ).scalars().all()
+            (await db.execute(select(Workspace.id).where(Workspace.deleted_at.is_(None))))
+            .scalars()
+            .all()
+        )
 
     for ws_id in ws_rows:
         summary["workspaces_seen"] += 1
@@ -145,9 +147,7 @@ async def curator_tick(ctx: dict[str, Any]) -> dict[str, Any]:
 
 
 # ── Per-workspace sweep (also reused by ``trigger_curator_now``) ──
-async def _curator_sweep_one_workspace(
-    *, workspace_id: uuid.UUID
-) -> dict[str, Any]:
+async def _curator_sweep_one_workspace(*, workspace_id: uuid.UUID) -> dict[str, Any]:
     """One workspace's slice of the Curator sweep.
 
     Returned dict shape:
@@ -162,9 +162,7 @@ async def _curator_sweep_one_workspace(
     now = utcnow_naive()
 
     async with factory() as db:
-        config = await curator_svc.get_workspace_curator_config(
-            db, workspace_id=workspace_id
-        )
+        config = await curator_svc.get_workspace_curator_config(db, workspace_id=workspace_id)
     if not config.enabled:
         return {
             "status": "disabled",
@@ -202,9 +200,7 @@ async def _curator_sweep_one_workspace(
                         workspace_id=workspace_id,
                         target_state=SkillPackState.STALE,
                         actor_identity_id=None,
-                        reason=(
-                            f"curator: idle for >= {config.stale_after_days} days"
-                        ),
+                        reason=(f"curator: idle for >= {config.stale_after_days} days"),
                         bypass_pinned=False,
                         actor_kind="curator",
                     )
@@ -252,9 +248,7 @@ async def _curator_sweep_one_workspace(
                 # Re-fetch inside this session because find_… ran on
                 # a separate session whose `pack` object is detached.
                 fresh = (
-                    await db.execute(
-                        select(SkillPack).where(SkillPack.id == pack.id)
-                    )
+                    await db.execute(select(SkillPack).where(SkillPack.id == pack.id))
                 ).scalar_one_or_none()
                 if fresh is None or fresh.workspace_id != workspace_id:
                     continue
@@ -265,9 +259,7 @@ async def _curator_sweep_one_workspace(
                     db,
                     workspace_id=workspace_id,
                     pack=fresh,
-                    reason=(
-                        f"curator: stale for >= {config.archive_after_days} days"
-                    ),
+                    reason=(f"curator: stale for >= {config.archive_after_days} days"),
                     use_count_30d=use_count_30d,
                     now=now,
                 )
@@ -314,11 +306,7 @@ async def _curator_sweep_one_workspace(
                     "archive_after_days": config.archive_after_days,
                     "min_idle_hours": config.min_idle_hours,
                     "active_skills_soft_cap": config.active_skills_soft_cap,
-                    **{
-                        k: v
-                        for k, v in summary.items()
-                        if k != "workspace_id" and k != "status"
-                    },
+                    **{k: v for k, v in summary.items() if k != "workspace_id" and k != "status"},
                 },
             )
             await db.commit()
@@ -328,9 +316,7 @@ async def _curator_sweep_one_workspace(
     return summary
 
 
-async def _use_count_last_30d(
-    *, workspace_id: uuid.UUID, pack_id: uuid.UUID, now: Any
-) -> int:
+async def _use_count_last_30d(*, workspace_id: uuid.UUID, pack_id: uuid.UUID, now: Any) -> int:
     """Count of SkillUsage rows for ``pack_id`` in the last 30 days.
 
     Soft-fails on missing skill_usage table (pre-M1.3 deployments)
@@ -369,9 +355,7 @@ async def curator_propose_archive(
     actor_uuid = uuid.UUID(actor_identity_id) if actor_identity_id else None
 
     async with factory() as db:
-        pack = (
-            await db.execute(select(SkillPack).where(SkillPack.id == pid))
-        ).scalar_one_or_none()
+        pack = (await db.execute(select(SkillPack).where(SkillPack.id == pid))).scalar_one_or_none()
         if pack is None or pack.deleted_at is not None:
             return {"status": "skipped_missing", "approval_id": None}
         approval = await curator_svc.propose_archive(
@@ -459,9 +443,7 @@ async def curator_apply_approved(
             workspace_id=workspace_id,
             resource_type="skill_pack",
             resource_id=pack_id,
-            summary=(
-                f"Curator archived skill pack {pack.slug!r} after approval"
-            ),
+            summary=(f"Curator archived skill pack {pack.slug!r} after approval"),
             metadata={
                 "approval_id": str(aid),
                 "pack_id": str(pack_id),

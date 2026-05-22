@@ -32,9 +32,7 @@ class AgentProfileRepository(AsyncRepository[AgentProfile]):
         )
         return (await self.session.execute(stmt)).scalar_one_or_none()
 
-    async def get_by_agent_any_workspace(
-        self, *, agent_id: uuid.UUID
-    ) -> AgentProfile | None:
+    async def get_by_agent_any_workspace(self, *, agent_id: uuid.UUID) -> AgentProfile | None:
         """Lookup that ignores the workspace filter.
 
         Reserved for the platform-admin cross-workspace read path;
@@ -64,9 +62,7 @@ class AgentProfileRepository(AsyncRepository[AgentProfile]):
         )
         return (await self.session.execute(stmt)).scalars().all()
 
-    async def list_all_platform(
-        self, *, limit: int = 500
-    ) -> Sequence[AgentProfile]:
+    async def list_all_platform(self, *, limit: int = 500) -> Sequence[AgentProfile]:
         """Cross-workspace listing — platform admin only at call site."""
         stmt = (
             select(AgentProfile)

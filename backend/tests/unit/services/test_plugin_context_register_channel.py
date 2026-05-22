@@ -92,8 +92,8 @@ def test_register_channel_kind_refuses_builtin_kind() -> None:
 def test_register_channel_kind_refuses_duplicate(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from app.services.channels.base import ChannelProvider
     import app.services.channels as ch_mod
+    from app.services.channels.base import ChannelProvider
 
     # Reset plugin-registered set so the test is independent of order.
     monkeypatch.setattr(ch_mod, "_PLUGIN_REGISTERED_KINDS", set())
@@ -115,8 +115,8 @@ def test_register_channel_kind_refuses_kind_mismatch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Factory-returned ``provider.kind`` must match the kind argument."""
-    from app.services.channels.base import ChannelProvider
     import app.services.channels as ch_mod
+    from app.services.channels.base import ChannelProvider
 
     monkeypatch.setattr(ch_mod, "_PLUGIN_REGISTERED_KINDS", set())
 
@@ -136,8 +136,8 @@ def test_register_channel_kind_refuses_kind_mismatch(
 def test_register_model_provider_happy(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from app.agents.kernels.provider_catalog import CatalogEntry
     import app.agents.kernels.provider_catalog as cat_mod
+    from app.agents.kernels.provider_catalog import CatalogEntry
 
     monkeypatch.setattr(cat_mod, "_PLUGIN_REGISTERED_KINDS", set())
 
@@ -203,7 +203,5 @@ def test_register_tool_requires_scope() -> None:
     """``register_tool`` is gated by an explicit capability scope."""
     ctx = PluginContext(manifest=_manifest("pre_tool_call"))
     with pytest.raises(ValueError) as exc:
-        ctx.register_tool(
-            "test.tool", args_model=None, runner=lambda **_: None
-        )
+        ctx.register_tool("test.tool", args_model=None, runner=lambda **_: None)
     assert "register_tool" in str(exc.value)

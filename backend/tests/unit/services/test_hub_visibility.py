@@ -47,18 +47,12 @@ async def _make_hub_pack(
     return pack
 
 
-async def test_resolve_caller_tenant_falls_back_to_workspace_id(
-    db_session, workspace
-):
-    tenant_id = await hub_svc.resolve_caller_tenant(
-        db_session, workspace_id=workspace.id
-    )
+async def test_resolve_caller_tenant_falls_back_to_workspace_id(db_session, workspace):
+    tenant_id = await hub_svc.resolve_caller_tenant(db_session, workspace_id=workspace.id)
     assert tenant_id == workspace.id
 
 
-async def test_platform_scope_is_visible_to_every_workspace(
-    db_session, workspace, identity
-):
+async def test_platform_scope_is_visible_to_every_workspace(db_session, workspace, identity):
     other_ws = await ws_svc.create_workspace(
         db_session,
         name="Other",
@@ -68,23 +62,15 @@ async def test_platform_scope_is_visible_to_every_workspace(
     await db_session.flush()
 
     slug = f"platform-{uuid.uuid4().hex[:6]}"
-    pack = await _make_hub_pack(
-        db_session, scope=HubScope.PLATFORM, tenant_id=None, slug=slug
-    )
+    pack = await _make_hub_pack(db_session, scope=HubScope.PLATFORM, tenant_id=None, slug=slug)
 
-    rows_a = await hub_svc.list_hub_catalog(
-        db_session, workspace_id=workspace.id, limit=200
-    )
-    rows_b = await hub_svc.list_hub_catalog(
-        db_session, workspace_id=other_ws.id, limit=200
-    )
+    rows_a = await hub_svc.list_hub_catalog(db_session, workspace_id=workspace.id, limit=200)
+    rows_b = await hub_svc.list_hub_catalog(db_session, workspace_id=other_ws.id, limit=200)
     assert pack.id in {r.id for r in rows_a}
     assert pack.id in {r.id for r in rows_b}
 
 
-async def test_tenant_scope_visible_only_to_matching_tenant(
-    db_session, workspace, identity
-):
+async def test_tenant_scope_visible_only_to_matching_tenant(db_session, workspace, identity):
     other_ws = await ws_svc.create_workspace(
         db_session,
         name="Other tenant",
@@ -101,19 +87,13 @@ async def test_tenant_scope_visible_only_to_matching_tenant(
         slug=slug,
     )
 
-    rows_a = await hub_svc.list_hub_catalog(
-        db_session, workspace_id=workspace.id, limit=200
-    )
-    rows_b = await hub_svc.list_hub_catalog(
-        db_session, workspace_id=other_ws.id, limit=200
-    )
+    rows_a = await hub_svc.list_hub_catalog(db_session, workspace_id=workspace.id, limit=200)
+    rows_b = await hub_svc.list_hub_catalog(db_session, workspace_id=other_ws.id, limit=200)
     assert pack.id in {r.id for r in rows_a}
     assert pack.id not in {r.id for r in rows_b}
 
 
-async def test_get_by_id_visible_blocks_cross_tenant(
-    db_session, workspace, identity
-):
+async def test_get_by_id_visible_blocks_cross_tenant(db_session, workspace, identity):
     other_ws = await ws_svc.create_workspace(
         db_session,
         name="Other",
@@ -145,9 +125,7 @@ async def test_get_by_id_visible_blocks_cross_tenant(
     assert visible_to_stranger is None
 
 
-async def test_archived_state_hidden_from_default_listing(
-    db_session, workspace
-):
+async def test_archived_state_hidden_from_default_listing(db_session, workspace):
     slug = f"arch-{uuid.uuid4().hex[:6]}"
     pack = await _make_hub_pack(
         db_session,
@@ -157,9 +135,7 @@ async def test_archived_state_hidden_from_default_listing(
         state=HubSkillPackState.ARCHIVED,
     )
 
-    rows = await hub_svc.list_hub_catalog(
-        db_session, workspace_id=workspace.id, limit=200
-    )
+    rows = await hub_svc.list_hub_catalog(db_session, workspace_id=workspace.id, limit=200)
     assert pack.id not in {r.id for r in rows}
 
     explicit = await hub_svc.list_hub_catalog(

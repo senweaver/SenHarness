@@ -120,9 +120,7 @@ async def test_promote_then_approve_lands_hub_version(async_client):
         from app.db.models.approval import Approval
 
         approval = (
-            await db.execute(
-                select(Approval).where(Approval.id == uuid.UUID(approval_id))
-            )
+            await db.execute(select(Approval).where(Approval.id == uuid.UUID(approval_id)))
         ).scalar_one()
         assert approval.status == ApprovalStatus.APPROVED
 
@@ -157,15 +155,12 @@ async def test_promote_then_approve_lands_hub_version(async_client):
 
         # Audit chain: proposed + applied for the same approval id.
         actions = (
-            (
-                await db.execute(
-                    select(AuditEvent.action, AuditEvent.metadata_json).where(
-                        AuditEvent.workspace_id == uuid.UUID(ws_id),
-                    )
+            await db.execute(
+                select(AuditEvent.action, AuditEvent.metadata_json).where(
+                    AuditEvent.workspace_id == uuid.UUID(ws_id),
                 )
             )
-            .all()
-        )
+        ).all()
         labelled = [(a, (m or {}).get("approval_id")) for (a, m) in actions]
         assert ("hub.promotion_proposed", str(approval.id)) in labelled
         assert ("hub.promotion_applied", str(approval.id)) in labelled

@@ -35,9 +35,7 @@ async def _bootstrap(async_client) -> tuple[dict, str]:
         json={"email": email, "name": "Flow E2E", "password": password},
     )
     assert r.status_code == 201, r.text
-    r = await async_client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    r = await async_client.post("/api/v1/auth/login", json={"email": email, "password": password})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -103,12 +101,16 @@ async def test_no_agent_script_e2e(async_client):
         assert run.probe_duration_ms == 12
 
         events = (
-            await db.execute(
-                select(AuditEvent)
-                .where(AuditEvent.workspace_id == uuid.UUID(ws_id))
-                .where(AuditEvent.action == "flow.script_executed")
+            (
+                await db.execute(
+                    select(AuditEvent)
+                    .where(AuditEvent.workspace_id == uuid.UUID(ws_id))
+                    .where(AuditEvent.action == "flow.script_executed")
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(events) >= 1
         meta = events[0].metadata_json or {}
         assert meta.get("outcome") == "success"

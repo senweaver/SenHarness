@@ -43,9 +43,7 @@ async def _factory_returning(db_session):
     return _factory
 
 
-async def test_memorize_default_returns_deferred(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_memorize_default_returns_deferred(db_session, workspace, identity, monkeypatch):
     from app.services import session as session_svc
 
     sess = await session_svc.create_session(
@@ -55,21 +53,15 @@ async def test_memorize_default_returns_deferred(
     )
     _set_ctx(workspace, identity, sess.id)
     factory = await _factory_returning(db_session)
-    monkeypatch.setattr(
-        "app.agents.tools.memory.get_session_factory", lambda: factory
-    )
+    monkeypatch.setattr("app.agents.tools.memory.get_session_factory", lambda: factory)
 
-    out = await run_memorize(
-        MemorizeArgs(content="user prefers dark mode")
-    )
+    out = await run_memorize(MemorizeArgs(content="user prefers dark mode"))
     assert out["status"] == "deferred"
     assert out["effective"] == "next_session"
     assert "pending_memory_id" in out
 
 
-async def test_memorize_now_rejected_when_gate_closed(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_memorize_now_rejected_when_gate_closed(db_session, workspace, identity, monkeypatch):
     from app.services import session as session_svc
 
     sess = await session_svc.create_session(
@@ -81,9 +73,7 @@ async def test_memorize_now_rejected_when_gate_closed(
     await db_session.flush()
     _set_ctx(workspace, identity, sess.id)
     factory = await _factory_returning(db_session)
-    monkeypatch.setattr(
-        "app.agents.tools.memory.get_session_factory", lambda: factory
-    )
+    monkeypatch.setattr("app.agents.tools.memory.get_session_factory", lambda: factory)
 
     out = await run_memorize(
         MemorizeArgs(
@@ -95,9 +85,7 @@ async def test_memorize_now_rejected_when_gate_closed(
     assert out["code"] == "memory.immediate_not_permitted"
 
 
-async def test_memorize_now_succeeds_when_gate_open(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_memorize_now_succeeds_when_gate_open(db_session, workspace, identity, monkeypatch):
     from app.services import session as session_svc
 
     sess = await session_svc.create_session(
@@ -109,9 +97,7 @@ async def test_memorize_now_succeeds_when_gate_open(
     await db_session.flush()
     _set_ctx(workspace, identity, sess.id)
     factory = await _factory_returning(db_session)
-    monkeypatch.setattr(
-        "app.agents.tools.memory.get_session_factory", lambda: factory
-    )
+    monkeypatch.setattr("app.agents.tools.memory.get_session_factory", lambda: factory)
 
     out = await run_memorize(
         MemorizeArgs(
@@ -124,9 +110,7 @@ async def test_memorize_now_succeeds_when_gate_open(
     assert "memory_id" in out
 
 
-async def test_memorize_kv_without_key_is_rejected(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_memorize_kv_without_key_is_rejected(db_session, workspace, identity, monkeypatch):
     from app.services import session as session_svc
 
     sess = await session_svc.create_session(
@@ -136,9 +120,7 @@ async def test_memorize_kv_without_key_is_rejected(
     )
     _set_ctx(workspace, identity, sess.id)
     factory = await _factory_returning(db_session)
-    monkeypatch.setattr(
-        "app.agents.tools.memory.get_session_factory", lambda: factory
-    )
+    monkeypatch.setattr("app.agents.tools.memory.get_session_factory", lambda: factory)
 
     out = await run_memorize(MemorizeArgs(content="x", kind="kv"))
     assert out["status"] == "rejected"

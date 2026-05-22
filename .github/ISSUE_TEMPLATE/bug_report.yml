@@ -1,0 +1,93 @@
+name: Bug report
+description: Something is broken in SenHarness backend, frontend, or runtime.
+title: "bug: <short summary>"
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill in
+        the fields below so a maintainer can reproduce the issue
+        quickly. Issues without reproduction steps are usually closed.
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      options:
+        - label: I searched existing issues and discussions and could not find a duplicate.
+          required: true
+        - label: I checked the relevant `docs/*.md` page and the bug is not the documented behaviour.
+          required: true
+        - label: I am on a supported version (latest `main` or a tagged release).
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+      placeholder: |
+        When I ...
+        I expected ...
+        Instead, ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Minimal steps a maintainer can run to reproduce.
+      placeholder: |
+        1. `make up`
+        2. Open http://localhost:3000 and log in
+        3. Click ...
+        4. Observe ...
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / stack trace
+      description: Paste backend or browser logs. Redact secrets.
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: SenHarness version / commit
+      description: Output of `git rev-parse --short HEAD` or the release tag.
+      placeholder: "main @ abc1234"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      multiple: true
+      options:
+        - backend (FastAPI / agents)
+        - frontend (Next.js)
+        - runtime (workers / scheduler / channels)
+        - infra (docker-compose / migrations)
+        - docs
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python, Node, browser, deployment mode.
+      placeholder: |
+        OS: Ubuntu 24.04 / macOS 15 / Windows 11 WSL2
+        Python: 3.12.7
+        Node: 20.18.0
+        Browser: Chrome 132
+        Deployment: docker-compose dev
+    validations:
+      required: true

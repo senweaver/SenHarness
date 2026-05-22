@@ -84,9 +84,7 @@ AUDIT_TTL_FAILED_PERMANENT = "approval.ttl_failed_permanent"
 # instead of a rejection. Today: only the curator's archive proposal —
 # that's the spirit of "if nobody objects in 7 days, archive the
 # stale pack".
-_AUTO_EXECUTE_ON_EXPIRY: frozenset[str] = frozenset(
-    {ApprovalResourceType.SKILL_PACK_ARCHIVE.value}
-)
+_AUTO_EXECUTE_ON_EXPIRY: frozenset[str] = frozenset({ApprovalResourceType.SKILL_PACK_ARCHIVE.value})
 
 # Pre-expiry reminder window. Hard-coded to 24h to match the roadmap
 # TTL table; if we ever need it per-resource_type the workspace
@@ -142,9 +140,7 @@ async def process_expired_approvals(ctx: dict[str, Any]) -> dict[str, Any]:
             if sent:
                 summary["expiring_reminded"] += 1
         except Exception:  # pragma: no cover - defensive
-            log.exception(
-                "approval.ttl reminder pass failed for approval=%s", row.id
-            )
+            log.exception("approval.ttl reminder pass failed for approval=%s", row.id)
 
     # ── Pass 2: expired processor ───────────────────────────
     async with factory() as db:
@@ -165,10 +161,8 @@ async def process_expired_approvals(ctx: dict[str, Any]) -> dict[str, Any]:
     for row in expired_rows:
         try:
             outcome = await _process_expired(approval_id=row.id)
-        except Exception:  # noqa: BLE001
-            log.exception(
-                "approval.ttl expiry pass failed for approval=%s", row.id
-            )
+        except Exception:
+            log.exception("approval.ttl expiry pass failed for approval=%s", row.id)
             summary["expired_errored"] += 1
             continue
         if outcome == "auto_executed":
@@ -225,9 +219,7 @@ async def _send_pre_expiry_reminder(*, approval_id: uuid.UUID) -> bool:
             workspace_id=row.workspace_id,
             resource_type="approval",
             resource_id=row.id,
-            summary=(
-                f"approval {row.id} expiring soon ({row.resource_type or row.tool_name})"
-            ),
+            summary=(f"approval {row.id} expiring soon ({row.resource_type or row.tool_name})"),
             metadata={
                 "approval_id": str(row.id),
                 "resource_type": row.resource_type,
@@ -268,10 +260,7 @@ async def _process_expired(*, approval_id: uuid.UUID) -> str:
                 await db.rollback()
                 await _reject_with_audit(
                     approval_id=approval_id,
-                    reason=(
-                        "ttl auto-execute failed — see "
-                        "approval.dispatch_failed audit"
-                    ),
+                    reason=("ttl auto-execute failed — see approval.dispatch_failed audit"),
                 )
                 return "errored"
             # On success, finalise the row + audit + commit.
@@ -329,9 +318,7 @@ async def _reject_with_audit(*, approval_id: uuid.UUID, reason: str) -> None:
                 status_override=ApprovalStatus.EXPIRED,
             )
         except Exception:  # pragma: no cover - defensive
-            log.exception(
-                "approval.ttl reject pass failed for approval=%s", approval_id
-            )
+            log.exception("approval.ttl reject pass failed for approval=%s", approval_id)
             await db.rollback()
             return
 
@@ -342,10 +329,7 @@ async def _reject_with_audit(*, approval_id: uuid.UUID, reason: str) -> None:
             workspace_id=row.workspace_id,
             resource_type="approval",
             resource_id=row.id,
-            summary=(
-                f"approval {row.id} expired without decision "
-                f"({rt or row.tool_name})"
-            ),
+            summary=(f"approval {row.id} expired without decision ({rt or row.tool_name})"),
             metadata={
                 "approval_id": str(row.id),
                 "resource_type": rt,
@@ -363,9 +347,7 @@ async def _reload(db: Any, *, approval_id: uuid.UUID) -> Approval | None:
 
 
 # ─── ARQ permanent-failure hook ──────────────────────────────
-async def on_approval_ttl_job_failed_permanent(
-    ctx: dict[str, Any], exc: BaseException
-) -> None:
+async def on_approval_ttl_job_failed_permanent(ctx: dict[str, Any], exc: BaseException) -> None:
     """Three-strike hook for ``process_expired_approvals``.
 
     Mirrors the curator / pending-memory / evolver hooks: writes one
@@ -382,13 +364,9 @@ async def on_approval_ttl_job_failed_permanent(
                 workspace_id=None,
                 resource_type="job",
                 resource_id=None,
-                summary=(
-                    f"process_expired_approvals failed permanently: {exc!r}"
-                ),
+                summary=(f"process_expired_approvals failed permanently: {exc!r}"),
                 metadata={
-                    "function": str(
-                        ctx.get("function") or PROCESS_EXPIRED_APPROVALS_NAME
-                    ),
+                    "function": str(ctx.get("function") or PROCESS_EXPIRED_APPROVALS_NAME),
                     "job_id": ctx.get("job_id"),
                     "exception": repr(exc),
                     "job_try": ctx.get("job_try"),

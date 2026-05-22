@@ -25,12 +25,11 @@ from app.agents.tools.session_search import (
     run_session_search,
 )
 
-
 pytestmark = pytest.mark.asyncio
 
 
 def _install_settings(monkeypatch: pytest.MonkeyPatch, *, strikes: int = 3) -> None:
-    async def _stub_settings(db, *, workspace_id):  # noqa: ARG001
+    async def _stub_settings(db, *, workspace_id):
         return {
             "summarize_rate_per_minute": 30,
             "summarize_fail_strikes": strikes,
@@ -79,17 +78,17 @@ async def test_breaker_open_skips_aux_and_returns_raw(monkeypatch):
     raw = _hits(3)
     aux_calls: list = []
 
-    async def _stub_search(args, *, workspace_id):  # noqa: ARG001
+    async def _stub_search(args, *, workspace_id):
         return raw
 
     async def _stub_aux(**_):
         aux_calls.append("called")
         return None
 
-    async def _open(*, bucket, workspace_id, trip_at):  # noqa: ARG001
+    async def _open(*, bucket, workspace_id, trip_at):
         return True
 
-    async def _consume(*, bucket, workspace_id, limit, period_seconds=60):  # noqa: ARG001
+    async def _consume(*, bucket, workspace_id, limit, period_seconds=60):
         raise AssertionError("rate gate must not run when breaker is open")
 
     monkeypatch.setattr(tool, "_record_audit", _record)
@@ -119,25 +118,25 @@ async def test_three_strikes_trip_breaker(monkeypatch):
     async def _record(**kwargs):
         audit_rows.append(kwargs)
 
-    async def _is_open(*, bucket, workspace_id, trip_at):  # noqa: ARG001
+    async def _is_open(*, bucket, workspace_id, trip_at):
         return open_state["open"]
 
-    async def _consume(*, bucket, workspace_id, limit, period_seconds=60):  # noqa: ARG001
+    async def _consume(*, bucket, workspace_id, limit, period_seconds=60):
         return True
 
-    async def _bump(*, bucket, workspace_id, window_seconds, recover_seconds=None):  # noqa: ARG001
+    async def _bump(*, bucket, workspace_id, window_seconds, recover_seconds=None):
         breaker_state["strikes"] += 1
         if breaker_state["strikes"] >= 3:
             open_state["open"] = True
         return breaker_state["strikes"]
 
-    async def _reset(*, bucket, workspace_id):  # noqa: ARG001
+    async def _reset(*, bucket, workspace_id):
         breaker_state["strikes"] = 0
         open_state["open"] = False
 
     raw = _hits(2)
 
-    async def _stub_search(args, *, workspace_id):  # noqa: ARG001
+    async def _stub_search(args, *, workspace_id):
         return raw
 
     async def _stub_aux_always_fail(**_):
@@ -181,17 +180,17 @@ async def test_rate_gate_denies_with_audit(monkeypatch):
     raw = _hits(2)
     aux_calls: list = []
 
-    async def _stub_search(args, *, workspace_id):  # noqa: ARG001
+    async def _stub_search(args, *, workspace_id):
         return raw
 
     async def _stub_aux(**_):
         aux_calls.append("called")
         return None
 
-    async def _open(*, bucket, workspace_id, trip_at):  # noqa: ARG001
+    async def _open(*, bucket, workspace_id, trip_at):
         return False
 
-    async def _consume_deny(*, bucket, workspace_id, limit, period_seconds=60):  # noqa: ARG001
+    async def _consume_deny(*, bucket, workspace_id, limit, period_seconds=60):
         return False
 
     monkeypatch.setattr(tool, "_record_audit", _record)

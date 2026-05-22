@@ -83,9 +83,7 @@ async def _enable_auto_verifier(workspace_id: str) -> None:
         await db.commit()
 
 
-async def _seed_proposed_versions(
-    workspace_id: str, identity_id: str, *, count: int
-) -> list[str]:
+async def _seed_proposed_versions(workspace_id: str, identity_id: str, *, count: int) -> list[str]:
     from app.db.session import get_session_factory
     from app.repositories.skills import SkillPackRepository
     from app.services import skill_version as svc
@@ -177,9 +175,7 @@ async def test_sweep_processes_all_proposed_versions(async_client):
     # Reset the breaker so the workspace isn't skipped from a prior sibling test.
     from app.jobs._breaker import reset_failure
 
-    await reset_failure(
-        bucket=verifier_svc.VerifierBreakerBucket, workspace_id=ws_id
-    )
+    await reset_failure(bucket=verifier_svc.VerifierBreakerBucket, workspace_id=ws_id)
 
     with patch.object(sweep_mod, "verify_skill_version", fake_verify):
         result = await sweep_mod.verify_proposed_versions_sweep({})
@@ -191,9 +187,7 @@ async def test_sweep_processes_all_proposed_versions(async_client):
         assert vid in seen_version_ids
 
 
-async def test_sweep_skips_workspace_when_breaker_open(
-    async_client, redis_available
-):
+async def test_sweep_skips_workspace_when_breaker_open(async_client, redis_available):
     if not redis_available:
         pytest.skip("Redis required for breaker state")
 
@@ -249,19 +243,21 @@ async def test_sweep_skips_workspace_when_breaker_open(
             )
 
             rows = (
-                await db.execute(
-                    select(SkillPackVersion.id).where(
-                        SkillPackVersion.workspace_id == uuid.UUID(ws_id),
-                        SkillPackVersion.state == SkillPackVersionState.PROPOSED,
+                (
+                    await db.execute(
+                        select(SkillPackVersion.id).where(
+                            SkillPackVersion.workspace_id == uuid.UUID(ws_id),
+                            SkillPackVersion.state == SkillPackVersionState.PROPOSED,
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             this_ws_versions = {str(r) for r in rows}
 
         assert not (this_ws_versions & set(invocations)), (
             "breaker-open workspace must not have its versions verified"
         )
     finally:
-        await reset_failure(
-            bucket=verifier_svc.VerifierBreakerBucket, workspace_id=ws_id
-        )
+        await reset_failure(bucket=verifier_svc.VerifierBreakerBucket, workspace_id=ws_id)

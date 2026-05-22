@@ -28,7 +28,7 @@ async def test_stream_sse_serializes_update_frames():
     # First frame must be event: started + a JSON body
     first = frames[0].decode()
     assert first.startswith("event: started\n")
-    body_line = [ln for ln in first.splitlines() if ln.startswith("data: ")][0]
+    body_line = next(ln for ln in first.splitlines() if ln.startswith("data: "))
     doc = json.loads(body_line[len("data: ") :])
     assert doc == {"kind": "started", "sync_id": "abc"}
 

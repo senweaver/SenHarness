@@ -42,13 +42,10 @@ class NotificationRepository(AsyncRepository[Notification]):
         workspace_id: uuid.UUID,
         recipient_identity_id: uuid.UUID,
     ) -> int:
-        stmt = (
-            select(func.count(Notification.id))
-            .where(
-                Notification.workspace_id == workspace_id,
-                Notification.recipient_identity_id == recipient_identity_id,
-                Notification.deleted_at.is_(None),
-                Notification.read_at.is_(None),
-            )
+        stmt = select(func.count(Notification.id)).where(
+            Notification.workspace_id == workspace_id,
+            Notification.recipient_identity_id == recipient_identity_id,
+            Notification.deleted_at.is_(None),
+            Notification.read_at.is_(None),
         )
         return int((await self.session.execute(stmt)).scalar() or 0)

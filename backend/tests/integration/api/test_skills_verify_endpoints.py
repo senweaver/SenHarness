@@ -41,9 +41,7 @@ async def _bootstrap(async_client) -> tuple[dict, str]:
     return headers, ws_id
 
 
-async def _create_pack_with_v2_proposed(
-    async_client, headers
-) -> tuple[str, str]:
+async def _create_pack_with_v2_proposed(async_client, headers) -> tuple[str, str]:
     payload = {
         "slug": f"vfy-{uuid.uuid4().hex[:8]}",
         "name": "Verify pack",
@@ -51,9 +49,7 @@ async def _create_pack_with_v2_proposed(
         "manifest_json": {},
         "content_md": "v1 body initial",
     }
-    r = await async_client.post(
-        "/api/v1/skills/packs", headers=headers, json=payload
-    )
+    r = await async_client.post("/api/v1/skills/packs", headers=headers, json=payload)
     assert r.status_code == 201, r.text
     pack_id = r.json()["id"]
 
@@ -100,9 +96,7 @@ def _stub_verify_result(version_id_str: str) -> verifier_svc.VerificationResult:
 
 async def test_verify_now_happy_path(async_client):
     headers, _ws_id = await _bootstrap(async_client)
-    pack_id, version_id = await _create_pack_with_v2_proposed(
-        async_client, headers
-    )
+    pack_id, version_id = await _create_pack_with_v2_proposed(async_client, headers)
 
     async def fake_verify(_db, *, workspace_id, version_id, request=None):
         _ = (workspace_id, request)
@@ -127,9 +121,7 @@ async def test_verify_now_requires_workspace_admin(async_client):
     # Owner of WS A creates everything; a separate identity is invited
     # as a regular member and tries to call verify-now.
     headers_admin, ws_id = await _bootstrap(async_client)
-    pack_id, version_id = await _create_pack_with_v2_proposed(
-        async_client, headers_admin
-    )
+    pack_id, version_id = await _create_pack_with_v2_proposed(async_client, headers_admin)
 
     member_email = f"member-{uuid.uuid4().hex[:8]}@example.com"
     password = "member-password-very-long"
@@ -174,9 +166,7 @@ async def test_verify_now_requires_workspace_admin(async_client):
 
 async def test_validation_endpoint_returns_state_and_results(async_client):
     headers, _ws_id = await _bootstrap(async_client)
-    pack_id, version_id = await _create_pack_with_v2_proposed(
-        async_client, headers
-    )
+    pack_id, version_id = await _create_pack_with_v2_proposed(async_client, headers)
 
     # Persist a synthetic validation_results blob directly so we don't
     # depend on running verifier_svc.verify_skill_version end-to-end here.
@@ -225,9 +215,7 @@ async def test_verify_now_rejects_unknown_pack(async_client):
 
 async def test_verify_now_rate_limit_fires(async_client):
     headers, _ws_id = await _bootstrap(async_client)
-    pack_id, version_id = await _create_pack_with_v2_proposed(
-        async_client, headers
-    )
+    pack_id, version_id = await _create_pack_with_v2_proposed(async_client, headers)
 
     async def fake_verify(_db, *, workspace_id, version_id, request=None):
         _ = (workspace_id, request)

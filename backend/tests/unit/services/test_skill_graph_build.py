@@ -209,15 +209,10 @@ async def test_hub_external_node_is_synthesised(db_session, workspace, identity)
     ext = external_nodes[0]
     assert ext.node_id == "hub:code-review"
     assert ext.pack_id is None
-    assert any(
-        e.parent_id == "hub:code-review" and e.child_id == str(a.id)
-        for e in graph.edges
-    )
+    assert any(e.parent_id == "hub:code-review" and e.child_id == str(a.id) for e in graph.edges)
 
 
-async def test_focus_pack_outside_workspace_returns_empty(
-    db_session, workspace, identity
-):
+async def test_focus_pack_outside_workspace_returns_empty(db_session, workspace, identity):
     other_ws = await ws_svc.create_workspace(
         db_session,
         name="other",

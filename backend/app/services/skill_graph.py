@@ -277,12 +277,8 @@ async def list_one_step_lineage(
         return [], []
 
     edge_repo = SkillLineageEdgeRepository(db)
-    incoming = list(
-        await edge_repo.list_incoming(workspace_id=workspace_id, pack_id=pack_id)
-    )
-    outgoing = list(
-        await edge_repo.list_outgoing(workspace_id=workspace_id, pack_id=pack_id)
-    )
+    incoming = list(await edge_repo.list_incoming(workspace_id=workspace_id, pack_id=pack_id))
+    outgoing = list(await edge_repo.list_outgoing(workspace_id=workspace_id, pack_id=pack_id))
     return incoming, outgoing
 
 
@@ -336,8 +332,7 @@ async def record_lineage_edge_for_propose(
             resource_type="skill_pack",
             resource_id=child_pack_id,
             summary=(
-                f"derived_from edge: {parent_pack_id} → {child_pack_id} "
-                f"({len(run_ids)} run(s))"
+                f"derived_from edge: {parent_pack_id} → {child_pack_id} ({len(run_ids)} run(s))"
             ),
             metadata={
                 "edge_kind": SkillLineageEdgeKind.DERIVED_FROM.value,
@@ -384,9 +379,7 @@ async def record_lineage_edge_for_pull(
             workspace_id=workspace_id,
             resource_type="skill_pack",
             resource_id=local_pack_id,
-            summary=(
-                f"pulled_from_hub edge: hub:{hub_pack_slug} → {local_pack_id}"
-            ),
+            summary=(f"pulled_from_hub edge: hub:{hub_pack_slug} → {local_pack_id}"),
             metadata={
                 "edge_kind": SkillLineageEdgeKind.PULLED_FROM_HUB.value,
                 "hub_pack_id": str(hub_pack_id),

@@ -58,19 +58,18 @@ async def rollup_skill_usage(ctx: dict[str, Any]) -> dict[str, Any]:
 
     async with factory() as db:
         ws_rows = (
-            await db.execute(select(Workspace.id).where(Workspace.deleted_at.is_(None)))
-        ).scalars().all()
+            (await db.execute(select(Workspace.id).where(Workspace.deleted_at.is_(None))))
+            .scalars()
+            .all()
+        )
 
     for ws_id in ws_rows:
         workspaces_processed += 1
         async with factory() as db:
-            stmt = (
-                select(SkillPack.id)
-                .where(
-                    SkillPack.workspace_id == ws_id,
-                    SkillPack.deleted_at.is_(None),
-                    SkillPack.state != SkillPackState.TOMBSTONE,
-                )
+            stmt = select(SkillPack.id).where(
+                SkillPack.workspace_id == ws_id,
+                SkillPack.deleted_at.is_(None),
+                SkillPack.state != SkillPackState.TOMBSTONE,
             )
             pack_ids = (await db.execute(stmt)).scalars().all()
 
@@ -94,9 +93,7 @@ async def rollup_skill_usage(ctx: dict[str, Any]) -> dict[str, Any]:
                 packs_updated += 1
                 total_usage_rows_aggregated += int(stats["use_count"])
             except Exception:  # pragma: no cover - never let one pack tank the sweep
-                log.exception(
-                    "rollup_skill_usage failed for ws=%s pack=%s", ws_id, pack_id
-                )
+                log.exception("rollup_skill_usage failed for ws=%s pack=%s", ws_id, pack_id)
 
     return {
         "status": "ok",

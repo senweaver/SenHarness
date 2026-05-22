@@ -49,16 +49,14 @@ class _AlignmentResponse(BaseModel):
 
 _PROMPT_SYSTEM = (
     "You judge whether an assistant message advances a stated goal. "
-    "Output strict JSON: {\"score\": float in [0,1], \"rationale\": short single sentence}. "
+    'Output strict JSON: {"score": float in [0,1], "rationale": short single sentence}. '
     "Score 1.0 means the message materially advances the goal; "
     "0.0 means it is off-topic or actively diverging. "
     "Use the language of the goal text."
 )
 
 
-def _build_user_prompt(
-    *, goal_text: str, criteria: list[str], assistant_text: str
-) -> str:
+def _build_user_prompt(*, goal_text: str, criteria: list[str], assistant_text: str) -> str:
     crit_block = "\n".join(f"- {c}" for c in criteria) or "(none provided)"
     return (
         f"GOAL:\n{goal_text}\n\n"
@@ -171,9 +169,7 @@ async def score_message_alignment(
             if failures >= _ALIGN_BREAKER_TRIP_AT:
                 breaker_tripped = True
                 score = 0.5
-                rationale = (
-                    f"Aux scorer degraded after {failures} consecutive failures."
-                )
+                rationale = f"Aux scorer degraded after {failures} consecutive failures."
                 judged_by_model = "heuristic:breaker"
             else:
                 # Surface the failure so ARQ retries within the budget.
@@ -262,9 +258,7 @@ async def score_message_alignment(
                     },
                 )
             except Exception:  # pragma: no cover - notification best-effort
-                log.exception(
-                    "notify goal.alignment_low failed for goal=%s", goal_uid
-                )
+                log.exception("notify goal.alignment_low failed for goal=%s", goal_uid)
 
         await db.commit()
 
@@ -280,9 +274,7 @@ async def score_message_alignment(
 
 
 # ─── ARQ worker hooks ────────────────────────────────────────
-async def on_job_failed_permanent(
-    ctx: dict[str, Any], exc: BaseException
-) -> None:
+async def on_job_failed_permanent(ctx: dict[str, Any], exc: BaseException) -> None:
     """ARQ hook for jobs that exhausted their retry budget.
 
     Writes one ``audit_events(action="job.failed_permanent")`` so
@@ -356,9 +348,7 @@ async def on_job_failed_permanent(
                     },
                 )
             except Exception:  # pragma: no cover
-                log.exception(
-                    "notify job.failed_permanent failed for %s", function_name
-                )
+                log.exception("notify job.failed_permanent failed for %s", function_name)
             await db.commit()
     except Exception:  # pragma: no cover
         log.exception("on_job_failed_permanent hook crashed")
@@ -661,9 +651,7 @@ async def judge_session_artifact(
                 )
                 await db.commit()
             return {"status": "degraded", "artifact_id": str(art_uid)}
-        raise RuntimeError(
-            f"aux judge produced no verdict (failures={failures})"
-        )
+        raise RuntimeError(f"aux judge produced no verdict (failures={failures})")
 
     await reset_failure(bucket=_JUDGE_BUCKET, workspace_id=str(workspace_id))
 
@@ -754,11 +742,7 @@ async def judge_periodic_sweep(ctx: dict[str, Any]) -> dict[str, Any]:
 
     async with factory() as db:
         ws_rows = (
-            (
-                await db.execute(
-                    select(Workspace.id).where(Workspace.deleted_at.is_(None))
-                )
-            )
+            (await db.execute(select(Workspace.id).where(Workspace.deleted_at.is_(None))))
             .scalars()
             .all()
         )
@@ -798,14 +782,10 @@ async def judge_periodic_sweep(ctx: dict[str, Any]) -> dict[str, Any]:
             try:
                 from app.worker.queue import enqueue
 
-                await enqueue(
-                    "judge_session_artifact", str(art.id), _defer_by=2
-                )
+                await enqueue("judge_session_artifact", str(art.id), _defer_by=2)
                 enqueued += 1
             except Exception:  # pragma: no cover
-                log.exception(
-                    "periodic sweep: enqueue failed for artifact %s", art.id
-                )
+                log.exception("periodic sweep: enqueue failed for artifact %s", art.id)
 
     return {
         "status": "swept",

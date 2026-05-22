@@ -46,13 +46,9 @@ async def _make_pack(
 async def test_same_tenant_slug_collides(db_session):
     tenant_id = uuid.uuid4()
     slug = f"shared-{uuid.uuid4().hex[:6]}"
-    await _make_pack(
-        db_session, scope=HubScope.TENANT, tenant_id=tenant_id, slug=slug
-    )
+    await _make_pack(db_session, scope=HubScope.TENANT, tenant_id=tenant_id, slug=slug)
     with pytest.raises(IntegrityError):
-        await _make_pack(
-            db_session, scope=HubScope.TENANT, tenant_id=tenant_id, slug=slug
-        )
+        await _make_pack(db_session, scope=HubScope.TENANT, tenant_id=tenant_id, slug=slug)
     await db_session.rollback()
 
 
@@ -76,16 +72,12 @@ async def test_different_tenants_share_slug_ok(db_session):
 
 async def test_two_platform_packs_with_same_slug_collide(db_session):
     slug = f"plat-{uuid.uuid4().hex[:6]}"
-    await _make_pack(
-        db_session, scope=HubScope.PLATFORM, tenant_id=None, slug=slug
-    )
+    await _make_pack(db_session, scope=HubScope.PLATFORM, tenant_id=None, slug=slug)
     # The migration adds a partial UNIQUE index on (slug) WHERE
     # scope='platform' AND tenant_id IS NULL. The plain unique
     # constraint won't catch it because NULL is distinct in UNIQUE.
     with pytest.raises(IntegrityError):
-        await _make_pack(
-            db_session, scope=HubScope.PLATFORM, tenant_id=None, slug=slug
-        )
+        await _make_pack(db_session, scope=HubScope.PLATFORM, tenant_id=None, slug=slug)
     await db_session.rollback()
 
 

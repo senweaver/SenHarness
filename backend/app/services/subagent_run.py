@@ -49,7 +49,6 @@ from app.core.errors import AppError
 from app.core.security import utcnow_naive
 from app.db.models.approval import (
     Approval,
-    ApprovalResourceType,
     ApprovalStatus,
 )
 from app.db.models.subagent_run import (
@@ -169,8 +168,8 @@ _PROMPT_SYSTEM = (
     "Decide whether the answer is grounded in verifiable evidence:\n"
     " - Tool results, cited URLs, computed values, or quoted source text count as evidence.\n"
     " - Speculation, generic platitudes, or unattributed claims do NOT.\n"
-    "Output strict JSON: {\"score\": float in [0,1], \"rationale\": short single sentence,"
-    " \"has_evidence\": bool}.\n"
+    'Output strict JSON: {"score": float in [0,1], "rationale": short single sentence,'
+    ' "has_evidence": bool}.\n'
     "score=1.0 → all major claims grounded. score=0.5 → mixed. score=0.0 → entirely ungrounded."
 )
 
@@ -455,9 +454,7 @@ async def reap_zombie(
         workspace_id=row.workspace_id,
         resource_type="subagent_run",
         resource_id=row.id,
-        summary=(
-            f"subagent {row.child_run_id} reaped as zombie (parent_run={row.parent_run_id})"
-        ),
+        summary=(f"subagent {row.child_run_id} reaped as zombie (parent_run={row.parent_run_id})"),
         metadata={
             "child_run_id": str(row.child_run_id),
             "parent_run_id": str(row.parent_run_id),
@@ -478,7 +475,7 @@ async def _emit_zombie_notification(
 ) -> None:
     """M0.10 fan-out for ``subagent.zombie_detected``. Never raises."""
     try:
-        from app.services.notification_events import emit_event  # noqa: PLC0415
+        from app.services.notification_events import emit_event
 
         await emit_event(
             db,
@@ -517,15 +514,13 @@ async def evaluate_hallucination(
     so the gate degrades to "trust the result" instead of blocking
     every child on review during an aux outage.
     """
-    from app.agents.auxiliary_client import (  # noqa: PLC0415
+    from app.agents.auxiliary_client import (
         AuxiliaryTask,
         call_aux_chat,
         get_aux_model,
     )
 
-    config = await get_aux_model(
-        db, workspace_id=workspace_id, task=AuxiliaryTask.JUDGE
-    )
+    config = await get_aux_model(db, workspace_id=workspace_id, task=AuxiliaryTask.JUDGE)
     if config is None:
         log.info(
             "hallucination gate: no aux model for workspace %s; fail-open",
@@ -579,7 +574,7 @@ async def gate_hallucination_or_approve(
     Caller commits.
     """
     # Breaker check first — fail-open before we burn another aux call.
-    from app.jobs._breaker import (  # noqa: PLC0415
+    from app.jobs._breaker import (
         bump_failure,
         is_breaker_open,
     )
@@ -604,9 +599,7 @@ async def gate_hallucination_or_approve(
             workspace_id=workspace_id,
             resource_type="subagent_run",
             resource_id=child_run.id,
-            summary=(
-                f"subagent {child_run.child_run_id} passed gate (breaker open)"
-            ),
+            summary=(f"subagent {child_run.child_run_id} passed gate (breaker open)"),
             metadata={
                 "child_run_id": str(child_run.child_run_id),
                 "parent_run_id": str(child_run.parent_run_id),
@@ -626,7 +619,7 @@ async def gate_hallucination_or_approve(
             final_output=final_output,
             timeout_s=timeout_s,
         )
-    except Exception:  # noqa: BLE001
+    except Exception:
         log.exception("hallucination eval raised for workspace %s", workspace_id)
         await bump_failure(
             bucket=HALLUCINATION_BREAKER_BUCKET,
@@ -652,9 +645,7 @@ async def gate_hallucination_or_approve(
             workspace_id=workspace_id,
             resource_type="subagent_run",
             resource_id=child_run.id,
-            summary=(
-                f"subagent {child_run.child_run_id} passed gate (no aux model)"
-            ),
+            summary=(f"subagent {child_run.child_run_id} passed gate (no aux model)"),
             metadata={
                 "child_run_id": str(child_run.child_run_id),
                 "parent_run_id": str(child_run.parent_run_id),
@@ -683,9 +674,7 @@ async def gate_hallucination_or_approve(
             workspace_id=workspace_id,
             resource_type="subagent_run",
             resource_id=child_run.id,
-            summary=(
-                f"subagent {child_run.child_run_id} passed gate score={score_value:.2f}"
-            ),
+            summary=(f"subagent {child_run.child_run_id} passed gate score={score_value:.2f}"),
             metadata={
                 "child_run_id": str(child_run.child_run_id),
                 "parent_run_id": str(child_run.parent_run_id),
@@ -751,9 +740,8 @@ async def _file_hallucination_approval(
     """Persist a pending Approval row for the M2.5 dispatch handler."""
     repo = ApprovalRepository(db)
     summary_preview = (final_output or "").strip().splitlines()[0:1]
-    summary = (
-        f"sub-agent hallucination review (score {score:.2f} < {threshold:.2f})"
-        + (f": {summary_preview[0][:120]}" if summary_preview else "")
+    summary = f"sub-agent hallucination review (score {score:.2f} < {threshold:.2f})" + (
+        f": {summary_preview[0][:120]}" if summary_preview else ""
     )
     body: dict[str, Any] = {
         "subagent_run_id": str(child_run.id),
@@ -844,15 +832,16 @@ async def apply_hallucination_decision(
         resource_type="subagent_run",
         resource_id=row.id,
         summary=(
-            f"subagent {row.child_run_id} hallucination review {decision} "
-            f"(approval={approval.id})"
+            f"subagent {row.child_run_id} hallucination review {decision} (approval={approval.id})"
         ),
         metadata={
             "approval_id": str(approval.id),
             "child_run_id": str(row.child_run_id),
             "parent_run_id": str(row.parent_run_id),
             "spawn_depth": int(row.spawn_depth),
-            "score": float(row.hallucination_score) if row.hallucination_score is not None else None,
+            "score": float(row.hallucination_score)
+            if row.hallucination_score is not None
+            else None,
         },
     )
     return updated

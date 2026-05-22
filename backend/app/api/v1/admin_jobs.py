@@ -28,7 +28,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from app.api.deps import CurrentIdentityId, DBSession
@@ -137,23 +137,15 @@ async def _resolve_workspace_scope(
     if identity.platform_role == PlatformRole.PLATFORM_ADMIN:
         return identity, None
     if cross_workspace_required:
-        raise HTTPException(
-            status_code=403, detail="platform_admin_required"
-        )
+        raise HTTPException(status_code=403, detail="platform_admin_required")
     raw = request.headers.get("X-Workspace-Id")
     if not raw:
-        raise HTTPException(
-            status_code=403, detail="workspace_id_required"
-        )
+        raise HTTPException(status_code=403, detail="workspace_id_required")
     try:
         ws_id = uuid.UUID(raw)
     except ValueError as e:
-        raise HTTPException(
-            status_code=400, detail="invalid_workspace_id"
-        ) from e
-    await ws_svc.ensure_admin(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+        raise HTTPException(status_code=400, detail="invalid_workspace_id") from e
+    await ws_svc.ensure_admin(db, workspace_id=ws_id, identity_id=identity_id)
     return identity, ws_id
 
 
@@ -195,18 +187,14 @@ async def _redis_queue_depth() -> QueueDepth:
         return QueueDepth(queue_name=ARQ_DEFAULT_QUEUE, depth=int(depth or 0))
     except Exception as exc:  # pragma: no cover - infra dependent
         log.warning("admin_jobs.queue_depth_failed err=%s", exc)
-        return QueueDepth(
-            queue_name=ARQ_DEFAULT_QUEUE, depth=None, error=str(exc)[:200]
-        )
+        return QueueDepth(queue_name=ARQ_DEFAULT_QUEUE, depth=None, error=str(exc)[:200])
 
 
 # ── Routes ───────────────────────────────────────────────────
 @router.get(
     "/queues",
     response_model=QueuesResponse,
-    dependencies=[
-        Depends(rate_limit("admin_jobs_queues", limit=30, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("admin_jobs_queues", limit=30, period_seconds=60))],
 )
 async def get_queues(
     db: DBSession,
@@ -244,9 +232,7 @@ async def get_queues(
 @router.get(
     "/recent",
     response_model=list[JobRunRead],
-    dependencies=[
-        Depends(rate_limit("admin_jobs_recent", limit=60, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("admin_jobs_recent", limit=60, period_seconds=60))],
 )
 async def list_recent(
     db: DBSession,
@@ -262,9 +248,7 @@ async def list_recent(
         try:
             parsed_status = JobRunStatus(status_filter)
         except ValueError as e:
-            raise HTTPException(
-                status_code=400, detail=f"invalid_status:{status_filter}"
-            ) from e
+            raise HTTPException(status_code=400, detail=f"invalid_status:{status_filter}") from e
     rows = await job_run_svc.list_recent_job_runs(
         db,
         workspace_id=ws_id,
@@ -278,9 +262,7 @@ async def list_recent(
 @router.get(
     "/health",
     response_model=HealthResponse,
-    dependencies=[
-        Depends(rate_limit("admin_jobs_health", limit=30, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("admin_jobs_health", limit=30, period_seconds=60))],
 )
 async def get_health(
     db: DBSession,
@@ -306,9 +288,7 @@ async def get_health(
 @router.post(
     "/{job_id}/retry",
     response_model=RetryResponse,
-    dependencies=[
-        Depends(rate_limit("admin_jobs_retry", limit=5, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("admin_jobs_retry", limit=5, period_seconds=60))],
 )
 async def retry_job(
     job_id: str,
@@ -330,21 +310,15 @@ async def retry_job(
     )
     row = await job_run_svc.get_job_run(db, job_id=job_id)
     if row is None:
-        raise HTTPException(
-            status_code=404, detail="job_not_found"
-        )
+        raise HTTPException(status_code=404, detail="job_not_found")
     if row.status not in {
         JobRunStatus.FAILED,
         JobRunStatus.FAILED_PERMANENT,
     }:
-        raise HTTPException(
-            status_code=409, detail="job_not_eligible_for_retry"
-        )
+        raise HTTPException(status_code=409, detail="job_not_eligible_for_retry")
     payload = row.args_json or {}
     if payload.get("_truncated"):
-        raise HTTPException(
-            status_code=409, detail="args_truncated_cannot_replay"
-        )
+        raise HTTPException(status_code=409, detail="args_truncated_cannot_replay")
     args = list(payload.get("args") or ())
     kwargs = dict(payload.get("kwargs") or {})
 
@@ -364,9 +338,7 @@ async def retry_job(
         workspace_id=row.workspace_id,
         resource_type="job_run",
         resource_id=row.id,
-        summary=(
-            f"manual retry of {row.function_name} (original job_id={row.job_id})"
-        ),
+        summary=(f"manual retry of {row.function_name} (original job_id={row.job_id})"),
         metadata={
             "original_job_id": row.job_id,
             "new_job_id": new_job_id,

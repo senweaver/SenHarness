@@ -25,9 +25,7 @@ from app.db.base import Base
 from app.db.mixins import TimestampMixin, UuidPkMixin, WorkspaceScopedMixin
 
 
-class WorkspaceHubSubscription(
-    UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base
-):
+class WorkspaceHubSubscription(UuidPkMixin, TimestampMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "workspace_hub_subscriptions"
 
     hub_pack_id: Mapped[uuid.UUID] = mapped_column(
@@ -36,12 +34,8 @@ class WorkspaceHubSubscription(
         nullable=False,
         index=True,
     )
-    auto_pull: Mapped[bool] = mapped_column(
-        default=False, server_default="false", nullable=False
-    )
-    last_pulled_version_no: Mapped[int | None] = mapped_column(
-        Integer, nullable=True
-    )
+    auto_pull: Mapped[bool] = mapped_column(default=False, server_default="false", nullable=False)
+    last_pulled_version_no: Mapped[int | None] = mapped_column(Integer, nullable=True)
     last_pulled_at: Mapped[datetime | None] = mapped_column(nullable=True)
     subscribed_by_identity_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),

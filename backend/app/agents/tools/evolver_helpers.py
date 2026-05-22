@@ -41,9 +41,9 @@ log = logging.getLogger(__name__)
 
 __all__ = [
     "AUDIT_MARKED_SKIP",
+    "READ_SKILL_PACK_TRUNCATE_CHARS",
     "ListSessionArtifactsArgs",
     "MarkSkipArgs",
-    "READ_SKILL_PACK_TRUNCATE_CHARS",
     "ReadSkillPackArgs",
     "run_list_session_artifacts",
     "run_mark_skip",
@@ -129,13 +129,9 @@ async def run_list_session_artifacts(
                 "run_id": str(row.run_id),
                 "session_id": str(row.session_id),
                 "finished_at": row.finished_at.isoformat(),
-                "judge_score": (
-                    float(row.judge_score) if row.judge_score is not None else None
-                ),
+                "judge_score": (float(row.judge_score) if row.judge_score is not None else None),
                 "goal_alignment_avg": (
-                    float(row.goal_alignment_avg)
-                    if row.goal_alignment_avg is not None
-                    else None
+                    float(row.goal_alignment_avg) if row.goal_alignment_avg is not None else None
                 ),
                 "error_kind_hint": row.error_kind,
                 "final_outcome": row.final_outcome,
@@ -180,9 +176,7 @@ async def run_read_skill_pack(args: ReadSkillPackArgs) -> dict[str, Any]:
             }
 
         version_repo = SkillPackVersionRepository(db)
-        active = await version_repo.get_active(
-            workspace_id=ctx.workspace_id, pack_id=pack.id
-        )
+        active = await version_repo.get_active(workspace_id=ctx.workspace_id, pack_id=pack.id)
         if active is not None:
             content = active.content_md or ""
             version_no: int | None = int(active.version_no)
@@ -265,9 +259,7 @@ async def run_mark_skip(args: MarkSkipArgs) -> dict[str, Any]:
         "status": "skipped",
         "stop": True,
         "rationale": args.rationale,
-        "final_message": (
-            "No SkillPack proposals worth filing this round. " + args.rationale
-        ),
+        "final_message": ("No SkillPack proposals worth filing this round. " + args.rationale),
     }
 
 

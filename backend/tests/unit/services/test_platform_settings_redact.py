@@ -6,9 +6,7 @@ from app.services.platform_settings import _diff_payloads, _redact_for_audit
 
 
 def test_redact_replaces_password_ref():
-    redacted = _redact_for_audit(
-        {"host": "smtp.example.com", "password_ref": "smtp/main"}
-    )
+    redacted = _redact_for_audit({"host": "smtp.example.com", "password_ref": "smtp/main"})
     assert redacted["host"] == "smtp.example.com"
     assert redacted["password_ref"] == "***"
 

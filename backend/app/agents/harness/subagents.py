@@ -189,8 +189,8 @@ async def on_child_start(
     falls back to logging so the chat run never breaks because the
     reliability spine is degraded.
     """
-    from app.db.session import get_session_factory  # noqa: PLC0415
-    from app.services import subagent_run as svc  # noqa: PLC0415
+    from app.db.session import get_session_factory
+    from app.services import subagent_run as svc
 
     factory = get_session_factory()
     try:
@@ -224,8 +224,8 @@ async def on_child_heartbeat(
     60-second reaper fires once the value falls more than 5 minutes
     behind. Best-effort.
     """
-    from app.db.session import get_session_factory  # noqa: PLC0415
-    from app.services import subagent_run as svc  # noqa: PLC0415
+    from app.db.session import get_session_factory
+    from app.services import subagent_run as svc
 
     factory = get_session_factory()
     try:
@@ -252,19 +252,17 @@ async def on_child_complete(
     / cost-sensitive deployments). Returns ``"missing"`` when the
     spine row doesn't exist (race against the reaper).
     """
-    from app.db.session import get_session_factory  # noqa: PLC0415
-    from app.services import subagent_run as svc  # noqa: PLC0415
+    from app.db.session import get_session_factory
+    from app.services import subagent_run as svc
 
     factory = get_session_factory()
     try:
         async with factory() as db:
-            from app.repositories.subagent_run import (  # noqa: PLC0415
+            from app.repositories.subagent_run import (
                 SubAgentRunRepository,
             )
 
-            child = await SubAgentRunRepository(db).get_by_child_run_id(
-                child_run_id=child_run_id
-            )
+            child = await SubAgentRunRepository(db).get_by_child_run_id(child_run_id=child_run_id)
             if child is None:
                 log.info(
                     "subagent on_child_complete: no spine row for child=%s",
@@ -292,9 +290,7 @@ async def on_child_complete(
             await db.commit()
             return outcome
     except Exception:  # pragma: no cover - reliability is best-effort
-        log.exception(
-            "subagent on_child_complete failed (child=%s)", child_run_id
-        )
+        log.exception("subagent on_child_complete failed (child=%s)", child_run_id)
         return "missing"
 
 
@@ -312,8 +308,8 @@ async def on_child_failed(
     the underlying service when the budget is already 0 — caller is
     expected to terminate the parent's retry loop.
     """
-    from app.db.session import get_session_factory  # noqa: PLC0415
-    from app.services import subagent_run as svc  # noqa: PLC0415
+    from app.db.session import get_session_factory
+    from app.services import subagent_run as svc
 
     factory = get_session_factory()
     remaining: int | None = None
@@ -327,18 +323,14 @@ async def on_child_failed(
                 error_kind=error_kind,
             )
             if consume_budget:
-                remaining = await svc.consume_retry_budget(
-                    db, child_run_id=child_run_id
-                )
+                remaining = await svc.consume_retry_budget(db, child_run_id=child_run_id)
             await db.commit()
     except svc.RetryBudgetExhausted:
         # Budget audit + commit happened inside consume_retry_budget;
         # surface to caller so the parent stops retrying.
         raise
     except Exception:  # pragma: no cover - reliability is best-effort
-        log.exception(
-            "subagent on_child_failed failed (child=%s)", child_run_id
-        )
+        log.exception("subagent on_child_failed failed (child=%s)", child_run_id)
     return remaining
 
 
@@ -475,8 +467,8 @@ async def _audit(
     resource_id: uuid.UUID | None = None,
 ) -> None:
     """Open a fresh session for one best-effort audit row."""
-    from app.db.session import get_session_factory  # noqa: PLC0415
-    from app.services import audit as audit_svc  # noqa: PLC0415
+    from app.db.session import get_session_factory
+    from app.services import audit as audit_svc
 
     factory = get_session_factory()
     try:
@@ -508,12 +500,12 @@ async def _resolve_child_agent_model(
     The runner-style fallback is a no-op test stub: callers handle
     ``None`` model by treating the spawn as a failed dispatch.
     """
-    from app.agents.kernels.model_client import (  # noqa: PLC0415
+    from app.agents.kernels.model_client import (
         build_pydantic_ai_model,
         resolve_for_agent,
     )
-    from app.db.models.agent import Agent as AgentModel  # noqa: PLC0415
-    from app.db.session import get_session_factory  # noqa: PLC0415
+    from app.db.models.agent import Agent as AgentModel
+    from app.db.session import get_session_factory
 
     factory = get_session_factory()
     try:
@@ -521,9 +513,7 @@ async def _resolve_child_agent_model(
             agent_orm = await db.get(AgentModel, target_agent_id)
             if agent_orm is None or agent_orm.workspace_id != workspace_id:
                 return None, None
-            resolved = await resolve_for_agent(
-                workspace_id=workspace_id, agent_id=target_agent_id
-            )
+            resolved = await resolve_for_agent(workspace_id=workspace_id, agent_id=target_agent_id)
             if resolved is None:
                 return None, agent_orm
             return build_pydantic_ai_model(resolved), agent_orm
@@ -546,7 +536,7 @@ def _build_child_agent(*, model: Any, persona_md: str | None) -> Any:
     parallel dispatch + reliability bookkeeping. Future iterations may
     extend the signature with ``inherit_skills`` honouring callers.
     """
-    from pydantic_ai import Agent  # noqa: PLC0415
+    from pydantic_ai import Agent
 
     return Agent(
         model=model,
@@ -633,9 +623,7 @@ async def _run_single_child(
 
     if model is None:
         error_kind = "agent_not_found" if agent_orm is None else "no_aux_model"
-        await on_child_failed(
-            child_run_id=child_run_id, error_kind=error_kind
-        )
+        await on_child_failed(child_run_id=child_run_id, error_kind=error_kind)
         return SubAgentResult(
             task_id=task.task_id,
             child_run_id=child_run_id,
@@ -651,15 +639,11 @@ async def _run_single_child(
     final_text = ""
     proposals_created = 0
     try:
-        run_result = await asyncio.wait_for(
-            child_agent.run(task.prompt), timeout=timeout
-        )
+        run_result = await asyncio.wait_for(child_agent.run(task.prompt), timeout=timeout)
         final_text = _extract_final_text(run_result)
         proposals_created = _proposals_for_run_count(run_result)
     except TimeoutError:
-        await on_child_failed(
-            child_run_id=child_run_id, error_kind="timeout"
-        )
+        await on_child_failed(child_run_id=child_run_id, error_kind="timeout")
         # Match the M2.5.1 reaper contract: a hard timeout flips the
         # row to ZOMBIE only when the heartbeat has actually died; for
         # a wait_for boundary we know the child never had a chance to
@@ -674,9 +658,7 @@ async def _run_single_child(
             duration_ms=int((time.perf_counter() - started) * 1000),
         )
     except asyncio.CancelledError:
-        await on_child_failed(
-            child_run_id=child_run_id, error_kind="cancelled"
-        )
+        await on_child_failed(child_run_id=child_run_id, error_kind="cancelled")
         return SubAgentResult(
             task_id=task.task_id,
             child_run_id=child_run_id,
@@ -684,16 +666,14 @@ async def _run_single_child(
             error_kind="cancelled",
             duration_ms=int((time.perf_counter() - started) * 1000),
         )
-    except Exception as exc:  # noqa: BLE001 — child crashes are isolated
+    except Exception as exc:
         error_kind = type(exc).__name__[:80]
         log.exception(
             "subagent child crashed task_id=%s child_run_id=%s",
             task.task_id,
             child_run_id,
         )
-        await on_child_failed(
-            child_run_id=child_run_id, error_kind=error_kind
-        )
+        await on_child_failed(child_run_id=child_run_id, error_kind=error_kind)
         return SubAgentResult(
             task_id=task.task_id,
             child_run_id=child_run_id,
@@ -849,9 +829,7 @@ async def delegate_batch(
     # workspace policy upper bound so an aggressive parent can't bypass
     # the platform-wide ceiling.
     requested = (
-        max(1, int(max_concurrent))
-        if max_concurrent is not None
-        else int(config.max_concurrent)
+        max(1, int(max_concurrent)) if max_concurrent is not None else int(config.max_concurrent)
     )
     effective_max_concurrent = max(1, min(requested, int(config.max_concurrent)))
     if serial_fallback:
@@ -864,8 +842,7 @@ async def delegate_batch(
             actor_identity_id=parent_identity_id,
             action=AUDIT_BATCH_SERIAL_FALLBACK,
             summary=(
-                f"subagent batch fell back to serial: {serial_reason} "
-                f"(tasks={len(accepted_tasks)})"
+                f"subagent batch fell back to serial: {serial_reason} (tasks={len(accepted_tasks)})"
             ),
             metadata={
                 "parent_run_id": str(parent_run_id),
@@ -1051,8 +1028,8 @@ async def _load_resolved_config(*, workspace_id: uuid.UUID) -> Any:
     is local so the harness module can stay free of a hard dependency
     on the service layer's import order.
     """
-    from app.db.session import get_session_factory  # noqa: PLC0415
-    from app.services.subagent_batch_config import (  # noqa: PLC0415
+    from app.db.session import get_session_factory
+    from app.services.subagent_batch_config import (
         ResolvedSubagentBatchConfig,
         get_workspace_subagent_batch_config,
     )
@@ -1060,15 +1037,13 @@ async def _load_resolved_config(*, workspace_id: uuid.UUID) -> Any:
     factory = get_session_factory()
     try:
         async with factory() as db:
-            return await get_workspace_subagent_batch_config(
-                db, workspace_id=workspace_id
-            )
+            return await get_workspace_subagent_batch_config(db, workspace_id=workspace_id)
     except Exception:  # pragma: no cover — fail-open to defaults
         log.exception(
             "subagent batch config load failed ws=%s; using schema defaults",
             workspace_id,
         )
-        from app.schemas.platform_settings import (  # noqa: PLC0415
+        from app.schemas.platform_settings import (
             SubagentBatchDefaults,
         )
 

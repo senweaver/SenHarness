@@ -105,9 +105,7 @@ async def test_propose_edit_creates_proposed_version_and_approval(
     db_session, workspace, identity, monkeypatch
 ):
     await _enable(db_session, workspace)
-    pack = await _make_pack(
-        db_session, workspace=workspace, identity=identity, body="old body"
-    )
+    pack = await _make_pack(db_session, workspace=workspace, identity=identity, body="old body")
     _set_ctx(workspace, identity)
     monkeypatch.setattr(
         "app.agents.tools.skill_propose.get_session_factory",
@@ -124,9 +122,7 @@ async def test_propose_edit_creates_proposed_version_and_approval(
 
     assert result["status"] == "proposed"
     assert result["kind"] == ApprovalResourceType.SKILL_PACK_EDIT.value
-    version = await db_session.get(
-        SkillPackVersion, uuid.UUID(result["version_id"])
-    )
+    version = await db_session.get(SkillPackVersion, uuid.UUID(result["version_id"]))
     assert version is not None
     assert version.state == SkillPackVersionState.PROPOSED
     assert version.created_by == "evolver"
@@ -139,9 +135,7 @@ async def test_propose_edit_creates_proposed_version_and_approval(
     assert body["rationale"] == "restructure"
 
 
-async def test_propose_edit_rejects_tombstoned_pack(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_propose_edit_rejects_tombstoned_pack(db_session, workspace, identity, monkeypatch):
     await _enable(db_session, workspace)
     pack = await _make_pack(db_session, workspace=workspace, identity=identity)
     pack.state = SkillPackState.ARCHIVED
@@ -193,9 +187,7 @@ async def test_propose_delete_creates_approval_no_version(
     assert result["status"] == "proposed"
     approval = await db_session.get(Approval, uuid.UUID(result["approval_id"]))
     assert approval is not None
-    assert (
-        approval.resource_type == ApprovalResourceType.SKILL_PACK_DELETE.value
-    )
+    assert approval.resource_type == ApprovalResourceType.SKILL_PACK_DELETE.value
     assert approval.status == ApprovalStatus.PENDING
     assert approval.tool_name == "_skill_propose_delete"
     body = dict(approval.tool_args)
@@ -203,9 +195,7 @@ async def test_propose_delete_creates_approval_no_version(
     assert body["rationale"] == "no longer relevant"
 
 
-async def test_propose_delete_rejects_pinned_pack(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_propose_delete_rejects_pinned_pack(db_session, workspace, identity, monkeypatch):
     await _enable(db_session, workspace)
     pack = await _make_pack(db_session, workspace=workspace, identity=identity)
     pack.pinned = True
@@ -216,16 +206,12 @@ async def test_propose_delete_rejects_pinned_pack(
         lambda: _patched_factory(db_session),
     )
 
-    result = await run_propose_skill_delete(
-        ProposeSkillDeleteArgs(pack_id=pack.id, rationale="r")
-    )
+    result = await run_propose_skill_delete(ProposeSkillDeleteArgs(pack_id=pack.id, rationale="r"))
     assert result["status"] == "rejected"
     assert result["code"] == "evolver.pack_pinned"
 
 
-async def test_propose_delete_dedup_pending(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_propose_delete_dedup_pending(db_session, workspace, identity, monkeypatch):
     await _enable(db_session, workspace)
     pack = await _make_pack(db_session, workspace=workspace, identity=identity)
     _set_ctx(workspace, identity)
@@ -246,9 +232,7 @@ async def test_propose_delete_dedup_pending(
 
 
 # ─── propose_skill_write_file ────────────────────────────────
-async def test_propose_write_file_happy(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_propose_write_file_happy(db_session, workspace, identity, monkeypatch):
     await _enable(db_session, workspace)
     pack = await _make_pack(db_session, workspace=workspace, identity=identity)
     _set_ctx(workspace, identity)
@@ -268,18 +252,13 @@ async def test_propose_write_file_happy(
     assert result["status"] == "proposed"
     approval = await db_session.get(Approval, uuid.UUID(result["approval_id"]))
     assert approval is not None
-    assert (
-        approval.resource_type
-        == ApprovalResourceType.SKILL_PACK_WRITE_FILE.value
-    )
+    assert approval.resource_type == ApprovalResourceType.SKILL_PACK_WRITE_FILE.value
     body = dict(approval.tool_args)
     assert body["relative_path"] == "scripts/run.sh"
     assert body["content_hash"] == result["content_hash"]
 
 
-async def test_propose_write_file_rejects_skill_md(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_propose_write_file_rejects_skill_md(db_session, workspace, identity, monkeypatch):
     await _enable(db_session, workspace)
     pack = await _make_pack(db_session, workspace=workspace, identity=identity)
     _set_ctx(workspace, identity)
@@ -329,9 +308,7 @@ async def test_propose_write_file_rejects_traversal_segments(
 
 
 # ─── propose_skill_remove_file ───────────────────────────────
-async def test_propose_remove_file_happy(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_propose_remove_file_happy(db_session, workspace, identity, monkeypatch):
     await _enable(db_session, workspace)
     pack = await _make_pack(db_session, workspace=workspace, identity=identity)
     db_session.add(
@@ -359,10 +336,7 @@ async def test_propose_remove_file_happy(
     assert result["status"] == "proposed"
     approval = await db_session.get(Approval, uuid.UUID(result["approval_id"]))
     assert approval is not None
-    assert (
-        approval.resource_type
-        == ApprovalResourceType.SKILL_PACK_REMOVE_FILE.value
-    )
+    assert approval.resource_type == ApprovalResourceType.SKILL_PACK_REMOVE_FILE.value
     assert approval.tool_name == "_skill_propose_remove_file"
 
 
@@ -388,9 +362,7 @@ async def test_propose_remove_file_rejects_unknown_path(
     assert result["code"] == "evolver.file_not_found"
 
 
-async def test_propose_remove_file_rejects_skill_md(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_propose_remove_file_rejects_skill_md(db_session, workspace, identity, monkeypatch):
     await _enable(db_session, workspace)
     pack = await _make_pack(db_session, workspace=workspace, identity=identity)
     _set_ctx(workspace, identity)
@@ -411,9 +383,7 @@ async def test_propose_remove_file_rejects_skill_md(
 
 
 # ─── audit + select smoke ────────────────────────────────────
-async def test_audit_actions_use_canonical_keys(
-    db_session, workspace, identity, monkeypatch
-):
+async def test_audit_actions_use_canonical_keys(db_session, workspace, identity, monkeypatch):
     """Spot-check that each happy verb writes the agreed audit action."""
     from app.db.models.audit import AuditEvent
 
@@ -425,9 +395,7 @@ async def test_audit_actions_use_canonical_keys(
         lambda: _patched_factory(db_session),
     )
 
-    await run_propose_skill_delete(
-        ProposeSkillDeleteArgs(pack_id=pack.id, rationale="r")
-    )
+    await run_propose_skill_delete(ProposeSkillDeleteArgs(pack_id=pack.id, rationale="r"))
 
     actions = list(
         (

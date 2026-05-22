@@ -70,9 +70,7 @@ async def _seed_pack(
         )
         pack.pinned = pinned
         pack.last_used_at = (
-            None
-            if last_used_days_ago is None
-            else now - timedelta(days=last_used_days_ago)
+            None if last_used_days_ago is None else now - timedelta(days=last_used_days_ago)
         )
         pack.state_changed_at = now - timedelta(days=state_changed_days_ago)
         db.add(pack)
@@ -129,30 +127,31 @@ async def test_curator_tick_transitions_and_proposes(async_client):
         assert stale_now.state == SkillPackState.STALE
 
         archived_target = (
-            await db.execute(
-                select(SkillPack).where(SkillPack.id == pid_archive_target)
-            )
+            await db.execute(select(SkillPack).where(SkillPack.id == pid_archive_target))
         ).scalar_one()
-        assert archived_target.state == SkillPackState.STALE  # transition is the proposal, not the apply
+        assert (
+            archived_target.state == SkillPackState.STALE
+        )  # transition is the proposal, not the apply
 
         approvals = (
-            await db.execute(
-                select(Approval).where(
-                    Approval.workspace_id == uuid.UUID(ws_id),
-                    Approval.resource_type
-                    == ApprovalResourceType.SKILL_PACK_ARCHIVE.value,
-                    Approval.resource_id == pid_archive_target,
+            (
+                await db.execute(
+                    select(Approval).where(
+                        Approval.workspace_id == uuid.UUID(ws_id),
+                        Approval.resource_type == ApprovalResourceType.SKILL_PACK_ARCHIVE.value,
+                        Approval.resource_id == pid_archive_target,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(approvals) == 1
         assert approvals[0].status == ApprovalStatus.PENDING
         assert approvals[0].expires_at is not None
 
         pinned_now = (
-            await db.execute(
-                select(SkillPack).where(SkillPack.id == pid_pinned_active)
-            )
+            await db.execute(select(SkillPack).where(SkillPack.id == pid_pinned_active))
         ).scalar_one()
         assert pinned_now.state == SkillPackState.ACTIVE
         assert pinned_now.pinned is True
@@ -163,25 +162,32 @@ async def test_curator_tick_transitions_and_proposes(async_client):
         assert young_now.state == SkillPackState.STALE
         # No archive proposal for the young STALE pack.
         no_proposal = (
-            await db.execute(
-                select(Approval).where(
-                    Approval.workspace_id == uuid.UUID(ws_id),
-                    Approval.resource_type
-                    == ApprovalResourceType.SKILL_PACK_ARCHIVE.value,
-                    Approval.resource_id == pid_young_stale,
+            (
+                await db.execute(
+                    select(Approval).where(
+                        Approval.workspace_id == uuid.UUID(ws_id),
+                        Approval.resource_type == ApprovalResourceType.SKILL_PACK_ARCHIVE.value,
+                        Approval.resource_id == pid_young_stale,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert no_proposal == []
 
         swept_audits = (
-            await db.execute(
-                select(AuditEvent).where(
-                    AuditEvent.workspace_id == uuid.UUID(ws_id),
-                    AuditEvent.action == svc.CURATOR_SWEPT,
+            (
+                await db.execute(
+                    select(AuditEvent).where(
+                        AuditEvent.workspace_id == uuid.UUID(ws_id),
+                        AuditEvent.action == svc.CURATOR_SWEPT,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(swept_audits) >= 1
 
 
@@ -217,7 +223,5 @@ async def test_curator_tick_disabled_workspace_short_circuits(async_client):
     assert summary["workspaces_disabled"] >= 1
 
     async with factory() as db:
-        pack = (
-            await db.execute(select(SkillPack).where(SkillPack.id == pid))
-        ).scalar_one()
+        pack = (await db.execute(select(SkillPack).where(SkillPack.id == pid))).scalar_one()
         assert pack.state == SkillPackState.ACTIVE  # unchanged

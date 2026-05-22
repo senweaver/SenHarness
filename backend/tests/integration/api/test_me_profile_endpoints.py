@@ -178,9 +178,7 @@ async def test_extract_now_invokes_service(async_client, monkeypatch):
 
     monkeypatch.setattr(svc, "extract_facts_from_runs", _stub_extract)
 
-    r = await async_client.post(
-        "/api/v1/me/profile/extract-now", headers=user["headers"]
-    )
+    r = await async_client.post("/api/v1/me/profile/extract-now", headers=user["headers"])
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["facts_created"] == 3

@@ -69,9 +69,7 @@ async def persist_verdict(
         db, workspace_id=workspace_id, artifact_id=artifact_id
     )
     if artifact is None:  # pragma: no cover - get_artifact_by_id raises
-        raise NotFound(
-            "artifact not found", code="session_artifact.not_found"
-        )
+        raise NotFound("artifact not found", code="session_artifact.not_found")
 
     notes = list(process_notes or [])[:5]
     notes = [str(n)[:500] for n in notes]
@@ -150,9 +148,7 @@ async def session_summary(
         SessionArtifact.session_id == session_id,
         SessionArtifact.deleted_at.is_(None),
     )
-    rows: Sequence[tuple[uuid.UUID, float | None]] = (
-        (await db.execute(art_stmt)).tuples().all()
-    )
+    rows: Sequence[tuple[uuid.UUID, float | None]] = (await db.execute(art_stmt)).tuples().all()
     total = len(rows)
     unjudged = sum(1 for _aid, s in rows if s is None)
     success = sum(1 for _aid, s in rows if s is not None and s >= 0.5)

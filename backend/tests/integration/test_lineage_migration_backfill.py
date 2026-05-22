@@ -167,9 +167,7 @@ async def test_backfill_supersedes_and_derived_and_hub(async_client, identity):
         # Slug we actually inserted is unknown to python; read it back.
         hub_slug = (
             await db.execute(
-                text(
-                    "SELECT slug FROM hub_skill_packs WHERE id = :id"
-                ),
+                text("SELECT slug FROM hub_skill_packs WHERE id = :id"),
                 {"id": hub_pack_id},
             )
         ).scalar_one()
@@ -209,9 +207,7 @@ async def test_backfill_supersedes_and_derived_and_hub(async_client, identity):
 
         # Make sure the workspace starts clean of edges from prior runs.
         await db.execute(
-            text(
-                "DELETE FROM skill_lineage_edges WHERE workspace_id = :w"
-            ),
+            text("DELETE FROM skill_lineage_edges WHERE workspace_id = :w"),
             {"w": ws.id},
         )
         await db.commit()
@@ -242,10 +238,7 @@ async def test_backfill_supersedes_and_derived_and_hub(async_client, identity):
             by_kind[edge.edge_kind].append(edge)
 
     supers = by_kind[SkillLineageEdgeKind.SUPERSEDES]
-    assert any(
-        e.parent_pack_id == old_pack.id and e.child_pack_id == new_pack.id
-        for e in supers
-    )
+    assert any(e.parent_pack_id == old_pack.id and e.child_pack_id == new_pack.id for e in supers)
 
     deriveds = by_kind[SkillLineageEdgeKind.DERIVED_FROM]
     assert any(
@@ -256,7 +249,4 @@ async def test_backfill_supersedes_and_derived_and_hub(async_client, identity):
     )
 
     hub_edges = by_kind[SkillLineageEdgeKind.PULLED_FROM_HUB]
-    assert any(
-        e.child_pack_id == pulled_pack.id and e.hub_pack_slug == hub_slug
-        for e in hub_edges
-    )
+    assert any(e.child_pack_id == pulled_pack.id and e.hub_pack_slug == hub_slug for e in hub_edges)

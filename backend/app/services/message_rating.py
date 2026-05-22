@@ -42,9 +42,7 @@ async def rate_message(
         message_id=message_id,
     )
     repo = MessageRatingRepository(db)
-    existing = await repo.get_for_user(
-        message_id=msg.id, identity_id=identity_id
-    )
+    existing = await repo.get_for_user(message_id=msg.id, identity_id=identity_id)
     if existing is not None:
         return await repo.update(existing, rating=rating, comment=comment)
     return await repo.create(
@@ -72,9 +70,7 @@ async def remove_rating(
         message_id=message_id,
     )
     repo = MessageRatingRepository(db)
-    existing = await repo.get_for_user(
-        message_id=msg.id, identity_id=identity_id
-    )
+    existing = await repo.get_for_user(message_id=msg.id, identity_id=identity_id)
     if existing is not None:
         await repo.hard_delete(existing)
 
@@ -112,11 +108,7 @@ async def _get_assistant_message(
     message_id: uuid.UUID,
 ) -> Message:
     msg = await MessageRepository(db).get(message_id)
-    if (
-        msg is None
-        or msg.workspace_id != workspace_id
-        or msg.session_id != session_id
-    ):
+    if msg is None or msg.workspace_id != workspace_id or msg.session_id != session_id:
         raise NotFound("message_not_found", code="message.not_found")
     if msg.role != MessageRole.ASSISTANT:
         raise ValidationFailed(

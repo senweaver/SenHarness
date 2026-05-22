@@ -16,9 +16,7 @@ suite stays hermetic.
 
 from __future__ import annotations
 
-import json
 import uuid
-from collections.abc import AsyncIterator
 from typing import Any
 
 import pytest
@@ -55,6 +53,7 @@ def _patch_kernel(monkeypatch, *, one_shot_result=None, stream_frames=None):
     from app.api.v1 import openai_compat
 
     if one_shot_result is not None:
+
         async def fake_one_shot(normalized, *, workspace_id, identity_id=None):
             return dict(one_shot_result, model=normalized.model)
 
@@ -65,6 +64,7 @@ def _patch_kernel(monkeypatch, *, one_shot_result=None, stream_frames=None):
         )
 
     if stream_frames is not None:
+
         def fake_stream(normalized, *, workspace_id, identity_id=None):
             async def _gen():
                 for frame in stream_frames:
@@ -152,9 +152,7 @@ async def test_anthropic_messages_streaming(async_client, monkeypatch) -> None:
 
 
 # ─── Tool-use round trip ────────────────────────────────────
-async def test_anthropic_messages_tool_use_round_trip(
-    async_client, monkeypatch
-) -> None:
+async def test_anthropic_messages_tool_use_round_trip(async_client, monkeypatch) -> None:
     headers, _ = await _bootstrap(async_client)
 
     captured: dict[str, Any] = {}
@@ -166,9 +164,7 @@ async def test_anthropic_messages_tool_use_round_trip(
         captured["tools"] = [t.name for t in normalized.tools]
         return {
             "output_text": "I'll search.",
-            "tool_uses": [
-                {"id": "toolu_2", "name": "search", "input": {"q": "next"}}
-            ],
+            "tool_uses": [{"id": "toolu_2", "name": "search", "input": {"q": "next"}}],
             "usage": {"input_tokens": 12, "output_tokens": 7},
             "stop_reason": "tool_use",
             "model": normalized.model,
@@ -221,9 +217,7 @@ async def test_anthropic_messages_tool_use_round_trip(
         ],
     }
 
-    r = await async_client.post(
-        "/api/v1/openai/v1/messages", headers=headers, json=payload
-    )
+    r = await async_client.post("/api/v1/openai/v1/messages", headers=headers, json=payload)
     assert r.status_code == 200, r.text
     body = r.json()
     tool_blocks = [b for b in body["content"] if b["type"] == "tool_use"]
@@ -235,14 +229,8 @@ async def test_anthropic_messages_tool_use_round_trip(
     # Kernel was called with the normalized history including the
     # tool_use + tool_result turns.
     captured_msgs = captured["normalized_messages"]
-    assert any(
-        any(p.get("type") == "tool_use" for p in msg["content"])
-        for msg in captured_msgs
-    )
-    assert any(
-        any(p.get("type") == "tool_result" for p in msg["content"])
-        for msg in captured_msgs
-    )
+    assert any(any(p.get("type") == "tool_use" for p in msg["content"]) for msg in captured_msgs)
+    assert any(any(p.get("type") == "tool_result" for p in msg["content"]) for msg in captured_msgs)
     assert "search" in captured["tools"]
 
 

@@ -44,7 +44,7 @@ _PASSIVE_TICKET_MAX_USES = 5
 
 
 class _PassiveTicket:
-    __slots__ = ("msg_id", "expires_at", "seq")
+    __slots__ = ("expires_at", "msg_id", "seq")
 
     def __init__(self, msg_id: str) -> None:
         self.msg_id = msg_id
@@ -86,8 +86,7 @@ async def run_botpy_stream(
         from botpy.message import C2CMessage, GroupMessage, Message  # noqa: F401
     except ImportError as e:  # pragma: no cover - SDK absent path
         raise RuntimeError(
-            "qq-botpy extra missing; install with "
-            "'pip install \".[channels-stream]\"'"
+            "qq-botpy extra missing; install with 'pip install \".[channels-stream]\"'"
         ) from e
 
     plain = getattr(channel, "_plain_config", None) or (channel.config_json or {})
@@ -110,9 +109,7 @@ async def run_botpy_stream(
             await _forward(message, kind="AT", channel=channel, dispatch=dispatch)
 
         async def on_group_at_message_create(self, message):  # type: ignore[no-untyped-def]
-            await _forward(
-                message, kind="GROUP_AT", channel=channel, dispatch=dispatch
-            )
+            await _forward(message, kind="GROUP_AT", channel=channel, dispatch=dispatch)
 
         async def on_c2c_message_create(self, message):  # type: ignore[no-untyped-def]
             await _forward(message, kind="C2C", channel=channel, dispatch=dispatch)
@@ -148,19 +145,12 @@ async def _forward(
     if not text:
         return
     if kind == "GROUP_AT":
-        thread = (
-            f"qq_group:{getattr(message, 'group_openid', None) or 'unknown'}"
-        )
+        thread = f"qq_group:{getattr(message, 'group_openid', None) or 'unknown'}"
     elif kind == "C2C":
         author = getattr(message, "author", None)
-        thread = (
-            f"qq_c2c:"
-            f"{getattr(author, 'user_openid', None) if author else 'unknown'}"
-        )
+        thread = f"qq_c2c:{getattr(author, 'user_openid', None) if author else 'unknown'}"
     else:
-        thread = (
-            f"qq_guild:{getattr(message, 'channel_id', None) or 'unknown'}"
-        )
+        thread = f"qq_guild:{getattr(message, 'channel_id', None) or 'unknown'}"
     msg_id = getattr(message, "id", None)
     _remember_inbound_ticket(thread, msg_id)
     inbound = InboundMessage(

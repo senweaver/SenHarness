@@ -18,7 +18,6 @@ import uuid
 from datetime import timedelta
 
 import pytest
-from sqlalchemy import select
 
 from app.core.security import utcnow_naive
 from app.db.models.approval import (
@@ -161,7 +160,7 @@ async def test_approve_flow_create_lands_disabled_flow(async_client):
     # Need an in-workspace agent to satisfy the FK.
     factory = get_session_factory()
     async with factory() as db:
-        from app.db.models.agent import Agent  # noqa: PLC0415
+        from app.db.models.agent import Agent
 
         agent = Agent(
             workspace_id=uuid.UUID(ws_id),
@@ -255,6 +254,4 @@ async def test_approve_invalid_body_409_and_row_stays_pending(async_client):
     factory = get_session_factory()
     async with factory() as db:
         row = await db.get(Approval, aid)
-        assert row.status == ApprovalStatus.PENDING, (
-            "approve must not commit when dispatch fails"
-        )
+        assert row.status == ApprovalStatus.PENDING, "approve must not commit when dispatch fails"

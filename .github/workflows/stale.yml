@@ -1,0 +1,41 @@
+name: stale
+
+on:
+  schedule:
+    - cron: "0 17 * * *"  # daily at 01:00 Beijing time (17:00 UTC prev day)
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          days-before-stale: 60
+          days-before-close: 14
+          stale-issue-label: stale
+          stale-pr-label: stale
+          exempt-issue-labels: "pinned,security,roadmap"
+          exempt-pr-labels: "pinned,security,wip"
+          stale-issue-message: |
+            This issue has had no activity for 60 days and is being
+            marked as stale. It will be closed in 14 days unless there
+            is a new comment. If it is still relevant, please add any
+            new information you have.
+          stale-pr-message: |
+            This PR has had no activity for 60 days and is being marked
+            as stale. It will be closed in 14 days unless it is rebased
+            or updated. If you are still working on it, push a new
+            commit or comment to reset the timer.
+          close-issue-message: |
+            Closing as stale. If the problem still reproduces on the
+            latest `main`, please open a new issue with fresh
+            reproduction steps.
+          close-pr-message: |
+            Closing as stale. Feel free to reopen once you have time
+            to come back to it.
+          operations-per-run: 100

@@ -64,8 +64,8 @@ log = logging.getLogger(__name__)
 
 
 __all__ = [
-    "AUDIT_FORCE_RECYCLE_FAILED",
     "AUDIT_FORCE_RECYCLED",
+    "AUDIT_FORCE_RECYCLE_FAILED",
     "AUDIT_RECOVERED_LOST",
     "AUDIT_REGISTERED",
     "AUDIT_TIMED_OUT_TO_LOST",
@@ -81,9 +81,9 @@ __all__ = [
     "STALE_LAST_SEEN_SECONDS",
     "ConsoleStateBucket",
     "InflightRunWithMeta",
-    "RuntimeConsoleStats",
     "RunNotFoundError",
     "RunTerminalError",
+    "RuntimeConsoleStats",
     "console_state_bucket",
     "current_pid_token",
     "force_recycle_run",
@@ -311,9 +311,7 @@ async def register_run(
         workspace_id=workspace_id,
         resource_type="inflight_run",
         resource_id=row.id,
-        summary=(
-            f"inflight run registered: run_id={run_id} backend={backend_kind}"
-        ),
+        summary=(f"inflight run registered: run_id={run_id} backend={backend_kind}"),
         metadata={
             "run_id": str(run_id),
             "session_id": str(session_id),
@@ -404,8 +402,7 @@ async def transition(
             resource_id=row.id,
             summary=(
                 f"inflight run {row.run_id} {previous.value} → "
-                f"{target_state.value}"
-                + (f": {reason}" if reason else "")
+                f"{target_state.value}" + (f": {reason}" if reason else "")
             ),
             metadata={
                 "run_id": str(row.run_id),
@@ -419,9 +416,7 @@ async def transition(
 
         from app.services.agent_runtime import publish_workspace_summary_for
 
-        await publish_workspace_summary_for(
-            db, workspace_id=row.workspace_id
-        )
+        await publish_workspace_summary_for(db, workspace_id=row.workspace_id)
         return row
     except Exception as exc:
         log.exception(
@@ -438,8 +433,7 @@ async def transition(
                 resource_type="inflight_run",
                 resource_id=None,
                 summary=(
-                    f"inflight transition crashed for run_id={run_id} "
-                    f"target={target_state.value}"
+                    f"inflight transition crashed for run_id={run_id} target={target_state.value}"
                 ),
                 metadata={
                     "run_id": str(run_id),
@@ -527,9 +521,7 @@ async def recover_inflight_runs(
                         "inflight_run_id": str(row.id),
                         "run_id": str(row.run_id),
                         "session_id": str(row.session_id),
-                        "agent_id": (
-                            str(row.agent_id) if row.agent_id else None
-                        ),
+                        "agent_id": (str(row.agent_id) if row.agent_id else None),
                         "trigger": "backend_restart",
                         "resource_type": "inflight_run",
                         "resource_id": str(row.id),
@@ -655,9 +647,7 @@ async def reap_stale(
                         "inflight_run_id": str(row.id),
                         "run_id": str(row.run_id),
                         "session_id": str(row.session_id),
-                        "agent_id": (
-                            str(row.agent_id) if row.agent_id else None
-                        ),
+                        "agent_id": (str(row.agent_id) if row.agent_id else None),
                         "trigger": "heartbeat_timeout",
                         "resource_type": "inflight_run",
                         "resource_id": str(row.id),
@@ -728,9 +718,7 @@ _CONSOLE_LISTED_STATES: tuple[InflightRunState, ...] = (
 )
 
 
-def console_state_bucket(
-    state: InflightRunState, error_kind: str | None
-) -> ConsoleStateBucket:
+def console_state_bucket(state: InflightRunState, error_kind: str | None) -> ConsoleStateBucket:
     """Project ``(state, error_kind)`` onto a runtime-console label.
 
     Mapping rationale:
@@ -883,9 +871,7 @@ async def list_active_for_console(
         .where(InflightRun.workspace_id == workspace_id)
         .where(InflightRun.state.in_(_CONSOLE_LISTED_STATES))
         .where(
-            (InflightRun.state.in_(
-                (InflightRunState.RUNNING, InflightRunState.PAUSED)
-            ))
+            (InflightRun.state.in_((InflightRunState.RUNNING, InflightRunState.PAUSED)))
             | (InflightRun.finished_at >= cutoff)
         )
         .order_by(desc(InflightRun.last_seen_at))
@@ -898,9 +884,7 @@ async def list_active_for_console(
         bucket = console_state_bucket(row.state, row.error_kind)
         if state_filter is not None and bucket not in state_filter:
             continue
-        elapsed = (
-            (row.finished_at or moment) - row.started_at
-        ).total_seconds()
+        elapsed = ((row.finished_at or moment) - row.started_at).total_seconds()
         out.append(
             InflightRunWithMeta(
                 inflight_run_id=row.id,
@@ -919,9 +903,7 @@ async def list_active_for_console(
                 finished_at=row.finished_at,
                 elapsed_seconds=max(0.0, float(elapsed)),
                 last_event_seq=int(row.last_event_seq or 0),
-                token_estimate=_request_snapshot_token_estimate(
-                    row.request_snapshot
-                ),
+                token_estimate=_request_snapshot_token_estimate(row.request_snapshot),
                 error_kind=row.error_kind,
                 workspace_id=row.workspace_id,
             )
@@ -944,9 +926,7 @@ async def runtime_console_stats(
     1k+ active runs regime would warrant a dedicated COUNT query, but
     that's beyond M4.1.
     """
-    rows = await list_active_for_console(
-        db, workspace_id=workspace_id, now=now, limit=500
-    )
+    rows = await list_active_for_console(db, workspace_id=workspace_id, now=now, limit=500)
     counters = {
         "running": 0,
         "paused": 0,
@@ -991,9 +971,7 @@ class RunTerminalError(Exception):
     """
 
     def __init__(self, run_id: uuid.UUID, state: InflightRunState) -> None:
-        super().__init__(
-            f"inflight run {run_id} already terminal ({state.value})"
-        )
+        super().__init__(f"inflight run {run_id} already terminal ({state.value})")
         self.run_id = run_id
         self.state = state
 
@@ -1075,10 +1053,7 @@ async def force_recycle_run(
         workspace_id=workspace_id,
         resource_type="inflight_run",
         resource_id=row.id,
-        summary=(
-            f"admin force-recycled inflight run {run_id} "
-            f"({row.backend_kind})"
-        ),
+        summary=(f"admin force-recycled inflight run {run_id} ({row.backend_kind})"),
         metadata={
             "run_id": str(run_id),
             "session_id": str(row.session_id),
@@ -1105,9 +1080,7 @@ async def force_recycle_run(
             workspace_id=workspace_id,
             resource_type="inflight_run",
             resource_id=row.id,
-            summary=(
-                f"backend.cancel did not execute for run {run_id}"
-            ),
+            summary=(f"backend.cancel did not execute for run {run_id}"),
             metadata={
                 "run_id": str(run_id),
                 "backend_kind": row.backend_kind,
@@ -1137,9 +1110,7 @@ async def force_recycle_run(
             request=request,
         )
     except Exception:  # pragma: no cover - best-effort
-        log.exception(
-            "inflight_run.force_recycled emit failed for run %s", run_id
-        )
+        log.exception("inflight_run.force_recycled emit failed for run %s", run_id)
 
     return {
         "run_id": str(run_id),

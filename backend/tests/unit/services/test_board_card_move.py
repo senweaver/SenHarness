@@ -30,9 +30,7 @@ async def _build_board(db_session, workspace, identity):
     )
 
 
-async def _seed_column(
-    db_session, workspace, identity, board, column, count: int
-):
+async def _seed_column(db_session, workspace, identity, board, column, count: int):
     cards = []
     for i in range(count):
         c = await svc.create_card(
@@ -51,13 +49,9 @@ def _orders_in(rows):
     return [int(r.sort_order) for r in rows]
 
 
-async def test_move_within_same_column_reorders_neighbours(
-    db_session, workspace, identity
-):
+async def test_move_within_same_column_reorders_neighbours(db_session, workspace, identity):
     board = await _build_board(db_session, workspace, identity)
-    cards = await _seed_column(
-        db_session, workspace, identity, board, BoardCardColumn.BACKLOG, 3
-    )
+    cards = await _seed_column(db_session, workspace, identity, board, BoardCardColumn.BACKLOG, 3)
     assert _orders_in(cards) == [0, 1, 2]
 
     # Move the third card to the top of the same column.
@@ -86,9 +80,7 @@ async def test_move_within_same_column_reorders_neighbours(
     assert _orders_in(fresh) == [0, 1, 2]
 
 
-async def test_move_to_other_column_packs_both_sides(
-    db_session, workspace, identity
-):
+async def test_move_to_other_column_packs_both_sides(db_session, workspace, identity):
     board = await _build_board(db_session, workspace, identity)
     backlog_cards = await _seed_column(
         db_session, workspace, identity, board, BoardCardColumn.BACKLOG, 3
@@ -111,9 +103,7 @@ async def test_move_to_other_column_packs_both_sides(
     # Source column should now have 2 dense cards (0, 1).
     repo = BoardCardRepository(db_session)
     fresh_backlog = list(
-        await repo.list_cards_in_column(
-            board_id=board.id, column=BoardCardColumn.BACKLOG
-        )
+        await repo.list_cards_in_column(board_id=board.id, column=BoardCardColumn.BACKLOG)
     )
     assert [c.title for c in fresh_backlog] == ["backlog-0", "backlog-2"]
     assert _orders_in(fresh_backlog) == [0, 1]
@@ -121,9 +111,7 @@ async def test_move_to_other_column_packs_both_sides(
     # Target column should now have 3 dense cards with the inserted
     # card at position 1.
     fresh_review = list(
-        await repo.list_cards_in_column(
-            board_id=board.id, column=BoardCardColumn.REVIEW
-        )
+        await repo.list_cards_in_column(board_id=board.id, column=BoardCardColumn.REVIEW)
     )
     assert [c.title for c in fresh_review] == [
         "review-0",
@@ -134,9 +122,7 @@ async def test_move_to_other_column_packs_both_sides(
     _ = review_cards  # kept for fixture completeness
 
 
-async def test_move_clamps_position_above_column_size(
-    db_session, workspace, identity
-):
+async def test_move_clamps_position_above_column_size(db_session, workspace, identity):
     board = await _build_board(db_session, workspace, identity)
     cards = await _seed_column(
         db_session, workspace, identity, board, BoardCardColumn.IN_PROGRESS, 2
@@ -160,9 +146,7 @@ async def test_move_clamps_position_above_column_size(
     assert _orders_in(fresh_done) == [0]
 
 
-async def test_complete_card_pushes_to_bottom_of_done(
-    db_session, workspace, identity
-):
+async def test_complete_card_pushes_to_bottom_of_done(db_session, workspace, identity):
     board = await _build_board(db_session, workspace, identity)
     done_existing = await _seed_column(
         db_session, workspace, identity, board, BoardCardColumn.DONE, 2

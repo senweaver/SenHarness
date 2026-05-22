@@ -120,12 +120,8 @@ async def test_empty_skills_list_returns_empty(db_session, workspace):
     assert ids == []
 
 
-async def test_malformed_uuid_logged_and_filtered(
-    db_session, workspace, caplog
-):
-    pack = await _create_pack(
-        db_session, workspace_id=workspace.id, slug="ok-pack"
-    )
+async def test_malformed_uuid_logged_and_filtered(db_session, workspace, caplog):
+    pack = await _create_pack(db_session, workspace_id=workspace.id, slug="ok-pack")
     with caplog.at_level(logging.WARNING):
         cap, ids = await skills_mod.build_skills_capability(
             policy={"skills": ["not-a-uuid", str(pack.id)]},
@@ -134,9 +130,7 @@ async def test_malformed_uuid_logged_and_filtered(
         )
     assert cap is not None
     assert ids == [pack.id]
-    assert any(
-        "skills.malformed_pack_id" in record.message for record in caplog.records
-    )
+    assert any("skills.malformed_pack_id" in record.message for record in caplog.records)
 
 
 async def test_all_malformed_returns_empty(db_session, workspace):
@@ -185,9 +179,7 @@ async def test_happy_path_three_active(db_session, workspace):
 
 
 async def test_archived_pack_filtered_out(db_session, workspace):
-    active = await _create_pack(
-        db_session, workspace_id=workspace.id, slug="active-one"
-    )
+    active = await _create_pack(db_session, workspace_id=workspace.id, slug="active-one")
     archived = await _create_pack(
         db_session,
         workspace_id=workspace.id,
@@ -241,9 +233,7 @@ async def test_pinned_tombstone_pack_is_excluded(db_session, workspace):
 
 
 async def test_db_failure_returns_empty(monkeypatch, db_session, workspace):
-    pack = await _create_pack(
-        db_session, workspace_id=workspace.id, slug="ok-but-broken-repo"
-    )
+    pack = await _create_pack(db_session, workspace_id=workspace.id, slug="ok-but-broken-repo")
 
     async def _boom(self, *, workspace_id, ids=None, limit=500):
         raise RuntimeError("simulated DB failure")
@@ -259,15 +249,9 @@ async def test_db_failure_returns_empty(monkeypatch, db_session, workspace):
     assert ids == []
 
 
-async def test_capability_init_failure_returns_empty(
-    monkeypatch, db_session, workspace
-):
-    pack = await _create_pack(
-        db_session, workspace_id=workspace.id, slug="cap-init-fails"
-    )
-    monkeypatch.setattr(
-        skills_mod, "_instantiate_skills_capability", lambda _: None
-    )
+async def test_capability_init_failure_returns_empty(monkeypatch, db_session, workspace):
+    pack = await _create_pack(db_session, workspace_id=workspace.id, slug="cap-init-fails")
+    monkeypatch.setattr(skills_mod, "_instantiate_skills_capability", lambda _: None)
 
     cap, ids = await skills_mod.build_skills_capability(
         policy={"skills": [str(pack.id)]},
@@ -278,9 +262,7 @@ async def test_capability_init_failure_returns_empty(
     assert ids == []
 
 
-async def test_pack_with_missing_skill_md_falls_back_to_description(
-    db_session, workspace
-):
+async def test_pack_with_missing_skill_md_falls_back_to_description(db_session, workspace):
     pack = await SkillPackRepository(db_session).create(
         workspace_id=workspace.id,
         slug="no-file",

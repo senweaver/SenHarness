@@ -27,9 +27,7 @@ async def test_bootstrap_seeds_smtp_from_env(db_session, monkeypatch):
     seeded = await ps.bootstrap_from_env_if_empty(db_session)
     assert PSEC_EMAIL_SMTP in seeded
 
-    fresh = await ps.get_section(
-        db_session, section=ps.PlatformSettingsSection.EMAIL_SMTP
-    )
+    fresh = await ps.get_section(db_session, section=ps.PlatformSettingsSection.EMAIL_SMTP)
     assert fresh.host == "smtp.example.com"
     assert fresh.port == 2525
     assert fresh.use_tls is False
@@ -47,9 +45,7 @@ async def test_bootstrap_seeds_oauth_from_env(db_session, monkeypatch):
     await db_session.commit()
 
     await ps.bootstrap_from_env_if_empty(db_session)
-    fresh = await ps.get_section(
-        db_session, section=ps.PlatformSettingsSection.AUTH_OAUTH
-    )
+    fresh = await ps.get_section(db_session, section=ps.PlatformSettingsSection.AUTH_OAUTH)
     providers = {p.name: p for p in fresh.providers}
     assert "github" in providers
     assert providers["github"].client_id == "abc123"

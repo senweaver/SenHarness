@@ -29,9 +29,7 @@ from app.db.base import Base
 from app.db.mixins import SoftDeleteMixin, TimestampMixin, UuidPkMixin, WorkspaceScopedMixin
 
 
-class JudgeVerdict(
-    UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base
-):
+class JudgeVerdict(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "judge_verdicts"
 
     artifact_id: Mapped[uuid.UUID] = mapped_column(

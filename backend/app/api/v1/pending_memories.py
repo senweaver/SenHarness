@@ -34,7 +34,6 @@ from app.core.errors import NotFound, PermissionDenied, Unauthorized
 from app.core.rate_limit import rate_limit
 from app.db.models.identity import Identity
 from app.db.models.role import BuiltinRole
-from app.repositories.session import SessionRepository
 from app.repositories.workspace import MembershipRepository
 from app.schemas.pending_memory import (
     PendingMemoryRead,
@@ -60,9 +59,7 @@ def _require_workspace(workspace_id: uuid.UUID | None) -> uuid.UUID:
     "/sessions/{session_id}/pending-memories",
     response_model=list[PendingMemoryRead],
     status_code=status.HTTP_200_OK,
-    dependencies=[
-        Depends(rate_limit("pending_memory_read", limit=60, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("pending_memory_read", limit=60, period_seconds=60))],
     tags=["sessions", "memory"],
 )
 async def list_session_pending_memories(
@@ -74,9 +71,7 @@ async def list_session_pending_memories(
     limit: int = Query(50, ge=1, le=200),
 ) -> list[PendingMemoryRead]:
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
     await session_svc.get_session_or_404(db, session_id, workspace_id=ws_id)
     rows = await pending_memory_svc.list_session_pending(
         db,
@@ -93,9 +88,7 @@ async def list_session_pending_memories(
     "/sessions/{session_id}/pending-memories/{pending_id}/cancel",
     response_model=PendingMemoryRead,
     status_code=status.HTTP_200_OK,
-    dependencies=[
-        Depends(rate_limit("pending_memory_cancel", limit=10, period_seconds=60))
-    ],
+    dependencies=[Depends(rate_limit("pending_memory_cancel", limit=10, period_seconds=60))],
     tags=["sessions", "memory"],
 )
 async def cancel_pending_memory(
@@ -107,12 +100,8 @@ async def cancel_pending_memory(
     workspace_id: CurrentWorkspaceId,
 ) -> PendingMemoryRead:
     ws_id = _require_workspace(workspace_id)
-    membership = await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
-    session_obj = await session_svc.get_session_or_404(
-        db, session_id, workspace_id=ws_id
-    )
+    membership = await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
+    session_obj = await session_svc.get_session_or_404(db, session_id, workspace_id=ws_id)
 
     is_owner = (
         getattr(session_obj, "owner_identity_id", None) == identity_id
@@ -148,13 +137,7 @@ async def cancel_pending_memory(
     "/workspaces/{workspace_id}/pending-memories/stats",
     response_model=PendingMemoryStats,
     status_code=status.HTTP_200_OK,
-    dependencies=[
-        Depends(
-            rate_limit(
-                "pending_memory_admin_read", limit=30, period_seconds=60
-            )
-        )
-    ],
+    dependencies=[Depends(rate_limit("pending_memory_admin_read", limit=30, period_seconds=60))],
     tags=["workspaces", "memory"],
 )
 async def workspace_pending_memory_stats(
@@ -172,12 +155,8 @@ async def workspace_pending_memory_stats(
     active = _require_workspace(active_workspace_id)
     if active != workspace_id:
         raise NotFound("workspace_not_found", code="workspace.not_found")
-    await ws_svc.ensure_admin(
-        db, workspace_id=workspace_id, identity_id=identity_id
-    )
-    stats = await pending_memory_svc.workspace_stats(
-        db, workspace_id=workspace_id
-    )
+    await ws_svc.ensure_admin(db, workspace_id=workspace_id, identity_id=identity_id)
+    stats = await pending_memory_svc.workspace_stats(db, workspace_id=workspace_id)
     return PendingMemoryStats.model_validate(stats)
 
 
@@ -231,8 +210,7 @@ async def trigger_pending_memory_sweep(
         resource_type="pending_memory",
         resource_id=None,
         summary=(
-            f"manual sweep visited={visited} promoted={promoted} "
-            f"skipped={skipped} failed={failed}"
+            f"manual sweep visited={visited} promoted={promoted} skipped={skipped} failed={failed}"
         ),
         metadata={
             "workspaces_visited": visited,

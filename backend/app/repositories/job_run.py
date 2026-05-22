@@ -43,10 +43,7 @@ class JobRunRepository(AsyncRepository[JobRun]):
         helper is effectively unique.
         """
         stmt = (
-            select(JobRun)
-            .where(JobRun.job_id == job_id)
-            .order_by(desc(JobRun.created_at))
-            .limit(1)
+            select(JobRun).where(JobRun.job_id == job_id).order_by(desc(JobRun.created_at)).limit(1)
         )
         return (await self.session.execute(stmt)).scalar_one_or_none()
 
@@ -109,9 +106,7 @@ class JobRunRepository(AsyncRepository[JobRun]):
         if workspace_id is not None:
             stmt = stmt.where(JobRun.workspace_id == workspace_id)
         stmt = stmt.where(
-            (JobRun.status.in_(
-                [JobRunStatus.QUEUED, JobRunStatus.RUNNING]
-            ))
+            (JobRun.status.in_([JobRunStatus.QUEUED, JobRunStatus.RUNNING]))
             | (JobRun.finished_at >= since)
         )
         stmt = stmt.group_by(JobRun.function_name, JobRun.status)
@@ -154,9 +149,7 @@ class JobRunRepository(AsyncRepository[JobRun]):
         )
         if workspace_id is not None:
             cum_stmt = cum_stmt.where(JobRun.workspace_id == workspace_id)
-        cumulative = int(
-            (await self.session.execute(cum_stmt)).scalar() or 0
-        )
+        cumulative = int((await self.session.execute(cum_stmt)).scalar() or 0)
         out["failed_permanent_total"] = cumulative
         return out
 

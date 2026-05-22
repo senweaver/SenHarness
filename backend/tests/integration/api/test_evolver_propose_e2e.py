@@ -70,10 +70,7 @@ def _resolve_for_kind(toolbox: list[str], *, agent_kind: str | None) -> list[str
         tool = BUILTIN_TOOL_REGISTRY.get(name)
         if tool is None:
             continue
-        if (
-            tool.available_for_kinds is not None
-            and agent_kind not in tool.available_for_kinds
-        ):
+        if tool.available_for_kinds is not None and agent_kind not in tool.available_for_kinds:
             continue
         out.append(name)
     return out
@@ -133,9 +130,7 @@ async def test_evolver_propose_create_e2e_files_approval_and_audit(
     assert pack is not None
     assert pack.state == SkillPackState.DRAFT
 
-    version = await db_session.get(
-        SkillPackVersion, uuid.UUID(result["version_id"])
-    )
+    version = await db_session.get(SkillPackVersion, uuid.UUID(result["version_id"]))
     assert version is not None
     assert version.state == SkillPackVersionState.PROPOSED
 

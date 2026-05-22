@@ -65,9 +65,7 @@ class SessionShare(UuidPkMixin, TimestampMixin, Base):
         index=True,
     )
     # Public-link token. NULL when this row is a direct user share.
-    token: Mapped[str | None] = mapped_column(
-        String(64), unique=True, index=True, nullable=True
-    )
+    token: Mapped[str | None] = mapped_column(String(64), unique=True, index=True, nullable=True)
     visibility: Mapped[ShareVisibility] = mapped_column(
         String(16), default=ShareVisibility.WORKSPACE, nullable=False
     )

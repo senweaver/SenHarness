@@ -138,7 +138,5 @@ def _envelope_to_dict(summary: subagents_svc.BatchSpawnResult) -> dict[str, Any]
     to get UUID strings without bypassing model validation.
     """
     payload = summary.model_dump(mode="json")
-    payload["results"] = {
-        task_id: result.to_dict() for task_id, result in summary.results.items()
-    }
+    payload["results"] = {task_id: result.to_dict() for task_id, result in summary.results.items()}
     return payload

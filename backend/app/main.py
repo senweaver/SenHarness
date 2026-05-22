@@ -53,7 +53,6 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     # leftover env vars are no longer read but indicate a stale .env that
     # should be cleaned up (the operator may have copy-pasted secrets that
     # are now sitting in plaintext on disk for no reason).
-    import os
 
     import app.agents.kernels.native
     import app.agents.kernels.openclaw  # noqa: F401
@@ -163,9 +162,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
                 # platform_settings itself per plugin so the trust
                 # root and dev-mode flag are picked up consistently
                 # with the admin console.
-                loaded = await load_and_register_plugins(
-                    fresh, plugin_dir=plugin_dir
-                )
+                loaded = await load_and_register_plugins(fresh, plugin_dir=plugin_dir)
                 log.info("plugin_loader: %d plugin(s) loaded", len(loaded))
     except Exception:  # pragma: no cover - never block API boot on plugin host
         log.exception("plugin_loader: startup hook failed")
@@ -210,9 +207,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
                 raise
 
     try:
-        db_heartbeat_task = asyncio.create_task(
-            _db_pool_heartbeat(), name="db-pool-heartbeat"
-        )
+        db_heartbeat_task = asyncio.create_task(_db_pool_heartbeat(), name="db-pool-heartbeat")
     except Exception:  # pragma: no cover
         log.exception("db pool heartbeat: failed to schedule")
 
@@ -273,6 +268,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         # thread teardown while every tenant's traffic stalls.
         grace = float(settings.WORKER_FORCE_EXIT_GRACE_S)
         if grace > 0:
+
             def _force_exit() -> None:
                 os._exit(0)
 
@@ -336,7 +332,9 @@ app = create_app()
 
 
 @app.exception_handler(AppError)
-async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:  # pragma: no cover - fallback
+async def app_error_handler(
+    request: Request, exc: AppError
+) -> JSONResponse:  # pragma: no cover - fallback
     return JSONResponse(
         status_code=exc.status_code,
         content={"code": exc.code, "detail": exc.detail, "extras": exc.extras},

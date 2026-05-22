@@ -98,17 +98,13 @@ async def register(
 ) -> RegistrationResult:
     mode = await get_registration_mode(session)
     if mode == RegistrationMode.CLOSED:
-        raise RegistrationClosed(
-            "registration_closed", code="auth.registration_closed"
-        )
+        raise RegistrationClosed("registration_closed", code="auth.registration_closed")
     if (
         mode == RegistrationMode.OPEN_INVITE_ONLY
         and not invitation_code
         and create_personal_workspace
     ):
-        raise InvitationRequired(
-            "invitation_code_required", code="auth.invitation_required"
-        )
+        raise InvitationRequired("invitation_code_required", code="auth.invitation_required")
 
     require_verification = await email_verification_required(session)
 
@@ -116,9 +112,7 @@ async def register(
     if await ident_repo.get_by_email(email):
         raise Conflict("email_taken", code="auth.email_taken")
 
-    initial_status = (
-        IdentityStatus.PENDING if require_verification else IdentityStatus.ACTIVE
-    )
+    initial_status = IdentityStatus.PENDING if require_verification else IdentityStatus.ACTIVE
     identity = await ident_repo.create(
         email=email.lower(),
         name=name,
@@ -167,9 +161,7 @@ async def register(
             blocked_by_quota = True
 
         if not blocked_by_quota:
-            slug, used_random = await reserve_personal_workspace_slug(
-                session, email=email
-            )
+            slug, used_random = await reserve_personal_workspace_slug(session, email=email)
             workspace = await workspace_svc.create_workspace(
                 session,
                 name=f"{name}'s Workspace",
@@ -209,9 +201,7 @@ async def register(
 
     verification_token: str | None = None
     if require_verification:
-        verification_token = await email_verify_svc.issue_token(
-            session, identity_id=identity.id
-        )
+        verification_token = await email_verify_svc.issue_token(session, identity_id=identity.id)
         await email_verify_svc.send_verification_email(
             session, identity=identity, token=verification_token
         )
@@ -285,9 +275,7 @@ async def register(
     )
 
 
-async def authenticate(
-    session: AsyncSession, *, email: str, password: str
-) -> Identity:
+async def authenticate(session: AsyncSession, *, email: str, password: str) -> Identity:
     ident_repo = IdentityRepository(session)
     identity = await ident_repo.get_by_email(email.lower())
     if not identity or not identity.password_hash:
@@ -416,6 +404,8 @@ async def change_password(
     await ident_repo.update(identity, password_hash=hash_password(new_password))
 
 
-async def get_first_workspace_for(session: AsyncSession, identity_id: uuid.UUID) -> Workspace | None:
+async def get_first_workspace_for(
+    session: AsyncSession, identity_id: uuid.UUID
+) -> Workspace | None:
     pairs = await MembershipRepository(session).list_with_workspace_for_identity(identity_id)
     return pairs[0][1] if pairs else None

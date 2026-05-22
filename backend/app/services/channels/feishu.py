@@ -162,9 +162,7 @@ class FeishuProvider(ChannelProvider):
         # Event 1.0 ships ``token`` at top level; 2.0 moves it into ``header``.
         got = payload.get("token") or (payload.get("header") or {}).get("token")
         if not got or got != expected:
-            raise SignatureInvalid(
-                "feishu.bad_token", "Feishu verification_token mismatch"
-            )
+            raise SignatureInvalid("feishu.bad_token", "Feishu verification_token mismatch")
 
     def parse_inbound(
         self, payload: dict[str, Any], headers: dict[str, str]
@@ -227,7 +225,9 @@ class FeishuProvider(ChannelProvider):
         try:
             async with httpx.AsyncClient(timeout=10.0) as c:
                 token = await _fetch_tenant_access_token(
-                    app_id=app_id, app_secret=app_secret, client=c,
+                    app_id=app_id,
+                    app_secret=app_secret,
+                    client=c,
                 )
                 if not token:
                     return

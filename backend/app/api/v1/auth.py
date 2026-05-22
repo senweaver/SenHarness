@@ -66,7 +66,15 @@ def _clear_refresh_cookie(resp: Response) -> None:
     "/register",
     response_model=RegistrationResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(rate_limit("auth_register", limit=settings.AUTH_REGISTER_RATE_LIMIT, period_seconds=settings.AUTH_REGISTER_RATE_PERIOD))],
+    dependencies=[
+        Depends(
+            rate_limit(
+                "auth_register",
+                limit=settings.AUTH_REGISTER_RATE_LIMIT,
+                period_seconds=settings.AUTH_REGISTER_RATE_PERIOD,
+            )
+        )
+    ],
 )
 async def register(
     body: RegisterIn, db: DBSession, request: Request, response: Response
@@ -133,9 +141,7 @@ async def get_registration_mode(db: DBSession) -> RegistrationModeOut:
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(rate_limit("auth_verify_email", limit=10, period_seconds=60))],
 )
-async def verify_email(
-    token: str, db: DBSession, request: Request
-) -> Response:
+async def verify_email(token: str, db: DBSession, request: Request) -> Response:
     identity = await email_verify_svc.consume_token(db, token=token)
     await audit_svc.record(
         db,
@@ -170,9 +176,7 @@ async def resend_verification(
         raise Conflict("identity_not_pending", code="auth.identity_not_pending")
 
     token = await email_verify_svc.issue_token(db, identity_id=identity.id)
-    await email_verify_svc.send_verification_email(
-        db, identity=identity, token=token
-    )
+    await email_verify_svc.send_verification_email(db, identity=identity, token=token)
     await audit_svc.record(
         db,
         action="auth.email_verification_resent",
@@ -189,7 +193,15 @@ async def resend_verification(
 @router.post(
     "/login",
     response_model=TokenOut,
-    dependencies=[Depends(rate_limit("auth_login", limit=settings.AUTH_LOGIN_RATE_LIMIT, period_seconds=settings.AUTH_LOGIN_RATE_PERIOD))],
+    dependencies=[
+        Depends(
+            rate_limit(
+                "auth_login",
+                limit=settings.AUTH_LOGIN_RATE_LIMIT,
+                period_seconds=settings.AUTH_LOGIN_RATE_PERIOD,
+            )
+        )
+    ],
 )
 async def login(body: LoginIn, db: DBSession, request: Request, response: Response) -> TokenOut:
     try:
@@ -241,9 +253,7 @@ async def login(body: LoginIn, db: DBSession, request: Request, response: Respon
     from app.repositories.workspace import MembershipRepository
 
     primary_ws = None
-    mems = await MembershipRepository(db).list_with_workspace_for_identity(
-        identity.id
-    )
+    mems = await MembershipRepository(db).list_with_workspace_for_identity(identity.id)
     if mems:
         primary_ws = mems[0][1].id
 
@@ -325,10 +335,10 @@ def _bearer_from_header(request: Request) -> str | None:
 
 
 # ─── MFA (TOTP) ─────────────────────────────────────────────
-from pydantic import BaseModel, Field  # noqa: E402
+from pydantic import BaseModel, Field
 
-from app.api.deps import CurrentIdentityId  # noqa: E402
-from app.repositories.identity import IdentityRepository  # noqa: E402
+from app.api.deps import CurrentIdentityId
+from app.repositories.identity import IdentityRepository
 
 
 class MfaStatus(BaseModel):
@@ -362,9 +372,7 @@ async def mfa_status(db: DBSession, identity_id: CurrentIdentityId) -> MfaStatus
 
 
 @router.post("/mfa/setup", response_model=MfaSetupOut)
-async def mfa_setup(
-    db: DBSession, identity_id: CurrentIdentityId, request: Request
-) -> MfaSetupOut:
+async def mfa_setup(db: DBSession, identity_id: CurrentIdentityId, request: Request) -> MfaSetupOut:
     """Begin TOTP enrollment. Returns a provisioning URI that the client
     renders as a QR code. The user then calls ``/mfa/activate`` with a fresh
     code to confirm.
@@ -473,9 +481,7 @@ def _frontend_base(request: Request) -> str:
     "/oauth/{provider}/start",
     dependencies=[Depends(rate_limit("oauth_start", limit=10, period_seconds=60))],
 )
-async def oauth_start(
-    provider: str, request: Request, next: str = "/"
-) -> Response:
+async def oauth_start(provider: str, request: Request, next: str = "/") -> Response:
     """Kick off the OAuth dance. Redirects the browser to the provider."""
     if provider not in registered_providers():
         raise HTTPException(
@@ -500,9 +506,7 @@ async def oauth_callback(
     provider: str, request: Request, db: DBSession, response: Response
 ) -> Response:
     if provider not in registered_providers():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="provider_not_configured"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="provider_not_configured")
     client = oauth.create_client(provider)
     try:
         token = await client.authorize_access_token(request)
@@ -516,9 +520,7 @@ async def oauth_callback(
     profile = await _resolve_profile(client, provider, token)
     if profile is None:
         fe = _frontend_base(request)
-        return RedirectResponse(
-            f"{fe}/login?{urlencode({'error': 'oauth_profile_missing'})}"
-        )
+        return RedirectResponse(f"{fe}/login?{urlencode({'error': 'oauth_profile_missing'})}")
 
     email = (profile.get("email") or "").lower()
     sub = str(profile.get("sub") or profile.get("id") or "")
@@ -526,9 +528,7 @@ async def oauth_callback(
     avatar_url = profile.get("avatar_url") or profile.get("picture")
     if not (email or sub):
         fe = _frontend_base(request)
-        return RedirectResponse(
-            f"{fe}/login?{urlencode({'error': 'oauth_insufficient_scope'})}"
-        )
+        return RedirectResponse(f"{fe}/login?{urlencode({'error': 'oauth_insufficient_scope'})}")
 
     identity = await _provision_oauth_identity(
         db, provider=provider, sub=sub, email=email, name=name, avatar_url=avatar_url
@@ -599,9 +599,7 @@ async def _resolve_profile(client, provider: str, token: dict) -> dict | None:  
         if provider == "microsoft":
             info = token.get("userinfo") or {}
             if not info:
-                resp = await client.get(
-                    "https://graph.microsoft.com/oidc/userinfo", token=token
-                )
+                resp = await client.get("https://graph.microsoft.com/oidc/userinfo", token=token)
                 info = resp.json() or {}
             return {
                 "sub": info.get("sub") or info.get("oid"),

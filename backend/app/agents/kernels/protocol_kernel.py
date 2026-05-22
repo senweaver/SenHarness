@@ -162,9 +162,7 @@ def _build_user_content_parts(parts: list[dict[str, Any]]) -> list[Any]:
             except Exception:
                 raw = b""
             out.append(
-                BinaryContent(
-                    data=raw, media_type=str(part.get("media_type") or "image/png")
-                )
+                BinaryContent(data=raw, media_type=str(part.get("media_type") or "image/png"))
             )
         elif kind == "image_url":
             url = str(part.get("url") or "")
@@ -344,9 +342,7 @@ async def run_kernel_one_shot(
     model_settings = _build_model_settings(normalized)
 
     try:
-        response = await model.request(
-            pydantic_messages, model_settings, request_parameters
-        )
+        response = await model.request(pydantic_messages, model_settings, request_parameters)
     except Exception as exc:  # pragma: no cover - provider failures live here
         log.warning("protocol_kernel upstream request failed: %s", exc)
         return {
@@ -495,9 +491,7 @@ async def run_kernel_stream(
                                 "type": "tool_use_stop",
                                 "id": open_tool_call_id,
                             }
-                        open_tool_call_id = (
-                            part.tool_call_id or f"toolu_{uuid.uuid4().hex}"
-                        )
+                        open_tool_call_id = part.tool_call_id or f"toolu_{uuid.uuid4().hex}"
                         open_tool_call_name = part.tool_name
                         yield {
                             "type": "tool_use_start",
@@ -568,23 +562,15 @@ async def run_kernel_stream(
             if open_tool_call_id is not None:
                 yield {"type": "tool_use_stop", "id": open_tool_call_id}
 
-            usage = (
-                response_stream.usage()
-                if hasattr(response_stream, "usage")
-                else None
-            )
+            usage = response_stream.usage() if hasattr(response_stream, "usage") else None
             input_tokens = int(getattr(usage, "input_tokens", 0) or 0) if usage else 0
             output_tokens = int(getattr(usage, "output_tokens", 0) or 0) if usage else 0
             finish_reason = (
-                response_stream.finish_reason
-                if hasattr(response_stream, "finish_reason")
-                else None
+                response_stream.finish_reason if hasattr(response_stream, "finish_reason") else None
             )
             yield {
                 "type": "stop",
-                "stop_reason": _map_finish_reason(
-                    finish_reason, has_tool_use=has_tool_use
-                ),
+                "stop_reason": _map_finish_reason(finish_reason, has_tool_use=has_tool_use),
                 "usage": {
                     "input_tokens": input_tokens,
                     "output_tokens": output_tokens,

@@ -20,9 +20,7 @@ from app.services import retention as retention_svc
 pytestmark = pytest.mark.asyncio
 
 
-async def test_workspace_cascade_soft_deletes_boards_and_cards(
-    db_session, workspace, identity
-):
+async def test_workspace_cascade_soft_deletes_boards_and_cards(db_session, workspace, identity):
     board = await svc.create_board(
         db_session,
         workspace_id=workspace.id,
@@ -40,24 +38,18 @@ async def test_workspace_cascade_soft_deletes_boards_and_cards(
         actor_identity_id=identity.id,
     )
 
-    affected = await retention_svc.cascade_for_workspace(
-        db_session, workspace_id=workspace.id
-    )
+    affected = await retention_svc.cascade_for_workspace(db_session, workspace_id=workspace.id)
 
     assert affected.get("project_boards", 0) >= 1
     assert affected.get("board_cards", 0) >= 1
 
     fresh_board = (
-        await db_session.execute(
-            select(ProjectBoard).where(ProjectBoard.id == board.id)
-        )
+        await db_session.execute(select(ProjectBoard).where(ProjectBoard.id == board.id))
     ).scalar_one()
     assert fresh_board.deleted_at is not None
 
     fresh_card = (
-        await db_session.execute(
-            select(BoardCard).where(BoardCard.id == card.id)
-        )
+        await db_session.execute(select(BoardCard).where(BoardCard.id == card.id))
     ).scalar_one()
     assert fresh_card.deleted_at is not None
 
@@ -79,15 +71,11 @@ async def test_cascade_is_idempotent(db_session, workspace, identity):
         actor_identity_id=identity.id,
     )
 
-    first = await retention_svc.cascade_for_workspace(
-        db_session, workspace_id=workspace.id
-    )
+    first = await retention_svc.cascade_for_workspace(db_session, workspace_id=workspace.id)
     assert first.get("project_boards", 0) >= 1
     assert first.get("board_cards", 0) >= 1
 
-    second = await retention_svc.cascade_for_workspace(
-        db_session, workspace_id=workspace.id
-    )
+    second = await retention_svc.cascade_for_workspace(db_session, workspace_id=workspace.id)
     assert second.get("project_boards", 0) == 0
     assert second.get("board_cards", 0) == 0
 
@@ -106,8 +94,6 @@ async def test_workspace_cascade_does_not_appear_in_identity_cascade(
         squad_id=None,
         actor_identity_id=identity.id,
     )
-    affected = await retention_svc.cascade_for_identity(
-        db_session, identity_id=identity.id
-    )
+    affected = await retention_svc.cascade_for_identity(db_session, identity_id=identity.id)
     assert "project_boards" not in affected
     assert "board_cards" not in affected

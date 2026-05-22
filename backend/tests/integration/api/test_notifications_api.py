@@ -52,18 +52,14 @@ async def _register_and_login(async_client, *, name: str = "User") -> dict:
 
 async def test_list_notifications_returns_array(async_client):
     user = await _register_and_login(async_client)
-    r = await async_client.get(
-        "/api/v1/notifications", headers=user["headers"]
-    )
+    r = await async_client.get("/api/v1/notifications", headers=user["headers"])
     assert r.status_code == 200
     assert isinstance(r.json(), list)
 
 
 async def test_unread_count_alias_returns_object(async_client):
     user = await _register_and_login(async_client)
-    r = await async_client.get(
-        "/api/v1/notifications/unread-count", headers=user["headers"]
-    )
+    r = await async_client.get("/api/v1/notifications/unread-count", headers=user["headers"])
     assert r.status_code == 200
     body = r.json()
     assert "unread" in body
@@ -72,9 +68,7 @@ async def test_unread_count_alias_returns_object(async_client):
 
 async def test_mark_all_read_alias_returns_count(async_client):
     user = await _register_and_login(async_client)
-    r = await async_client.post(
-        "/api/v1/notifications/mark-all-read", headers=user["headers"]
-    )
+    r = await async_client.post("/api/v1/notifications/mark-all-read", headers=user["headers"])
     assert r.status_code == 200
     assert "marked" in r.json()
 
@@ -88,9 +82,7 @@ async def test_list_notifications_without_auth_403(async_client):
 
 async def test_get_notification_prefs_includes_catalog(async_client):
     user = await _register_and_login(async_client)
-    r = await async_client.get(
-        "/api/v1/me/notification-prefs", headers=user["headers"]
-    )
+    r = await async_client.get("/api/v1/me/notification-prefs", headers=user["headers"])
     assert r.status_code == 200
     body = r.json()
     assert "catalog" in body
@@ -154,11 +146,7 @@ async def test_cross_identity_isolation_on_mark_read(async_client):
     user = await _register_and_login(async_client, name="A")
     other = await _register_and_login(async_client, name="B")
     fake_id = uuid.uuid4()
-    r = await async_client.post(
-        f"/api/v1/notifications/{fake_id}/read", headers=user["headers"]
-    )
+    r = await async_client.post(f"/api/v1/notifications/{fake_id}/read", headers=user["headers"])
     assert r.status_code in {404, 403}
-    r2 = await async_client.post(
-        f"/api/v1/notifications/{fake_id}/read", headers=other["headers"]
-    )
+    r2 = await async_client.post(f"/api/v1/notifications/{fake_id}/read", headers=other["headers"])
     assert r2.status_code in {404, 403}

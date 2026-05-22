@@ -75,11 +75,7 @@ async def extract_user_facts_sweep(ctx: dict[str, Any]) -> dict[str, Any]:
 
     async with factory() as db:
         workspace_ids = list(
-            (
-                await db.execute(
-                    select(Workspace.id).where(Workspace.deleted_at.is_(None))
-                )
-            )
+            (await db.execute(select(Workspace.id).where(Workspace.deleted_at.is_(None))))
             .scalars()
             .all()
         )
@@ -88,15 +84,11 @@ async def extract_user_facts_sweep(ctx: dict[str, Any]) -> dict[str, Any]:
         summary["workspaces_seen"] += 1
         identity_ids = await _list_identities(workspace_id=ws_id)
         for identity_id in identity_ids:
-            outcome = await _run_one(
-                workspace_id=ws_id, identity_id=identity_id
-            )
+            outcome = await _run_one(workspace_id=ws_id, identity_id=identity_id)
             if outcome.get("status") == "ok":
                 summary["identities_updated"] += 1
                 summary["facts_created"] += int(outcome.get("facts_created", 0))
-                summary["facts_superseded"] += int(
-                    outcome.get("facts_superseded", 0)
-                )
+                summary["facts_superseded"] += int(outcome.get("facts_superseded", 0))
             else:
                 summary["identities_failed"] += 1
                 if len(summary["errors"]) < 20:
@@ -115,9 +107,7 @@ async def _list_identities(*, workspace_id: uuid.UUID) -> list[uuid.UUID]:
         )
 
 
-async def _run_one(
-    *, workspace_id: uuid.UUID, identity_id: uuid.UUID
-) -> dict[str, Any]:
+async def _run_one(*, workspace_id: uuid.UUID, identity_id: uuid.UUID) -> dict[str, Any]:
     """Drive one ``(workspace, identity)`` extract inside a fresh session."""
     factory = get_session_factory()
     try:
@@ -133,9 +123,7 @@ async def _run_one(
         return {
             "status": "ok",
             "workspace_id": str(workspace_id),
-            "identity_id_hash": uuid.uuid5(
-                uuid.NAMESPACE_OID, str(identity_id)
-            ).hex[:16],
+            "identity_id_hash": uuid.uuid5(uuid.NAMESPACE_OID, str(identity_id)).hex[:16],
             "facts_created": int(outcome.facts_created),
             "facts_superseded": int(outcome.facts_superseded),
             "facts_unchanged": int(outcome.facts_unchanged),
@@ -156,9 +144,7 @@ async def _run_one(
         return {
             "status": "failed",
             "workspace_id": str(workspace_id),
-            "identity_id_hash": uuid.uuid5(
-                uuid.NAMESPACE_OID, str(identity_id)
-            ).hex[:16],
+            "identity_id_hash": uuid.uuid5(uuid.NAMESPACE_OID, str(identity_id)).hex[:16],
             "error": f"{type(exc).__name__}: {exc}",
         }
 
@@ -181,9 +167,7 @@ async def _audit_per_identity_failure(
                 resource_id=None,
                 summary="user_profile extraction failed (per-identity isolation)",
                 metadata={
-                    "identity_id_hash": uuid.uuid5(
-                        uuid.NAMESPACE_OID, str(identity_id)
-                    ).hex[:16],
+                    "identity_id_hash": uuid.uuid5(uuid.NAMESPACE_OID, str(identity_id)).hex[:16],
                     "error": f"{type(exc).__name__}: {exc}",
                 },
             )
@@ -196,9 +180,7 @@ async def _audit_per_identity_failure(
         )
 
 
-async def on_user_modeling_job_failed_permanent(
-    ctx: dict[str, Any], exc: BaseException
-) -> None:
+async def on_user_modeling_job_failed_permanent(ctx: dict[str, Any], exc: BaseException) -> None:
     """ARQ hook for ``extract_user_facts_sweep`` exhausting its retries."""
     factory = get_session_factory()
     try:
@@ -210,13 +192,9 @@ async def on_user_modeling_job_failed_permanent(
                 workspace_id=None,
                 resource_type="job",
                 resource_id=None,
-                summary=(
-                    f"extract_user_facts_sweep failed permanently: {exc!r}"
-                ),
+                summary=(f"extract_user_facts_sweep failed permanently: {exc!r}"),
                 metadata={
-                    "function": str(
-                        ctx.get("function") or USER_MODELING_SWEEP_NAME
-                    ),
+                    "function": str(ctx.get("function") or USER_MODELING_SWEEP_NAME),
                     "job_id": ctx.get("job_id"),
                     "exception": repr(exc),
                     "job_try": ctx.get("job_try"),

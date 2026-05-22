@@ -32,9 +32,7 @@ from app.db.base import Base
 from app.db.mixins import SoftDeleteMixin, TimestampMixin, UuidPkMixin, WorkspaceScopedMixin
 
 
-class SessionArtifact(
-    UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base
-):
+class SessionArtifact(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin, Base):
     __tablename__ = "session_artifacts"
     __table_args__ = (
         # Curator / Evolver pull recent artifacts per workspace ordered

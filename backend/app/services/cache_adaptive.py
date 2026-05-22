@@ -139,7 +139,7 @@ def _resolve_redis(redis: Any | None) -> Any | None:
     if redis is not None:
         return redis
     try:
-        from app.core.rate_limit import get_redis  # noqa: PLC0415
+        from app.core.rate_limit import get_redis
 
         return get_redis()
     except Exception:  # pragma: no cover — degraded Redis path
@@ -177,9 +177,7 @@ async def _read_redis(redis: Any, key: str) -> dict[str, Any] | None:
     return out
 
 
-async def _write_redis(
-    redis: Any, key: str, *, stats: CacheHitStats, ttl_seconds: int
-) -> None:
+async def _write_redis(redis: Any, key: str, *, stats: CacheHitStats, ttl_seconds: int) -> None:
     payload = {
         "workspace_id": str(stats.workspace_id),
         "provider_kind": stats.provider_kind,
@@ -198,9 +196,7 @@ async def _write_redis(
         log.debug("cache_adaptive redis write failed key=%s err=%s", key, exc)
 
 
-def _hydrate(
-    *, workspace_id: uuid.UUID, provider_kind: str, raw: dict[str, Any]
-) -> CacheHitStats:
+def _hydrate(*, workspace_id: uuid.UUID, provider_kind: str, raw: dict[str, Any]) -> CacheHitStats:
     def _to_int(name: str) -> int:
         try:
             return int(raw.get(name) or 0)
@@ -267,9 +263,7 @@ async def is_cache_disabled(
     immediate Redis write — the next ``record_cache_result`` call
     rewrites the row anyway.
     """
-    stats = await get_stats(
-        redis, workspace_id=workspace_id, provider_kind=provider_kind
-    )
+    stats = await get_stats(redis, workspace_id=workspace_id, provider_kind=provider_kind)
     disabled_until = stats.disabled_until
     if disabled_until is None:
         return False
@@ -293,9 +287,7 @@ async def record_cache_result(
     reaches :data:`ADAPTIVE_DISABLE_THRESHOLD`.
     """
     key = _key(workspace_id, provider_kind)
-    current = await get_stats(
-        redis, workspace_id=workspace_id, provider_kind=key[1]
-    )
+    current = await get_stats(redis, workspace_id=workspace_id, provider_kind=key[1])
 
     now = _now()
     consecutive = 0 if hit else int(current.consecutive_misses) + 1
@@ -313,13 +305,8 @@ async def record_cache_result(
         # surfacing the stale "still disabled" state.
         disabled_until = None
         just_recovered = True
-    elif (
-        not hit
-        and consecutive >= max(1, int(ADAPTIVE_DISABLE_THRESHOLD))
-    ):
-        new_until = now + timedelta(
-            seconds=max(1, int(ADAPTIVE_DISABLE_DURATION_SECONDS))
-        )
+    elif not hit and consecutive >= max(1, int(ADAPTIVE_DISABLE_THRESHOLD)):
+        new_until = now + timedelta(seconds=max(1, int(ADAPTIVE_DISABLE_DURATION_SECONDS)))
         if disabled_until is None or disabled_until < now:
             just_disabled = True
         if disabled_until is None or disabled_until < new_until:
@@ -347,9 +334,7 @@ async def record_cache_result(
         # historical totals readable for the admin dashboard between
         # bursts; the multiplier keeps the row alive long enough to
         # observe a recovery after the disable expires.
-        ttl_seconds = max(
-            3600, 2 * max(1, int(ADAPTIVE_DISABLE_DURATION_SECONDS))
-        )
+        ttl_seconds = max(3600, 2 * max(1, int(ADAPTIVE_DISABLE_DURATION_SECONDS)))
         await _write_redis(
             r,
             _redis_key(workspace_id, key[1]),

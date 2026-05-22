@@ -90,9 +90,7 @@ class Channel(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin
     # ``uq_channel_external_app_per_kind`` to refuse the same bot being
     # bound to two workspaces simultaneously. ``NULL`` for kinds with no
     # stable external identity (e.g. generic webhook).
-    external_app_id_hash: Mapped[str | None] = mapped_column(
-        String(64), nullable=True
-    )
+    external_app_id_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     default_agent_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),

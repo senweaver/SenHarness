@@ -110,9 +110,7 @@ class LogEmailTransport:
                 await db.commit()
         except Exception as exc:  # pragma: no cover - audit best-effort
             log.warning("LogEmailTransport audit failed: %s", exc)
-        return EmailDispatchResult(
-            ok=True, transport=self.transport_kind, message_id=None
-        )
+        return EmailDispatchResult(ok=True, transport=self.transport_kind, message_id=None)
 
 
 class SmtpEmailTransport:
@@ -206,9 +204,7 @@ class SmtpEmailTransport:
                 error=f"smtp_send_failed: {exc}",
             )
         message_id = message.get("Message-Id")
-        return EmailDispatchResult(
-            ok=True, transport=self.transport_kind, message_id=message_id
-        )
+        return EmailDispatchResult(ok=True, transport=self.transport_kind, message_id=message_id)
 
 
 _DEFAULT_TRANSPORT: EmailTransport = LogEmailTransport()
@@ -234,9 +230,7 @@ def set_email_transport(transport: EmailTransport) -> None:
     _DEFAULT_TRANSPORT = transport
 
 
-async def _resolve_smtp_password(
-    db: AsyncSession, *, password_ref: str | None
-) -> str | None:
+async def _resolve_smtp_password(db: AsyncSession, *, password_ref: str | None) -> str | None:
     """Fetch the SMTP password from the platform vault.
 
     The vault lives per-workspace in :mod:`app.services.vault`; SMTP
@@ -269,9 +263,7 @@ async def _resolve_smtp_password(
         )
         item = (await db.execute(stmt)).scalar_one_or_none()
         if item is None:
-            log.warning(
-                "platform SMTP password ref %r not found in vault", password_ref
-            )
+            log.warning("platform SMTP password ref %r not found in vault", password_ref)
             return None
         return await vault_svc.reveal_secret(item)
     except Exception as exc:  # pragma: no cover - vault best-effort
@@ -294,9 +286,7 @@ async def reload_email_transport_from_settings(db: AsyncSession) -> str:
             get_section,
         )
 
-        section_value = await get_section(
-            db, section=PlatformSettingsSection.EMAIL_SMTP
-        )
+        section_value = await get_section(db, section=PlatformSettingsSection.EMAIL_SMTP)
         smtp = section_value
     except Exception as exc:
         log.warning("email transport reload: failed to read settings (%s)", exc)
@@ -310,9 +300,7 @@ async def reload_email_transport_from_settings(db: AsyncSession) -> str:
         set_email_transport(LogEmailTransport())
         return "log"
 
-    password = await _resolve_smtp_password(
-        db, password_ref=getattr(smtp, "password_ref", None)
-    )
+    password = await _resolve_smtp_password(db, password_ref=getattr(smtp, "password_ref", None))
     transport = SmtpEmailTransport(
         host=host,
         port=int(getattr(smtp, "port", 587)),

@@ -15,9 +15,9 @@ from app.db.mixins import SoftDeleteMixin, TimestampMixin, UuidPkMixin, Workspac
 
 
 class SessionKind(StrEnum):
-    P2P = "p2p"              # one user <-> one Agent
-    SQUAD = "squad"          # user <-> Squad
-    CHANNEL = "channel"      # inbound via IM channel
+    P2P = "p2p"  # one user <-> one Agent
+    SQUAD = "squad"  # user <-> Squad
+    CHANNEL = "channel"  # inbound via IM channel
 
 
 class SessionState(StrEnum):

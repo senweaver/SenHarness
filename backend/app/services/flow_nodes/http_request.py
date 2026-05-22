@@ -130,6 +130,4 @@ async def _follow_with_ssrf_check(
         if resp.status_code in (301, 302, 303):
             method = "GET"
             content = None
-    raise httpx.TooManyRedirects(
-        "Exceeded SSRF-safe redirect cap", request=resp.request
-    )
+    raise httpx.TooManyRedirects("Exceeded SSRF-safe redirect cap", request=resp.request)

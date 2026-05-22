@@ -85,9 +85,7 @@ class TestParseInbound:
         assert msg is None
 
     def test_handshake_response_echoes_challenge(self):
-        resp = LarkProvider().handshake_response(
-            {"type": "url_verification", "challenge": "xyz"}
-        )
+        resp = LarkProvider().handshake_response({"type": "url_verification", "challenge": "xyz"})
         assert resp == {"challenge": "xyz"}
 
     def test_message_event_extracts_text(self):

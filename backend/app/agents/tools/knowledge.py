@@ -45,9 +45,7 @@ async def run_knowledge_search(args: KnowledgeSearchArgs) -> dict:
                 "error": f"collection_not_found: {args.collection!r}",
                 "hits": [],
             }
-        hits = await svc.search(
-            db, collection=col, query=args.query, top_k=args.top_k
-        )
+        hits = await svc.search(db, collection=col, query=args.query, top_k=args.top_k)
 
     return {
         "ok": True,

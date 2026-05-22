@@ -45,9 +45,7 @@ async def _make_session(db_session, workspace_id, identity_id) -> uuid.UUID:
     return sid
 
 
-def _make_row(
-    *, ws_id, pack_id, sid, identity_id, kind, score=None, created_at=None
-) -> SkillUsage:
+def _make_row(*, ws_id, pack_id, sid, identity_id, kind, score=None, created_at=None) -> SkillUsage:
     row = SkillUsage(
         workspace_id=ws_id,
         pack_id=pack_id,

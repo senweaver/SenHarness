@@ -42,8 +42,7 @@ async def run_agent_call(ctx: NodeContext) -> dict:
     prompt = ctx.render_str(ctx.data.get("prompt_template")) or ""
     if not prompt.strip():
         raise ValueError(
-            "agent_call produced an empty prompt — check your template "
-            "and upstream node outputs"
+            "agent_call produced an empty prompt — check your template and upstream node outputs"
         )
 
     iteration_budget = int(ctx.data.get("iteration_budget") or 8)
@@ -81,7 +80,7 @@ async def run_agent_call(ctx: NodeContext) -> dict:
     if result.error:
         raise RuntimeError(result.error)
 
-    tokens = (result.usage_payload.get("tokens") or {})
+    tokens = result.usage_payload.get("tokens") or {}
     return {
         "text": result.final_text,
         "session_id": str(new_session_id),

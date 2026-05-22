@@ -52,9 +52,7 @@ async def test_register_run_is_idempotent_on_run_id(db_session, workspace):
     assert second.state == InflightRunState.RUNNING
 
 
-async def test_transition_writes_audit_and_terminal_is_sticky(
-    db_session, workspace
-):
+async def test_transition_writes_audit_and_terminal_is_sticky(db_session, workspace):
     row = await _register(db_session, workspace)
     updated = await svc.transition(
         db_session,
@@ -77,13 +75,9 @@ async def test_transition_writes_audit_and_terminal_is_sticky(
     assert again.state == InflightRunState.COMPLETED
 
 
-async def test_update_last_seen_bumps_seq_and_skips_terminal(
-    db_session, workspace
-):
+async def test_update_last_seen_bumps_seq_and_skips_terminal(db_session, workspace):
     row = await _register(db_session, workspace)
-    ok = await svc.update_last_seen(
-        db_session, run_id=row.run_id, last_event_seq=5
-    )
+    ok = await svc.update_last_seen(db_session, run_id=row.run_id, last_event_seq=5)
     assert ok is True
 
     refreshed = await InflightRunRepository(db_session).get(row.id)
@@ -95,15 +89,11 @@ async def test_update_last_seen_bumps_seq_and_skips_terminal(
         run_id=row.run_id,
         target_state=InflightRunState.COMPLETED,
     )
-    skipped = await svc.update_last_seen(
-        db_session, run_id=row.run_id, last_event_seq=99
-    )
+    skipped = await svc.update_last_seen(db_session, run_id=row.run_id, last_event_seq=99)
     assert skipped is False
 
 
-async def test_recover_inflight_runs_marks_other_pid_lost(
-    db_session, workspace
-):
+async def test_recover_inflight_runs_marks_other_pid_lost(db_session, workspace):
     # Seed a row that pretends to belong to a previous backend incarnation.
     other_token = "other-host:99999:1700000000"
     row = await _register(db_session, workspace, pid_token=other_token)
@@ -124,9 +114,7 @@ async def test_recover_inflight_runs_marks_other_pid_lost(
     assert refreshed.finished_at is not None
 
 
-async def test_recover_inflight_runs_spares_current_token(
-    db_session, workspace
-):
+async def test_recover_inflight_runs_spares_current_token(db_session, workspace):
     current = svc.current_pid_token()
     row = await _register(db_session, workspace, pid_token=current)
 
@@ -175,9 +163,7 @@ async def test_list_lost_for_session_filters_by_state(db_session, workspace):
     assert rows[0].id == lost_row.id
 
 
-async def test_transition_failed_audit_when_db_breaks(
-    db_session, workspace, monkeypatch
-):
+async def test_transition_failed_audit_when_db_breaks(db_session, workspace, monkeypatch):
     """The transition wrapper writes a stable failure audit instead of raising."""
     row = await _register(db_session, workspace)
 
@@ -187,9 +173,7 @@ async def test_transition_failed_audit_when_db_breaks(
     async def _broken_get(*_args, **_kwargs):
         raise _BoomError("simulated repo crash")
 
-    monkeypatch.setattr(
-        InflightRunRepository, "get_by_run_id", _broken_get
-    )
+    monkeypatch.setattr(InflightRunRepository, "get_by_run_id", _broken_get)
 
     out = await svc.transition(
         db_session,

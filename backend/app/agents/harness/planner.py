@@ -91,10 +91,7 @@ def merge_planner_into_subagents(policy: dict[str, Any]) -> dict[str, Any]:
         return new_policy
 
     specs = list(sub.get("specs") or [])
-    if any(
-        isinstance(s, dict) and str(s.get("name", "")).lower() == PLANNER_NAME
-        for s in specs
-    ):
+    if any(isinstance(s, dict) and str(s.get("name", "")).lower() == PLANNER_NAME for s in specs):
         # Already configured — caller wins.
         return new_policy
 

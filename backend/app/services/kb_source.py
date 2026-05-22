@@ -228,8 +228,10 @@ async def _ingest_one(
 ) -> knowledge_svc.IngestResult | None:
     """Dispatch a :class:`ConnectorDocument` to the right ingest primitive."""
     # File connector → load attachment + run attachment extractor.
-    if doc.source_kind == DocSourceKind.FILE and doc.source_uri and doc.source_uri.startswith(
-        "attachment://"
+    if (
+        doc.source_kind == DocSourceKind.FILE
+        and doc.source_uri
+        and doc.source_uri.startswith("attachment://")
     ):
         try:
             att_id = uuid.UUID(doc.source_uri.split("://", 1)[1])
@@ -257,7 +259,10 @@ async def _ingest_one(
         source_kind=doc.source_kind,
         source_uri=doc.source_uri,
         raw_text=doc.raw_text,
-        metadata_json={**doc.metadata, **({"external_id": doc.external_id} if doc.external_id else {})},
+        metadata_json={
+            **doc.metadata,
+            **({"external_id": doc.external_id} if doc.external_id else {}),
+        },
         created_by=created_by,
     )
 
@@ -352,9 +357,7 @@ async def filter_accessible_doc_ids(
     return allowed
 
 
-async def list_access_entries(
-    session: AsyncSession, *, collection_id: uuid.UUID
-) -> list[KbAccess]:
+async def list_access_entries(session: AsyncSession, *, collection_id: uuid.UUID) -> list[KbAccess]:
     stmt = (
         select(KbAccess)
         .where(
@@ -387,11 +390,7 @@ async def grant_access(
                 KbAccess.deleted_at.is_(None),
                 KbAccess.subject_kind == subject_kind,
                 KbAccess.subject_id == subject_id,
-                (
-                    KbAccess.doc_id.is_(None)
-                    if doc_id is None
-                    else KbAccess.doc_id == doc_id
-                ),
+                (KbAccess.doc_id.is_(None) if doc_id is None else KbAccess.doc_id == doc_id),
             )
         )
     ).scalar_one_or_none()

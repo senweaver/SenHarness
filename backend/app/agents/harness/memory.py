@@ -70,13 +70,11 @@ async def fetch_system_memory_fragment(
                     min_score=0.30,
                 )
             if identity_id is not None:
-                user_facts_fragment = (
-                    await user_profile_svc.render_facts_for_injection(
-                        db,
-                        workspace_id=workspace_id,
-                        identity_id=identity_id,
-                        max_chars=user_profile_svc.DEFAULT_INJECT_MAX_CHARS,
-                    )
+                user_facts_fragment = await user_profile_svc.render_facts_for_injection(
+                    db,
+                    workspace_id=workspace_id,
+                    identity_id=identity_id,
+                    max_chars=user_profile_svc.DEFAULT_INJECT_MAX_CHARS,
                 )
     except Exception as e:  # pragma: no cover
         log.debug("memory fetch failed: %s", e)
@@ -101,8 +99,7 @@ async def fetch_system_memory_fragment(
         parts.append(
             "## RECALLED NOTES\n"
             "Use what's relevant, ignore the rest; these reflect past conversations, "
-            "not the user's current message.\n"
-            + "\n".join(lines)
+            "not the user's current message.\n" + "\n".join(lines)
         )
 
     return "\n\n".join(parts) if parts else None

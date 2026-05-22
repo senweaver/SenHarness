@@ -115,10 +115,7 @@ async def _reset_watermarks_to_far_past() -> None:
     factory = get_session_factory()
     async with factory() as db:
         await db.execute(
-            text(
-                "UPDATE retention_watermarks "
-                "SET last_seen_deleted_at = now() - interval '1 hour'"
-            )
+            text("UPDATE retention_watermarks SET last_seen_deleted_at = now() - interval '1 hour'")
         )
         await db.commit()
 
@@ -134,10 +131,8 @@ async def test_skill_usage_cascade_on_identity_soft_delete(async_client):
     factory = get_session_factory()
     async with factory() as db:
         rows = (
-            await db.execute(
-                select(SkillUsage).where(SkillUsage.id.in_(seeded))
-            )
-        ).scalars().all()
+            (await db.execute(select(SkillUsage).where(SkillUsage.id.in_(seeded)))).scalars().all()
+        )
         assert len(rows) == 3
 
     await _soft_delete_identity(identity_id)
@@ -148,9 +143,7 @@ async def test_skill_usage_cascade_on_identity_soft_delete(async_client):
 
     async with factory() as db:
         remaining = (
-            await db.execute(
-                select(SkillUsage).where(SkillUsage.id.in_(seeded))
-            )
-        ).scalars().all()
+            (await db.execute(select(SkillUsage).where(SkillUsage.id.in_(seeded)))).scalars().all()
+        )
         # ``soft_delete=False`` → physical delete.
         assert len(remaining) == 0

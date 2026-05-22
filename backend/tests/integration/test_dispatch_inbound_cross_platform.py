@@ -49,9 +49,7 @@ async def test_disabled_cross_platform_keeps_legacy_path(
     db_session, identity, workspace, agent, monkeypatch
 ):
     """Default contract: no logical_thread row is ever created."""
-    ch = await _seed_channel(
-        db_session, workspace_id=workspace.id, agent_id=agent.id
-    )
+    ch = await _seed_channel(db_session, workspace_id=workspace.id, agent_id=agent.id)
 
     # Stub the runner so we don't hit a real LLM.
     from app.services import agent_runner as runner
@@ -60,7 +58,6 @@ async def test_disabled_cross_platform_keeps_legacy_path(
         return runner.AgentResult(final_text="hi", session_id=uuid.uuid4())
 
     async def fake_ensure(db, **kw):
-        from app.db.models.session import Session as SessionModel
         from app.db.models.session import SessionKind
         from app.repositories.session import SessionRepository
 
@@ -83,11 +80,10 @@ async def test_disabled_cross_platform_keeps_legacy_path(
 
     monkeypatch.setattr(ch_mod, "get_provider", lambda _kind: _StubProvider())
 
-    from app.services.channels.base import InboundMessage
-    from app.services.channel_dispatch import dispatch_inbound
-
     # Override get_session_factory so the stub flow uses our fixture session.
     from app.db import session as db_session_mod
+    from app.services.channel_dispatch import dispatch_inbound
+    from app.services.channels.base import InboundMessage
 
     class _Factory:
         def __call__(self):
@@ -112,10 +108,14 @@ async def test_disabled_cross_platform_keeps_legacy_path(
     )
 
     rows = (
-        await db_session.execute(
-            select(LogicalThread).where(LogicalThread.workspace_id == workspace.id)
+        (
+            await db_session.execute(
+                select(LogicalThread).where(LogicalThread.workspace_id == workspace.id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert rows == [], "default-disabled flag must never create a thread"
 
 
@@ -123,9 +123,7 @@ async def test_enabled_with_existing_binding_resumes_thread(
     db_session, identity, workspace, agent, monkeypatch
 ):
     """Pre-paired binding routes a fresh inbound back to the same thread."""
-    ch = await _seed_channel(
-        db_session, workspace_id=workspace.id, agent_id=agent.id
-    )
+    ch = await _seed_channel(db_session, workspace_id=workspace.id, agent_id=agent.id)
 
     # Flip the platform default to enabled. Workspace has no override.
     await set_system_setting(
@@ -136,7 +134,6 @@ async def test_enabled_with_existing_binding_resumes_thread(
 
     # Pre-create a thread + binding for the inbound sender so the
     # dispatcher hits the resume branch (not the create branch).
-    from app.db.models.session import Session as SessionModel
     from app.db.models.session import SessionKind
     from app.repositories.session import SessionRepository
 
@@ -219,9 +216,13 @@ async def test_enabled_with_existing_binding_resumes_thread(
 
     # No new thread created — binding resolves to the seed thread.
     rows = (
-        await db_session.execute(
-            select(LogicalThread).where(LogicalThread.workspace_id == workspace.id)
+        (
+            await db_session.execute(
+                select(LogicalThread).where(LogicalThread.workspace_id == workspace.id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(rows) == 1
     assert rows[0].id == thread.id

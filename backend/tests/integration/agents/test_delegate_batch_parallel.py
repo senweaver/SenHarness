@@ -90,16 +90,14 @@ async def test_batch_writes_one_spine_row_per_task_sharing_parent_run(
         output = "the answer is 42"
 
     class _FakeAgent:
-        async def run(self, prompt: str):  # noqa: ARG002
+        async def run(self, prompt: str):
             await asyncio.sleep(0.01)
             return _FakeRunResult()
 
-    async def _fake_resolve(*, workspace_id, target_agent_id):  # noqa: ARG001
+    async def _fake_resolve(*, workspace_id, target_agent_id):
         return object(), None
 
-    monkeypatch.setattr(
-        subagents_svc, "_resolve_child_agent_model", _fake_resolve
-    )
+    monkeypatch.setattr(subagents_svc, "_resolve_child_agent_model", _fake_resolve)
     monkeypatch.setattr(
         subagents_svc,
         "_build_child_agent",
@@ -137,9 +135,7 @@ async def test_batch_writes_one_spine_row_per_task_sharing_parent_run(
     assert states == {SubAgentRunState.COMPLETED}
 
 
-async def test_one_failed_child_does_not_block_others(
-    db_session, workspace, monkeypatch
-):
+async def test_one_failed_child_does_not_block_others(db_session, workspace, monkeypatch):
     """1 child raises mid-run → 4 still complete + 1 lands FAILED."""
     _share_session_factory(monkeypatch, db_session)
     await _patch_config(monkeypatch, _config(max_concurrent=5))
@@ -154,7 +150,7 @@ async def test_one_failed_child_does_not_block_others(
         def __init__(self, *, will_crash: bool) -> None:
             self.will_crash = will_crash
 
-        async def run(self, prompt: str):  # noqa: ARG002
+        async def run(self, prompt: str):
             await asyncio.sleep(0.005)
             if self.will_crash:
                 raise _Crash("simulated child crash")
@@ -166,18 +162,16 @@ async def test_one_failed_child_does_not_block_others(
 
     crash_for = "task-2"
 
-    async def _fake_resolve(*, workspace_id, target_agent_id):  # noqa: ARG001
+    async def _fake_resolve(*, workspace_id, target_agent_id):
         # Encode the target_agent_id as a key the builder closure can
         # pick up below — passes through without per-task monkeypatch.
         return target_agent_id, None
 
-    monkeypatch.setattr(
-        subagents_svc, "_resolve_child_agent_model", _fake_resolve
-    )
+    monkeypatch.setattr(subagents_svc, "_resolve_child_agent_model", _fake_resolve)
 
     crash_target_ids: set[uuid.UUID] = set()
 
-    def _build(*, model, persona_md):  # noqa: ARG001
+    def _build(*, model, persona_md):
         return _AgentFor(will_crash=model in crash_target_ids)
 
     monkeypatch.setattr(subagents_svc, "_build_child_agent", _build)
@@ -218,9 +212,7 @@ async def test_one_failed_child_does_not_block_others(
     assert row.state == SubAgentRunState.FAILED
 
 
-async def test_one_timeout_child_marks_status_timeout(
-    db_session, workspace, monkeypatch
-):
+async def test_one_timeout_child_marks_status_timeout(db_session, workspace, monkeypatch):
     """A single timeout sibling shows ``status='timeout'`` + spine FAILED."""
     _share_session_factory(monkeypatch, db_session)
     await _patch_config(monkeypatch, _config(max_concurrent=3))
@@ -229,7 +221,7 @@ async def test_one_timeout_child_marks_status_timeout(
     workspace_id = workspace.id
 
     class _SlowAgent:
-        async def run(self, prompt: str):  # noqa: ARG002
+        async def run(self, prompt: str):
             await asyncio.sleep(2.0)
 
             class _Out:
@@ -238,7 +230,7 @@ async def test_one_timeout_child_marks_status_timeout(
             return _Out()
 
     class _FastAgent:
-        async def run(self, prompt: str):  # noqa: ARG002
+        async def run(self, prompt: str):
             await asyncio.sleep(0.01)
 
             class _Out:
@@ -248,16 +240,14 @@ async def test_one_timeout_child_marks_status_timeout(
 
     slow_target_ids: set[uuid.UUID] = set()
 
-    async def _fake_resolve(*, workspace_id, target_agent_id):  # noqa: ARG001
+    async def _fake_resolve(*, workspace_id, target_agent_id):
         # Tunnel target_agent_id into the builder closure as the
         # "model" so the builder can choose Slow vs Fast deterministically.
         return target_agent_id, None
 
-    monkeypatch.setattr(
-        subagents_svc, "_resolve_child_agent_model", _fake_resolve
-    )
+    monkeypatch.setattr(subagents_svc, "_resolve_child_agent_model", _fake_resolve)
 
-    def _build(*, model, persona_md):  # noqa: ARG001
+    def _build(*, model, persona_md):
         if model in slow_target_ids:
             return _SlowAgent()
         return _FastAgent()

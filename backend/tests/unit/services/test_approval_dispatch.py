@@ -19,7 +19,6 @@ from app.core.security import utcnow_naive
 from app.db.models.approval import (
     Approval,
     ApprovalResourceType,
-    ApprovalStatus,
 )
 from app.db.models.audit import AuditEvent
 from app.db.models.flow import Flow
@@ -151,13 +150,11 @@ async def test_dispatch_skill_pack_create_activates_version_and_promotes_pack(
     assert refreshed_pack.enabled is True
 
 
-async def test_dispatch_skill_pack_patch_activates_version_only(
-    db_session, workspace, identity
-):
+async def test_dispatch_skill_pack_patch_activates_version_only(db_session, workspace, identity):
     pack = await _make_pack(db_session, workspace, slug="patched")
     v1 = await _make_version(db_session, workspace, pack, content_md="## v1\n")
     # First version must be active to mirror the patch flow.
-    from app.services.skill_version import activate_version  # noqa: PLC0415
+    from app.services.skill_version import activate_version
 
     await activate_version(
         db_session,
@@ -186,9 +183,7 @@ async def test_dispatch_skill_pack_patch_activates_version_only(
     assert v2_refresh.state == SkillPackVersionState.ACTIVE
 
 
-async def test_dispatch_skill_pack_edit_uses_same_handler_as_patch(
-    db_session, workspace, identity
-):
+async def test_dispatch_skill_pack_edit_uses_same_handler_as_patch(db_session, workspace, identity):
     pack = await _make_pack(db_session, workspace, slug="edited")
     version = await _make_version(db_session, workspace, pack, content_md="## edited\n")
     approval = await _make_pending_approval(
@@ -205,9 +200,7 @@ async def test_dispatch_skill_pack_edit_uses_same_handler_as_patch(
     assert result.audit_action == "evolver.applied_skill_pack_edit"
 
 
-async def test_dispatch_skill_pack_delete_archives_pack(
-    db_session, workspace, identity
-):
+async def test_dispatch_skill_pack_delete_archives_pack(db_session, workspace, identity):
     pack = await _make_pack(db_session, workspace, slug="to-delete")
     approval = await _make_pending_approval(
         db_session,
@@ -226,9 +219,7 @@ async def test_dispatch_skill_pack_delete_archives_pack(
     assert refreshed.state == SkillPackState.ARCHIVED
 
 
-async def test_dispatch_skill_pack_archive_uses_curator_audit(
-    db_session, workspace, identity
-):
+async def test_dispatch_skill_pack_archive_uses_curator_audit(db_session, workspace, identity):
     pack = await _make_pack(db_session, workspace, slug="curator-archive")
     approval = await _make_pending_approval(
         db_session,
@@ -279,9 +270,7 @@ async def test_dispatch_skill_pack_write_file_creates_or_updates_file(
     assert any(f.path == "scripts/run.sh" for f in files)
 
 
-async def test_dispatch_skill_pack_remove_file_soft_deletes_file(
-    db_session, workspace, identity
-):
+async def test_dispatch_skill_pack_remove_file_soft_deletes_file(db_session, workspace, identity):
     pack = await _make_pack(db_session, workspace, slug="file-removal")
     file_repo = SkillFileRepository(db_session)
     await file_repo.create(
@@ -303,22 +292,18 @@ async def test_dispatch_skill_pack_remove_file_soft_deletes_file(
         db_session, approval=approval, actor_identity_id=identity.id
     )
     assert result.audit_action == "evolver.applied_skill_pack_remove_file"
-    remaining = await file_repo.list_for_pack(
-        workspace_id=workspace.id, skill_pack_id=pack.id
-    )
+    remaining = await file_repo.list_for_pack(workspace_id=workspace.id, skill_pack_id=pack.id)
     assert all(f.path != "scripts/old.sh" for f in remaining)
     # ensure soft-delete row exists (deleted_at not NULL)
     raw = (
-        await db_session.execute(
-            select(SkillFile).where(SkillFile.skill_pack_id == pack.id)
-        )
-    ).scalars().all()
+        (await db_session.execute(select(SkillFile).where(SkillFile.skill_pack_id == pack.id)))
+        .scalars()
+        .all()
+    )
     assert any(f.deleted_at is not None and f.path == "scripts/old.sh" for f in raw)
 
 
-async def test_dispatch_flow_create_lands_disabled_flow(
-    db_session, workspace, agent, identity
-):
+async def test_dispatch_flow_create_lands_disabled_flow(db_session, workspace, agent, identity):
     approval = await _make_pending_approval(
         db_session,
         workspace,
@@ -350,9 +335,7 @@ async def test_dispatch_flow_create_lands_disabled_flow(
 
 
 # ─── Failure path × 1 (rollback contract) ────────────────────
-async def test_dispatch_invalid_body_raises_dispatch_error(
-    db_session, workspace, identity
-):
+async def test_dispatch_invalid_body_raises_dispatch_error(db_session, workspace, identity):
     """Missing version_id in a create proposal must raise DispatchError.
 
     The API layer relies on the raise to roll back the approve

@@ -41,24 +41,18 @@ def _require_workspace(workspace_id: uuid.UUID | None) -> uuid.UUID:
     return workspace_id
 
 
-async def _ensure_pack_in_workspace(
-    db, *, ws_id: uuid.UUID, pack_id: uuid.UUID
-):
+async def _ensure_pack_in_workspace(db, *, ws_id: uuid.UUID, pack_id: uuid.UUID):
     pack = await SkillPackRepository(db).get(pack_id, include_deleted=True)
     if pack is None or pack.workspace_id != ws_id:
         raise NotFound("skill_pack_not_found", code="skill_pack.not_found")
     return pack
 
 
-async def _load_version_or_404(
-    db, *, ws_id: uuid.UUID, pack_id: uuid.UUID, version_id: uuid.UUID
-):
+async def _load_version_or_404(db, *, ws_id: uuid.UUID, pack_id: uuid.UUID, version_id: uuid.UUID):
     pack = await _ensure_pack_in_workspace(db, ws_id=ws_id, pack_id=pack_id)
     row = await SkillPackVersionRepository(db).get(version_id)
     if row is None or row.workspace_id != ws_id or row.pack_id != pack.id:
-        raise NotFound(
-            "skill_pack_version_not_found", code="skill_version.not_found"
-        )
+        raise NotFound("skill_pack_version_not_found", code="skill_version.not_found")
     return row
 
 
@@ -86,9 +80,7 @@ async def verify_skill_version_now(
     """
     ws_id = _require_workspace(workspace_id)
     await ws_svc.ensure_admin(db, workspace_id=ws_id, identity_id=identity_id)
-    await _load_version_or_404(
-        db, ws_id=ws_id, pack_id=pack_id, version_id=version_id
-    )
+    await _load_version_or_404(db, ws_id=ws_id, pack_id=pack_id, version_id=version_id)
 
     result = await verifier_svc.verify_skill_version(
         db,
@@ -133,12 +125,8 @@ async def get_skill_version_validation(
     would force every version-list cell into a try/catch.
     """
     ws_id = _require_workspace(workspace_id)
-    await ws_svc.ensure_member_access(
-        db, workspace_id=ws_id, identity_id=identity_id
-    )
-    version = await _load_version_or_404(
-        db, ws_id=ws_id, pack_id=pack_id, version_id=version_id
-    )
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
+    version = await _load_version_or_404(db, ws_id=ws_id, pack_id=pack_id, version_id=version_id)
     payload: dict[str, Any] = dict(version.validation_results or {})
     return SkillVerifierValidationResponse(
         version_id=version.id,

@@ -77,13 +77,9 @@ async def _seed_pack(db_session, *, workspace_id: uuid.UUID, slug: str):
     return pack
 
 
-async def test_two_packs_inject_then_archive_drops_one(
-    db_session, workspace, identity
-):
+async def test_two_packs_inject_then_archive_drops_one(db_session, workspace, identity):
     p_keep = await _seed_pack(db_session, workspace_id=workspace.id, slug="keeper")
-    p_archive = await _seed_pack(
-        db_session, workspace_id=workspace.id, slug="will-archive"
-    )
+    p_archive = await _seed_pack(db_session, workspace_id=workspace.id, slug="will-archive")
     bound_ids = [str(p_keep.id), str(p_archive.id)]
 
     cap_initial, ids_initial = await skills_mod.build_skills_capability(
@@ -119,9 +115,7 @@ async def test_two_packs_inject_then_archive_drops_one(
 
 
 async def test_pin_overrides_stale_state(db_session, workspace, identity):
-    pack = await _seed_pack(
-        db_session, workspace_id=workspace.id, slug="will-stale"
-    )
+    pack = await _seed_pack(db_session, workspace_id=workspace.id, slug="will-stale")
     await lifecycle_svc.transition(
         db_session,
         pack_id=pack.id,
@@ -151,9 +145,7 @@ async def test_pin_overrides_stale_state(db_session, workspace, identity):
     assert ids == [pack.id]
 
 
-async def test_audit_row_exists_for_workspace_after_capture(
-    db_session, workspace, identity
-):
+async def test_audit_row_exists_for_workspace_after_capture(db_session, workspace, identity):
     """The ``skill.discovery_resolved`` audit is emitted by the runner's
     short-lived session inside ``_resolve_skills_for_run`` — the
     discovery primitive itself does not write audit because it has no
@@ -162,9 +154,7 @@ async def test_audit_row_exists_for_workspace_after_capture(
     column wiring round-trips through the same ``audit_events`` table
     the runner uses.
     """
-    pack = await _seed_pack(
-        db_session, workspace_id=workspace.id, slug="audit-pack"
-    )
+    pack = await _seed_pack(db_session, workspace_id=workspace.id, slug="audit-pack")
     await lifecycle_svc.transition(
         db_session,
         pack_id=pack.id,
@@ -179,11 +169,15 @@ async def test_audit_row_exists_for_workspace_after_capture(
     await db_session.flush()
 
     rows = (
-        await db_session.execute(
-            select(AuditEvent).where(
-                AuditEvent.workspace_id == workspace.id,
-                AuditEvent.resource_id == pack.id,
+        (
+            await db_session.execute(
+                select(AuditEvent).where(
+                    AuditEvent.workspace_id == workspace.id,
+                    AuditEvent.resource_id == pack.id,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert any("skill" in (r.action or "") for r in rows)

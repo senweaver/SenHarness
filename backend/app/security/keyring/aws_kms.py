@@ -59,9 +59,7 @@ class AwsKmsKeyring(Keyring):
                 "`pip install senharness-backend[kms-aws]`."
             )
         if not settings.AWS_KMS_KEY_ID:
-            raise KeyringError(
-                "AWS_KMS_KEY_ID is empty; set it to the CMK id / alias / arn."
-            )
+            raise KeyringError("AWS_KMS_KEY_ID is empty; set it to the CMK id / alias / arn.")
         region = settings.AWS_REGION or None
         # Let boto3 pick up credentials from the standard chain (env vars,
         # IRSA, instance profile, etc.) — we don't accept explicit creds here
@@ -94,13 +92,9 @@ class AwsKmsKeyring(Keyring):
         by a different provider."""
 
         if not kek_version.startswith("aws-"):
-            raise KeyringError(
-                f"KEK version {kek_version!r} was not sealed by AwsKmsKeyring."
-            )
+            raise KeyringError(f"KEK version {kek_version!r} was not sealed by AwsKmsKeyring.")
         try:
-            resp = self._client.decrypt(
-                CiphertextBlob=wrapped_dek, KeyId=self._key_id
-            )
+            resp = self._client.decrypt(CiphertextBlob=wrapped_dek, KeyId=self._key_id)
         except (BotoCoreError, ClientError) as e:
             log.warning("aws kms unwrap failed: %s", e)
             raise KeyringAccessError("AWS KMS Decrypt failed") from e

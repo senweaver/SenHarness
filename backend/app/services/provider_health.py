@@ -45,8 +45,8 @@ from typing import Any
 log = logging.getLogger(__name__)
 
 __all__ = [
-    "ProviderHealth",
     "FailureKind",
+    "ProviderHealth",
     "classify_exception",
     "get_health",
     "is_in_cooldown",
@@ -178,9 +178,7 @@ def _from_iso(value: Any) -> datetime | None:
         return None
 
 
-async def _read_redis(
-    redis: Any, key: str
-) -> dict[str, Any] | None:
+async def _read_redis(redis: Any, key: str) -> dict[str, Any] | None:
     try:
         raw = await redis.hgetall(key)
     except Exception as exc:  # pragma: no cover — degraded Redis path
@@ -227,9 +225,7 @@ async def _delete_redis(redis: Any, key: str) -> None:
         log.debug("provider_health redis delete failed key=%s err=%s", key, exc)
 
 
-def _hydrate(
-    *, provider_kind: str, model_id: str, raw: dict[str, Any]
-) -> ProviderHealth:
+def _hydrate(*, provider_kind: str, model_id: str, raw: dict[str, Any]) -> ProviderHealth:
     failures = 0
     try:
         failures = int(raw.get("consecutive_failures") or 0)
@@ -287,9 +283,7 @@ async def is_in_cooldown(
     model_id: str,
 ) -> bool:
     """Cheap predicate the chain resolver consults per attempt."""
-    health = await get_health(
-        redis, provider_kind=provider_kind, model_id=model_id
-    )
+    health = await get_health(redis, provider_kind=provider_kind, model_id=model_id)
     if health.cooldown_until is None:
         return False
     if health.cooldown_until <= _now():
@@ -318,9 +312,7 @@ async def record_failure(
     the same state on the next attempt.
     """
     key = _key(provider_kind, model_id)
-    current = await get_health(
-        redis, provider_kind=key[0], model_id=key[1]
-    )
+    current = await get_health(redis, provider_kind=key[0], model_id=key[1])
     new_failures = int(current.consecutive_failures) + 1
     threshold = max(1, int(cooldown_threshold))
     cooldown_until = current.cooldown_until
@@ -328,9 +320,7 @@ async def record_failure(
     if new_failures >= threshold:
         new_until = _now() + _seconds(int(cooldown_seconds))
         if cooldown_until is None or cooldown_until < new_until:
-            cooldown_just_started = (
-                cooldown_until is None or cooldown_until < _now()
-            )
+            cooldown_just_started = cooldown_until is None or cooldown_until < _now()
             cooldown_until = new_until
     snapshot = ProviderHealth(
         provider_kind=key[0],

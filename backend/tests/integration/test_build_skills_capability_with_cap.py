@@ -139,7 +139,9 @@ async def test_50_packs_capped_to_workspace_limit_writes_drops_and_audit(
                     SkillUsage.run_id == fake_run,
                 )
             )
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
     expected_dropped = {p.id for p in packs[10:]}
     assert dropped_pack_ids == expected_dropped
@@ -172,9 +174,7 @@ async def test_50_packs_capped_to_workspace_limit_writes_drops_and_audit(
     assert audit_row.metadata_json["max_active_injected"] == 10
 
 
-async def test_under_cap_writes_no_drops_and_no_cap_audit(
-    db_session, workspace, identity, agent
-):
+async def test_under_cap_writes_no_drops_and_no_cap_audit(db_session, workspace, identity, agent):
     """When every bound pack fits, neither telemetry channel should fire."""
     packs = await _seed_packs(db_session, workspace_id=workspace.id, n=3)
     bound_ids = [str(p.id) for p in packs]
@@ -218,9 +218,7 @@ async def test_under_cap_writes_no_drops_and_no_cap_audit(
     assert cap_audit_count == 0
 
 
-async def test_record_drops_false_skips_audit_writes(
-    db_session, workspace, identity, agent
-):
+async def test_record_drops_false_skips_audit_writes(db_session, workspace, identity, agent):
     """The escape hatch lets unit tests opt out of telemetry side effects."""
     workspace.home_config_json = {"skills": {"max_active_injected": 2}}
     await db_session.flush()

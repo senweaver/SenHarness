@@ -57,8 +57,7 @@ async def run_oapi_ws_stream(
         from lark_oapi.api.im.v1 import P2ImMessageReceiveV1  # noqa: F401
     except ImportError as e:  # pragma: no cover - SDK absent path
         raise RuntimeError(
-            "lark-oapi extra missing; install with "
-            "'pip install \".[channels-stream]\"'"
+            "lark-oapi extra missing; install with 'pip install \".[channels-stream]\"'"
         ) from e
 
     plain = getattr(channel, "_plain_config", None) or (channel.config_json or {})
@@ -94,11 +93,7 @@ async def run_oapi_ws_stream(
             sender = event.event.sender
             content_raw = msg.content or "{}"
             try:
-                content = (
-                    json.loads(content_raw)
-                    if isinstance(content_raw, str)
-                    else content_raw
-                )
+                content = json.loads(content_raw) if isinstance(content_raw, str) else content_raw
             except json.JSONDecodeError:
                 content = {}
             text = (content.get("text") or "").strip()
@@ -110,9 +105,7 @@ async def run_oapi_ws_stream(
             sid = getattr(sender, "sender_id", None) if sender else None
             if sid is not None:
                 sender_id = (
-                    getattr(sid, "open_id", None)
-                    or getattr(sid, "user_id", None)
-                    or "lark_user"
+                    getattr(sid, "open_id", None) or getattr(sid, "user_id", None) or "lark_user"
                 )
             inbound = InboundMessage(
                 thread_key=f"{domain}:{chat_id}:{root_id}",
@@ -194,9 +187,7 @@ async def run_oapi_ws_stream(
     # Wait for the thread to either reach client.start() or fail loop
     # setup. Without this the supervisor can't tell a credential typo
     # apart from a hung start.
-    await asyncio.get_running_loop().run_in_executor(
-        None, ws_thread_started.wait, 5.0
-    )
+    await asyncio.get_running_loop().run_in_executor(None, ws_thread_started.wait, 5.0)
     if "error" in ws_thread_error:
         raise RuntimeError(str(ws_thread_error["error"]))
 
@@ -218,8 +209,7 @@ async def run_oapi_ws_stream(
         while ws_thread.is_alive():
             if loop.time() >= deadline:
                 log.warning(
-                    "lark/feishu ws thread for channel %s did not exit in 2s; "
-                    "leaving as daemon",
+                    "lark/feishu ws thread for channel %s did not exit in 2s; leaving as daemon",
                     channel.id,
                 )
                 break

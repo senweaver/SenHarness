@@ -70,9 +70,7 @@ async def share_session(
     if shared_with:
         target = await _resolve_identity(db, shared_with)
         target_identity_id = target.id
-        existing = await repo.find_direct(
-            session_id=session_id, identity_id=target_identity_id
-        )
+        existing = await repo.find_direct(session_id=session_id, identity_id=target_identity_id)
         if existing is not None:
             # Re-share = update permission/expiry, keep the row id stable.
             return await repo.update(
@@ -159,9 +157,7 @@ async def list_shared_with_me(
     )
 
 
-async def get_by_token(
-    db: AsyncSession, *, token: str
-) -> tuple[SessionShare, SessionModel, list]:
+async def get_by_token(db: AsyncSession, *, token: str) -> tuple[SessionShare, SessionModel, list]:
     """Resolve a public token → (share, session, message rows). 404 / Gone otherwise."""
     if not token:
         raise NotFound("share_not_found", code="share.not_found")
@@ -174,9 +170,7 @@ async def get_by_token(
     sess = await SessionRepository(db).get(share.session_id)
     if sess is None or sess.deleted_at is not None:
         raise NotFound("session_not_found", code="session.not_found")
-    msgs = await MessageRepository(db).list_for_session(
-        session_id=sess.id, limit=500
-    )
+    msgs = await MessageRepository(db).list_for_session(session_id=sess.id, limit=500)
     return share, sess, list(msgs)
 
 
@@ -184,9 +178,7 @@ def _coerce_permission(perm: str) -> SharePermission:
     try:
         return SharePermission(perm)
     except ValueError as e:
-        raise ValidationFailed(
-            f"unknown permission '{perm}'", code="share.bad_permission"
-        ) from e
+        raise ValidationFailed(f"unknown permission '{perm}'", code="share.bad_permission") from e
 
 
 async def _resolve_identity(db: AsyncSession, selector: str) -> Identity:

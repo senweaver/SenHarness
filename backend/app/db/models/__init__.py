@@ -11,13 +11,6 @@ from app.db.models.api_key import ApiKey
 from app.db.models.approval import Approval, ApprovalResourceType, ApprovalStatus
 from app.db.models.attachment import Attachment, AttachmentKind
 from app.db.models.audit import AuditEvent
-from app.db.models.board_card import (
-    BOARD_CARD_COLUMN_VALUES,
-    BOARD_CARD_PRIORITY_VALUES,
-    BoardCard,
-    BoardCardColumn,
-    BoardCardPriority,
-)
 from app.db.models.auth_session import AuthSession
 from app.db.models.backend_adapter import (
     BackendAdapter,
@@ -29,6 +22,13 @@ from app.db.models.batch import (
     BatchRun,
     BatchRunCase,
     BatchRunStatus,
+)
+from app.db.models.board_card import (
+    BOARD_CARD_COLUMN_VALUES,
+    BOARD_CARD_PRIORITY_VALUES,
+    BoardCard,
+    BoardCardColumn,
+    BoardCardPriority,
 )
 from app.db.models.channel import Channel, ChannelKind
 from app.db.models.checkpoint import SessionCheckpoint
@@ -202,6 +202,10 @@ __all__ = [
     "SKILL_LINEAGE_EDGE_KIND_VALUES",
     "SKILL_PACK_VERSION_STATE_VALUES",
     "SOUL_DIMENSIONS",
+    "SUBAGENT_FINAL_OUTPUT_MAX_CHARS",
+    "USER_PROFILE_AUTO_INJECT_CONFIDENCE_THRESHOLD",
+    "USER_PROFILE_DIMENSIONS",
+    "USER_PROFILE_MAX_FACT_CHARS",
     "Agent",
     "AgentProfile",
     "AgentReport",
@@ -331,7 +335,6 @@ __all__ = [
     "SkillPackVersionState",
     "SkillUsage",
     "SkillUsageEventKind",
-    "SUBAGENT_FINAL_OUTPUT_MAX_CHARS",
     "Squad",
     "SquadMember",
     "SquadStar",
@@ -345,9 +348,6 @@ __all__ = [
     "ToolBinding",
     "ToolCallLog",
     "Toolbox",
-    "USER_PROFILE_AUTO_INJECT_CONFIDENCE_THRESHOLD",
-    "USER_PROFILE_DIMENSIONS",
-    "USER_PROFILE_MAX_FACT_CHARS",
     "UsageEvent",
     "UserProfileDimension",
     "UserProfileFact",

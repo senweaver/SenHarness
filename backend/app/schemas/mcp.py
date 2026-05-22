@@ -54,7 +54,7 @@ class McpOAuthConfig(ORMModel):
         return cleaned
 
     @model_validator(mode="after")
-    def _has_secret_source(self) -> "McpOAuthConfig":
+    def _has_secret_source(self) -> McpOAuthConfig:
         if not self.client_secret_ref and not self.client_secret:
             raise ValueError(
                 "either ``client_secret`` (one-time, rotates into vault) or "
@@ -100,7 +100,7 @@ class McpServerCreate(ORMModel):
     metadata_json: dict = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def _validate(self) -> "McpServerCreate":
+    def _validate(self) -> McpServerCreate:
         _validate_transport_payload(
             self.transport,
             url=self.url,
@@ -126,7 +126,7 @@ class McpServerUpdate(ORMModel):
     metadata_json: dict | None = None
 
     @model_validator(mode="after")
-    def _validate(self) -> "McpServerUpdate":
+    def _validate(self) -> McpServerUpdate:
         if self.transport is not None:
             _validate_transport_payload(
                 self.transport,

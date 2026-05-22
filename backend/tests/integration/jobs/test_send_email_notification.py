@@ -55,9 +55,7 @@ async def test_failing_transport_raises_and_terminal_failure_audits():
 
     class _BoomTransport:
         async def send(self, **kwargs):
-            return EmailDispatchResult(
-                ok=False, transport="boom", message_id=None, error="kaboom"
-            )
+            return EmailDispatchResult(ok=False, transport="boom", message_id=None, error="kaboom")
 
     set_email_transport(_BoomTransport())
 

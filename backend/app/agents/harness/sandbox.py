@@ -88,9 +88,7 @@ def active_backend_for(run_id: Any) -> Any | None:
     return _ACTIVE_BACKENDS.get(str(run_id))
 
 
-def build_sandbox(
-    *, policy: dict[str, Any] | None
-) -> tuple[Any | None, Any | None]:
+def build_sandbox(*, policy: dict[str, Any] | None) -> tuple[Any | None, Any | None]:
     """Return ``(capability, backend)`` — both ``None`` when sandbox disabled.
 
     Raises :class:`SandboxMisconfigured` if the requested policy is unsafe for

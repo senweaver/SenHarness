@@ -73,9 +73,7 @@ def _sign_plain_token(plain_token: str, event_ts: str, secret: str) -> str:
             Ed25519PrivateKey,
         )
     except ImportError as e:  # pragma: no cover
-        raise RuntimeError(
-            "qq provider requires the 'cryptography' package"
-        ) from e
+        raise RuntimeError("qq provider requires the 'cryptography' package") from e
 
     seed = _ed25519_seed_from_secret(secret)
     sk = Ed25519PrivateKey.from_private_bytes(seed)
@@ -84,9 +82,7 @@ def _sign_plain_token(plain_token: str, event_ts: str, secret: str) -> str:
     return sig.hex()
 
 
-def _verify_v2_signature(
-    *, secret: str, headers: dict[str, str], body: bytes
-) -> None:
+def _verify_v2_signature(*, secret: str, headers: dict[str, str], body: bytes) -> None:
     """Validate the V2 webhook signature header pair.
 
     The official spec passes:
@@ -113,9 +109,7 @@ def _verify_v2_signature(
             Ed25519PrivateKey,
         )
     except ImportError as e:  # pragma: no cover
-        raise SignatureInvalid(
-            "qq.crypto_missing", "cryptography library not available"
-        ) from e
+        raise SignatureInvalid("qq.crypto_missing", "cryptography library not available") from e
 
     try:
         seed = _ed25519_seed_from_secret(secret)
@@ -124,9 +118,7 @@ def _verify_v2_signature(
         msg = ts.encode("utf-8") + body
         pk.verify(bytes.fromhex(sig_hex), msg)
     except (ValueError, InvalidSignature) as e:
-        raise SignatureInvalid(
-            "qq.signature_mismatch", "QQ V2 signature mismatch"
-        ) from e
+        raise SignatureInvalid("qq.signature_mismatch", "QQ V2 signature mismatch") from e
 
 
 class QQBotProvider(ChannelProvider):

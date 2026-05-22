@@ -78,11 +78,7 @@ async def update_agent_profiles_sweep(ctx: dict[str, Any]) -> dict[str, Any]:
 
     async with factory() as db:
         workspace_ids = list(
-            (
-                await db.execute(
-                    select(Workspace.id).where(Workspace.deleted_at.is_(None))
-                )
-            )
+            (await db.execute(select(Workspace.id).where(Workspace.deleted_at.is_(None))))
             .scalars()
             .all()
         )
@@ -114,9 +110,7 @@ async def _list_agents(*, workspace_id: uuid.UUID) -> list[uuid.UUID]:
         return list(rows.scalars().all())
 
 
-async def _run_one(
-    *, workspace_id: uuid.UUID, agent_id: uuid.UUID
-) -> dict[str, Any]:
+async def _run_one(*, workspace_id: uuid.UUID, agent_id: uuid.UUID) -> dict[str, Any]:
     """Update one (workspace, agent) pair inside a fresh session."""
     factory = get_session_factory()
     try:
@@ -142,9 +136,7 @@ async def _run_one(
             workspace_id,
             agent_id,
         )
-        await _audit_per_agent_failure(
-            workspace_id=workspace_id, agent_id=agent_id, exc=exc
-        )
+        await _audit_per_agent_failure(workspace_id=workspace_id, agent_id=agent_id, exc=exc)
         return {
             "status": "failed",
             "workspace_id": str(workspace_id),
@@ -184,9 +176,7 @@ async def _audit_per_agent_failure(
         )
 
 
-async def on_agent_profile_job_failed_permanent(
-    ctx: dict[str, Any], exc: BaseException
-) -> None:
+async def on_agent_profile_job_failed_permanent(ctx: dict[str, Any], exc: BaseException) -> None:
     """ARQ hook for ``update_agent_profiles_sweep`` exhausting its retries."""
     factory = get_session_factory()
     try:
@@ -198,13 +188,9 @@ async def on_agent_profile_job_failed_permanent(
                 workspace_id=None,
                 resource_type="job",
                 resource_id=None,
-                summary=(
-                    f"update_agent_profiles_sweep failed permanently: {exc!r}"
-                ),
+                summary=(f"update_agent_profiles_sweep failed permanently: {exc!r}"),
                 metadata={
-                    "function": str(
-                        ctx.get("function") or AGENT_PROFILE_SWEEP_NAME
-                    ),
+                    "function": str(ctx.get("function") or AGENT_PROFILE_SWEEP_NAME),
                     "job_id": ctx.get("job_id"),
                     "exception": repr(exc),
                     "job_try": ctx.get("job_try"),

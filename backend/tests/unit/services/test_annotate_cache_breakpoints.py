@@ -115,9 +115,7 @@ def test_openai_noop_returns_input_identity():
         {"role": "system", "content": "x" * 8000},
         {"role": "user", "content": "y" * 4000},
     ]
-    out = cache_ctl.annotate_cache_breakpoints(
-        msgs, provider_kind="openai", min_prompt_tokens=128
-    )
+    out = cache_ctl.annotate_cache_breakpoints(msgs, provider_kind="openai", min_prompt_tokens=128)
     assert out is msgs
 
 
@@ -143,9 +141,7 @@ def test_max_breakpoints_enforced():
     # 6 system messages — only 4 markers should be placed (default
     # max_breakpoints, with the cap also bounded by the profile's
     # provider-side limit of 4).
-    msgs = [
-        {"role": "system", "content": "x" * 1000} for _ in range(6)
-    ]
+    msgs = [{"role": "system", "content": "x" * 1000} for _ in range(6)]
     msgs.append({"role": "user", "content": "fin"})
     out = cache_ctl.annotate_cache_breakpoints(
         msgs,
@@ -164,9 +160,7 @@ def test_max_breakpoints_enforced():
 
 
 def test_max_breakpoints_below_provider_limit():
-    msgs = [
-        {"role": "system", "content": "x" * 1000} for _ in range(5)
-    ]
+    msgs = [{"role": "system", "content": "x" * 1000} for _ in range(5)]
     msgs.append({"role": "user", "content": "fin"})
     out = cache_ctl.annotate_cache_breakpoints(
         msgs,
@@ -194,9 +188,7 @@ def test_build_anthropic_cache_settings_default_5m():
 
 
 def test_build_anthropic_cache_settings_extended_1h():
-    s = cache_ctl.build_anthropic_cache_settings(
-        ttl=cache_ctl.CacheTtl.EXTENDED_1H
-    )
+    s = cache_ctl.build_anthropic_cache_settings(ttl=cache_ctl.CacheTtl.EXTENDED_1H)
     assert s.cache_tool_definitions == "1h"
     assert "extended-cache-ttl-2025-04-11" in s.betas
 

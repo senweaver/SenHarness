@@ -83,9 +83,7 @@ async def seed_defaults(session: AsyncSession) -> list[str]:
         system_workspace_id=sys_ws_id,
         system_identity_id=sys_identity.id,
     )
-    log.append(
-        f"[green]+ Templates[/green] {created} 新增 / {updated} 更新 (内置智能体)"
-    )
+    log.append(f"[green]+ Templates[/green] {created} 新增 / {updated} 更新 (内置智能体)")
 
     # 1) Demo identity if missing
     ident_repo = IdentityRepository(session)
@@ -141,11 +139,10 @@ async def seed_defaults(session: AsyncSession) -> list[str]:
     # 3) Default Agent — delegated to agent_svc so create_workspace and the
     #    alembic backfill use the exact same definition.
     name = agent_svc.default_agent_name()
-    await agent_svc.ensure_default_agent(
-        session, workspace_id=workspace.id, created_by=identity.id
-    )
+    await agent_svc.ensure_default_agent(session, workspace_id=workspace.id, created_by=identity.id)
     log.append(
-        f"[green]+ Agent[/green] {name}" if workspace_was_created
+        f"[green]+ Agent[/green] {name}"
+        if workspace_was_created
         else f"[cyan]= Agent[/cyan] {name}"
     )
 

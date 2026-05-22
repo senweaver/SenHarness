@@ -329,9 +329,7 @@ async def get_notification_settings(db: AsyncSession) -> dict[str, Any]:
     :mod:`app.services.system_settings` when the row is missing — any
     key the operator hasn't set yet still resolves to the safe default.
     """
-    raw = await get_system_setting(
-        db, SystemSettingKey.NOTIFICATION_DEFAULTS, default=None
-    )
+    raw = await get_system_setting(db, SystemSettingKey.NOTIFICATION_DEFAULTS, default=None)
     if isinstance(raw, dict):
         return raw
     return {}
@@ -350,9 +348,7 @@ def _dedup_key(
     return f"notif_dedup:{event_key}:{ws_part}:{target_label}:{res_part}"
 
 
-async def _claim_cooldown(
-    *, key: str, ttl_seconds: int
-) -> bool:
+async def _claim_cooldown(*, key: str, ttl_seconds: int) -> bool:
     """Best-effort Redis dedup. Returns True when this caller wins.
 
     Uses ``SET NX EX`` so concurrent callers race for the slot. When
@@ -407,11 +403,7 @@ async def _resolve_targets(
         stmt = (
             select(Membership.identity_id)
             .where(Membership.workspace_id == workspace_id)
-            .where(
-                Membership.role.in_(
-                    [BuiltinRole.OWNER.value, BuiltinRole.ADMIN.value]
-                )
-            )
+            .where(Membership.role.in_([BuiltinRole.OWNER.value, BuiltinRole.ADMIN.value]))
             .where(Membership.status == MembershipStatus.ACTIVE)
             .where(Membership.deleted_at.is_(None))
         )
@@ -441,9 +433,7 @@ async def _resolve_targets(
 
 
 # ── Preference merging ──────────────────────────────────────
-def _read_identity_prefs(
-    identity: Identity, event_key: str
-) -> dict[str, Any]:
+def _read_identity_prefs(identity: Identity, event_key: str) -> dict[str, Any]:
     raw = getattr(identity, "notification_prefs_json", None) or {}
     if not isinstance(raw, dict):
         return {}
@@ -568,9 +558,7 @@ async def emit_event(
 
         identities = await _load_identities(db, identity_ids=targets)
         platform_settings = await get_notification_settings(db)
-        critical_only = bool(
-            platform_settings.get("platform_email_critical_only", True)
-        )
+        critical_only = bool(platform_settings.get("platform_email_critical_only", True))
 
         for identity in identities:
             if _is_globally_muted(identity):
@@ -592,9 +580,7 @@ async def emit_event(
                 target_label=target_label,
                 cooldown_resource_id=cooldown_resource_id,
             )
-            if not await _claim_cooldown(
-                key=cooldown_key, ttl_seconds=descriptor.cooldown_seconds
-            ):
+            if not await _claim_cooldown(key=cooldown_key, ttl_seconds=descriptor.cooldown_seconds):
                 counters["cooldown_skipped"] += 1
                 continue
 
@@ -637,10 +623,7 @@ async def emit_event(
                 workspace_id=workspace_id,
                 resource_type="notification_event",
                 resource_id=None,
-                summary=(
-                    f"{counters['cooldown_skipped']} dedup hits for "
-                    f"{event_key}"
-                ),
+                summary=(f"{counters['cooldown_skipped']} dedup hits for {event_key}"),
                 metadata={
                     "event_key": event_key,
                     "count_in_window": counters["cooldown_skipped"],
@@ -701,9 +684,7 @@ async def _dispatch(
     level = _URGENCY_TO_LEVEL[descriptor.default_urgency]
 
     if NotificationChannel.IN_APP in channels:
-        ws_for_row = workspace_id or _fallback_workspace_for_identity(
-            db_identity=identity
-        )
+        ws_for_row = workspace_id or _fallback_workspace_for_identity(db_identity=identity)
         if ws_for_row is None:
             ws_for_row = await _resolve_any_workspace_for(db, identity.id)
         if ws_for_row is not None:
@@ -743,14 +724,11 @@ async def _dispatch(
                     "message_key": descriptor.message_key,
                     "payload": payload,
                     "urgency": descriptor.default_urgency.value,
-                    "workspace_id": (
-                        str(workspace_id) if workspace_id else None
-                    ),
+                    "workspace_id": (str(workspace_id) if workspace_id else None),
                     "idempotency_key": _email_idempotency_key(
                         event_key=descriptor.key,
                         identity_id=identity.id,
-                        cooldown_seed=payload.get("cooldown_resource_id")
-                        or "",
+                        cooldown_seed=payload.get("cooldown_resource_id") or "",
                     ),
                     "subject_fallback": title,
                     "body_fallback": body,
@@ -778,9 +756,7 @@ def _fallback_workspace_for_identity(*, db_identity: Identity) -> uuid.UUID | No
     return None
 
 
-async def _resolve_any_workspace_for(
-    db: AsyncSession, identity_id: uuid.UUID
-) -> uuid.UUID | None:
+async def _resolve_any_workspace_for(db: AsyncSession, identity_id: uuid.UUID) -> uuid.UUID | None:
     stmt = (
         select(Membership.workspace_id)
         .where(Membership.identity_id == identity_id)
@@ -809,9 +785,7 @@ def _render_template(key: str, payload: dict[str, Any]) -> str:
         return template_text
 
 
-def _email_idempotency_key(
-    *, event_key: str, identity_id: uuid.UUID, cooldown_seed: str
-) -> str:
+def _email_idempotency_key(*, event_key: str, identity_id: uuid.UUID, cooldown_seed: str) -> str:
     raw = f"{event_key}:{identity_id}:{cooldown_seed}".encode()
     return hashlib.sha256(raw).hexdigest()[:32]
 

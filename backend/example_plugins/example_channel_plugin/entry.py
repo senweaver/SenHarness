@@ -41,13 +41,9 @@ class TestChannelProvider(ChannelProvider):
             default_mode="webhook",
         )
 
-    async def parse_inbound(
-        self, payload: dict, headers: dict
-    ) -> InboundMessage | None:
+    async def parse_inbound(self, payload: dict, headers: dict) -> InboundMessage | None:
         text = str(payload.get("user_text") or payload.get("text") or "").strip()
-        thread_key = str(
-            payload.get("thread_key") or payload.get("thread_id") or "default"
-        )
+        thread_key = str(payload.get("thread_key") or payload.get("thread_id") or "default")
         if not text:
             return None
         return InboundMessage(

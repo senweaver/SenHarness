@@ -38,7 +38,9 @@ def _make_task(idx: int) -> subagents_svc.SubAgentTask:
     )
 
 
-async def _stub_child(*, task: subagents_svc.SubAgentTask, **_: Any) -> subagents_svc.SubAgentResult:
+async def _stub_child(
+    *, task: subagents_svc.SubAgentTask, **_: Any
+) -> subagents_svc.SubAgentResult:
     return subagents_svc.SubAgentResult(
         task_id=task.task_id,
         child_run_id=uuid.uuid4(),

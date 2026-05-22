@@ -63,11 +63,7 @@ _JOB_RUNS_SUCCESS_TTL = timedelta(days=60)
 # ── Watermark accessors ───────────────────────────────────────
 async def _ensure_watermark(db, scope: RetentionScopeKind) -> RetentionWatermark:
     row = (
-        await db.execute(
-            select(RetentionWatermark).where(
-                RetentionWatermark.scope_kind == scope
-            )
-        )
+        await db.execute(select(RetentionWatermark).where(RetentionWatermark.scope_kind == scope))
     ).scalar_one_or_none()
     if row is not None:
         return row
@@ -115,9 +111,7 @@ async def retention_sweep_cascade(ctx: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
-async def _sweep_scope(
-    *, scope: RetentionScopeKind, batch_size: int
-) -> dict[str, Any]:
+async def _sweep_scope(*, scope: RetentionScopeKind, batch_size: int) -> dict[str, Any]:
     """Fetch the next batch for one scope and cascade row-by-row.
 
     Each row is its own transaction-style commit so a single failure
@@ -149,9 +143,7 @@ async def _sweep_scope(
             break
 
         for scope_id, deleted_at in pending:
-            ok, rows = await _cascade_one_with_retry(
-                scope=scope, scope_id=scope_id
-            )
+            ok, rows = await _cascade_one_with_retry(scope=scope, scope_id=scope_id)
             if ok:
                 swept += 1
                 rows_total += rows
@@ -195,24 +187,18 @@ async def _cascade_one_with_retry(
         try:
             async with factory() as db:
                 if scope == RetentionScopeKind.IDENTITY:
-                    affected = await retention_svc.cascade_for_identity(
-                        db, identity_id=scope_id
-                    )
+                    affected = await retention_svc.cascade_for_identity(db, identity_id=scope_id)
                 else:
-                    affected = await retention_svc.cascade_for_workspace(
-                        db, workspace_id=scope_id
-                    )
+                    affected = await retention_svc.cascade_for_workspace(db, workspace_id=scope_id)
                 total = sum(affected.values())
                 await audit_svc.record(
                     db,
                     action="data.cascade_soft_delete",
                     actor_identity_id=None,
-                    workspace_id=(
-                        scope_id
-                        if scope == RetentionScopeKind.WORKSPACE
-                        else None
+                    workspace_id=(scope_id if scope == RetentionScopeKind.WORKSPACE else None),
+                    resource_type=(
+                        "identity" if scope == RetentionScopeKind.IDENTITY else "workspace"
                     ),
-                    resource_type=("identity" if scope == RetentionScopeKind.IDENTITY else "workspace"),
                     resource_id=None,
                     summary=(
                         f"cascade {scope.value} {retention_svc.scope_id_hash(scope_id)} "
@@ -242,9 +228,7 @@ async def _cascade_one_with_retry(
                 db,
                 action="job.failed_permanent",
                 actor_identity_id=None,
-                workspace_id=(
-                    scope_id if scope == RetentionScopeKind.WORKSPACE else None
-                ),
+                workspace_id=(scope_id if scope == RetentionScopeKind.WORKSPACE else None),
                 resource_type="retention_sweep_cascade",
                 resource_id=None,
                 summary=(
@@ -393,9 +377,7 @@ async def retention_physical_purge(ctx: dict[str, Any]) -> dict[str, Any]:
 
 
 # ── Permanent-failure hook ───────────────────────────────────
-async def on_retention_job_failed_permanent(
-    ctx: dict[str, Any], exc: BaseException
-) -> None:
+async def on_retention_job_failed_permanent(ctx: dict[str, Any], exc: BaseException) -> None:
     """ARQ ``on_job_end`` integration: log a permanent failure once."""
     try:
         function_name = ctx.get("function") or "retention"
@@ -429,9 +411,7 @@ async def on_retention_job_failed_permanent(
                     },
                 )
             except Exception:  # pragma: no cover
-                log.exception(
-                    "notify job.failed_permanent failed for %s", function_name
-                )
+                log.exception("notify job.failed_permanent failed for %s", function_name)
             await db.commit()
     except Exception:  # pragma: no cover
         log.exception("retention permanent-failure hook crashed")

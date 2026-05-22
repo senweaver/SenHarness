@@ -140,8 +140,7 @@ def parse_vault_ref(ref: str) -> tuple[str, str]:
         )
     if scope != "workspace":
         raise SshConfigInvalid(
-            f"vault scope {scope!r} is not allowed for SSH keys; only "
-            "'workspace' is supported",
+            f"vault scope {scope!r} is not allowed for SSH keys; only 'workspace' is supported",
             code="sandbox.ssh_config_invalid",
             extras={"reason": "scope_not_allowed", "scope": scope},
         )
@@ -169,22 +168,17 @@ async def _ssh_backend_enabled(db: AsyncSession) -> bool:
             get_section,
         )
 
-        section = await get_section(
-            db, section=PlatformSettingsSection.SECURITY_SANDBOX
-        )
+        section = await get_section(db, section=PlatformSettingsSection.SECURITY_SANDBOX)
     except Exception as exc:
         log.warning(
-            "ssh sandbox: platform_settings read failed (%s); "
-            "treating allow_ssh_backend as False",
+            "ssh sandbox: platform_settings read failed (%s); treating allow_ssh_backend as False",
             exc,
         )
         return False
     return bool(getattr(section, "allow_ssh_backend", False))
 
 
-async def assert_ssh_backend_allowed(
-    db: AsyncSession, *, workspace_id: uuid.UUID
-) -> None:
+async def assert_ssh_backend_allowed(db: AsyncSession, *, workspace_id: uuid.UUID) -> None:
     """Raise :class:`SandboxKindDisabled` when the platform admin has
     not enabled the SSH backend. Writes a single audit row so the
     operator sees attempted use even when the config never gets off
@@ -223,11 +217,7 @@ def validate_runtime_config(config: SshSandboxConfig) -> None:
     standalone function so unit tests can exercise it without touching
     the platform-settings store.
     """
-    if (
-        config.execute
-        and _is_production()
-        and not config.command_allowlist
-    ):
+    if config.execute and _is_production() and not config.command_allowlist:
         raise SshConfigInvalid(
             "In production, sandbox 'kind=ssh' with 'execute=True' "
             "requires a non-empty command_allowlist",
@@ -430,12 +420,8 @@ class SshConnection:
                     resource_id=None,
                     summary=f"resolved private key {key!r} for ssh sandbox",
                     metadata={
-                        "workspace_id_hash": _hash_for_audit(
-                            str(self.workspace_id)
-                        ),
-                        "key_ref_hash": _hash_for_audit(
-                            self.config.private_key_ref
-                        ),
+                        "workspace_id_hash": _hash_for_audit(str(self.workspace_id)),
+                        "key_ref_hash": _hash_for_audit(self.config.private_key_ref),
                     },
                 )
                 await db.commit()
@@ -446,9 +432,7 @@ class SshConnection:
             private_key = asyncssh.import_private_key(pem.encode("utf-8"))
             known_hosts = asyncssh.import_known_hosts(self.config.known_hosts_pin)
         except Exception as exc:
-            raise _SshSetupFailed(
-                f"failed to import ssh credentials ({exc!s})"
-            ) from exc
+            raise _SshSetupFailed(f"failed to import ssh credentials ({exc!s})") from exc
 
         try:
             self._conn = await asyncio.wait_for(
@@ -528,9 +512,7 @@ class SshConnection:
                     workspace_id=self.workspace_id,
                     resource_type="sandbox",
                     resource_id=None,
-                    summary=(
-                        f"host key mismatch for {self.config.user}@{self.config.host}"
-                    ),
+                    summary=(f"host key mismatch for {self.config.user}@{self.config.host}"),
                     metadata={
                         "host": self.config.host,
                         "port": self.config.port,
@@ -561,11 +543,7 @@ class SshConnection:
            stdout/stderr (truncated), and write a single
            ``sandbox.ssh_command_executed`` audit row.
         """
-        require = (
-            self.config.require_approval
-            if require_approval is None
-            else require_approval
-        )
+        require = self.config.require_approval if require_approval is None else require_approval
         cmd_timeout = timeout or self.config.command_timeout_seconds
 
         if not _command_in_allowlist(command, self.config.command_allowlist):
@@ -611,9 +589,7 @@ class SshConnection:
                 timeout=cmd_timeout,
             )
         except TimeoutError as exc:
-            raise _SshSetupFailed(
-                f"ssh command timed out after {cmd_timeout}s"
-            ) from exc
+            raise _SshSetupFailed(f"ssh command timed out after {cmd_timeout}s") from exc
 
         duration_ms = int((time.monotonic() - started) * 1000)
         stdout = _truncate(result.stdout)
@@ -655,26 +631,20 @@ class SshConnection:
                     workspace_id=self.workspace_id,
                     resource_type="sandbox",
                     resource_id=approval_id,
-                    summary=_command_summary(
-                        self.config.host, self.config.user, command
-                    ),
+                    summary=_command_summary(self.config.host, self.config.user, command),
                     metadata={
                         "host": self.config.host,
                         "user": self.config.user,
                         "exit_code": exit_code,
                         "duration_ms": duration_ms,
-                        "approval_id": (
-                            str(approval_id) if approval_id else None
-                        ),
+                        "approval_id": (str(approval_id) if approval_id else None),
                     },
                 )
                 await db.commit()
         except Exception:  # pragma: no cover
             log.exception("audit ssh_command_executed failed")
 
-    async def _audit_command_rejected(
-        self, *, command: str, reason: str
-    ) -> None:
+    async def _audit_command_rejected(self, *, command: str, reason: str) -> None:
         try:
             async with get_session_factory()() as db:
                 await audit_svc.record(
@@ -684,9 +654,7 @@ class SshConnection:
                     workspace_id=self.workspace_id,
                     resource_type="sandbox",
                     resource_id=None,
-                    summary=_command_summary(
-                        self.config.host, self.config.user, command
-                    ),
+                    summary=_command_summary(self.config.host, self.config.user, command),
                     metadata={
                         "host": self.config.host,
                         "user": self.config.user,
@@ -849,11 +817,11 @@ def _truncate(text: str | bytes | None) -> str:
 
 
 __all__ = [
+    "VAULT_REF_PREFIX",
     "SshCommandResult",
     "SshConnection",
     "SshSandbox",
     "SshSandboxConfig",
-    "VAULT_REF_PREFIX",
     "assert_ssh_backend_allowed",
     "build_ssh_sandbox",
     "parse_vault_ref",

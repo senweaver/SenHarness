@@ -104,10 +104,7 @@ class AgentRepository(AsyncRepository[Agent]):
             .limit(limit)
         )
         rows = (await self.session.execute(stmt)).all()
-        return [
-            (row[0], row[1], int(row[2] or 0), bool(row[3]), bool(row[4]))
-            for row in rows
-        ]
+        return [(row[0], row[1], int(row[2] or 0), bool(row[3]), bool(row[4])) for row in rows]
 
     async def list_public_for_discovery(
         self,
@@ -155,25 +152,15 @@ class AgentRepository(AsyncRepository[Agent]):
         )
         if q:
             like = f"%{q.strip()}%"
-            stmt = stmt.where(
-                (Agent.name.ilike(like)) | (Agent.description.ilike(like))
-            )
+            stmt = stmt.where((Agent.name.ilike(like)) | (Agent.description.ilike(like)))
         if category:
-            stmt = stmt.where(
-                Agent.metadata_json["category"].astext == category
-            )
+            stmt = stmt.where(Agent.metadata_json["category"].astext == category)
         if tag:
             # ``tags @> '["foo"]'``  — true when the JSONB array contains
             # the literal tag string.
-            stmt = stmt.where(
-                Agent.metadata_json["tags"].contains(
-                    type_coerce([tag], JSONB)
-                )
-            )
+            stmt = stmt.where(Agent.metadata_json["tags"].contains(type_coerce([tag], JSONB)))
         if template_only:
-            stmt = stmt.where(
-                Agent.metadata_json["template"] == type_coerce(True, JSONB)
-            )
+            stmt = stmt.where(Agent.metadata_json["template"] == type_coerce(True, JSONB))
         stmt = (
             stmt.order_by(
                 desc(func.coalesce(star_count.c.stars, 0)),

@@ -195,9 +195,7 @@ async def delete_channel(
     except Exception:  # pragma: no cover
         import logging
 
-        logging.getLogger(__name__).exception(
-            "stop_channel for %s after delete failed", channel_id
-        )
+        logging.getLogger(__name__).exception("stop_channel for %s after delete failed", channel_id)
 
 
 @router.get("/{channel_id}/status")
@@ -241,13 +239,9 @@ async def channel_status(
         response.update(
             {
                 "connected": st.connected,
-                "last_event_at": (
-                    st.last_event_at.isoformat() if st.last_event_at else None
-                ),
+                "last_event_at": (st.last_event_at.isoformat() if st.last_event_at else None),
                 "last_error": st.last_error,
-                "started_at": (
-                    st.started_at.isoformat() if st.started_at else None
-                ),
+                "started_at": (st.started_at.isoformat() if st.started_at else None),
                 "reconnect_attempts": st.reconnect_attempts,
             }
         )
@@ -339,9 +333,7 @@ async def poll_wechat_qr_login(
     return result
 
 
-@router.delete(
-    "/{channel_id}/wechat/session", status_code=status.HTTP_204_NO_CONTENT
-)
+@router.delete("/{channel_id}/wechat/session", status_code=status.HTTP_204_NO_CONTENT)
 async def logout_wechat_session(
     channel_id: uuid.UUID,
     db: DBSession,
@@ -386,5 +378,3 @@ async def rotate_token(
     )
     await db.commit()
     return _present(ch)
-
-

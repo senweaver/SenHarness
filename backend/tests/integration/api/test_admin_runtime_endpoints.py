@@ -83,9 +83,7 @@ async def _seed_inflight(
     return sess.id, run_id
 
 
-async def _new_member(
-    async_client, *, role: str, workspace_id: uuid.UUID
-) -> uuid.UUID:
+async def _new_member(async_client, *, role: str, workspace_id: uuid.UUID) -> uuid.UUID:
     factory = get_session_factory()
     from app.services import auth as auth_svc
 
@@ -130,9 +128,7 @@ async def _make_workspace(async_client) -> tuple[uuid.UUID, uuid.UUID]:
 # ─── List ────────────────────────────────────────────────────
 async def test_list_inflight_runs_happy_path(async_client):
     ws_id, owner_id = await _make_workspace(async_client)
-    _, run_id = await _seed_inflight(
-        workspace_id=ws_id, identity_id=owner_id
-    )
+    _, run_id = await _seed_inflight(workspace_id=ws_id, identity_id=owner_id)
 
     resp = await async_client.get(
         "/api/v1/admin/runtime/inflight-runs",
@@ -149,9 +145,7 @@ async def test_list_inflight_runs_happy_path(async_client):
 
 async def test_list_inflight_runs_filters_by_state(async_client):
     ws_id, owner_id = await _make_workspace(async_client)
-    _, running_id = await _seed_inflight(
-        workspace_id=ws_id, identity_id=owner_id
-    )
+    _, running_id = await _seed_inflight(workspace_id=ws_id, identity_id=owner_id)
     _, zombie_id = await _seed_inflight(
         workspace_id=ws_id,
         identity_id=owner_id,
@@ -173,9 +167,7 @@ async def test_list_inflight_runs_filters_by_state(async_client):
 
 async def test_list_inflight_runs_member_role_returns_403(async_client):
     ws_id, _owner_id = await _make_workspace(async_client)
-    member_id = await _new_member(
-        async_client, role=BuiltinRole.MEMBER.value, workspace_id=ws_id
-    )
+    member_id = await _new_member(async_client, role=BuiltinRole.MEMBER.value, workspace_id=ws_id)
 
     resp = await async_client.get(
         "/api/v1/admin/runtime/inflight-runs",
@@ -234,9 +226,7 @@ async def test_stats_endpoint_returns_counter_shape(async_client):
 # ─── Force recycle ───────────────────────────────────────────
 async def test_force_recycle_happy_path(async_client, monkeypatch):
     ws_id, owner_id = await _make_workspace(async_client)
-    _, run_id = await _seed_inflight(
-        workspace_id=ws_id, identity_id=owner_id
-    )
+    _, run_id = await _seed_inflight(workspace_id=ws_id, identity_id=owner_id)
 
     cancelled: list[str] = []
 
@@ -269,13 +259,17 @@ async def test_force_recycle_happy_path(async_client, monkeypatch):
         assert row.error_kind == "admin_force_recycle"
 
         audit = (
-            await db.execute(
-                select(AuditEvent).where(
-                    AuditEvent.action == "inflight_run.force_recycled",
-                    AuditEvent.workspace_id == ws_id,
+            (
+                await db.execute(
+                    select(AuditEvent).where(
+                        AuditEvent.action == "inflight_run.force_recycled",
+                        AuditEvent.workspace_id == ws_id,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(audit) >= 1
 
 
@@ -291,12 +285,8 @@ async def test_force_recycle_unknown_run_returns_404(async_client):
 
 async def test_force_recycle_member_role_returns_403(async_client):
     ws_id, owner_id = await _make_workspace(async_client)
-    member_id = await _new_member(
-        async_client, role=BuiltinRole.MEMBER.value, workspace_id=ws_id
-    )
-    _, run_id = await _seed_inflight(
-        workspace_id=ws_id, identity_id=owner_id
-    )
+    member_id = await _new_member(async_client, role=BuiltinRole.MEMBER.value, workspace_id=ws_id)
+    _, run_id = await _seed_inflight(workspace_id=ws_id, identity_id=owner_id)
 
     resp = await async_client.post(
         f"/api/v1/admin/runtime/inflight-runs/{run_id}/force-recycle",
@@ -326,9 +316,7 @@ async def test_force_recycle_rate_limited(async_client, monkeypatch):
 
     statuses: list[int] = []
     for _ in range(8):
-        _, run_id = await _seed_inflight(
-            workspace_id=ws_id, identity_id=owner_id
-        )
+        _, run_id = await _seed_inflight(workspace_id=ws_id, identity_id=owner_id)
         resp = await async_client.post(
             f"/api/v1/admin/runtime/inflight-runs/{run_id}/force-recycle",
             headers=_bearer(owner_id, workspace_id=ws_id),
