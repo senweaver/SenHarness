@@ -31,9 +31,12 @@ pytestmark = pytest.mark.asyncio
 
 
 def _share_session_factory(monkeypatch, db_session) -> None:
+    lock = asyncio.Lock()
+
     @asynccontextmanager
     async def _ctx():
-        yield db_session
+        async with lock:
+            yield db_session
 
     monkeypatch.setattr("app.db.session.get_session_factory", lambda: _ctx)
 

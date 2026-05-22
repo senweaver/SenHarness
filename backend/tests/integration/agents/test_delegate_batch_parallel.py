@@ -54,11 +54,18 @@ def _share_session_factory(monkeypatch, db_session) -> None:
     """Reroute every short-lived session opened by ``subagents.py`` and
     its lifecycle helpers through the test's ``db_session`` so the
     spine rows land where the test assertions can read them.
+
+    A lock serializes DB access: ``delegate_batch`` runs children
+    concurrently but lifecycle hooks each ``commit()`` on the shared
+    session — SQLAlchemy ``AsyncSession`` is not safe for overlapping
+    use from multiple tasks.
     """
+    lock = asyncio.Lock()
 
     @asynccontextmanager
     async def _ctx():
-        yield db_session
+        async with lock:
+            yield db_session
 
     def _factory():
         return _ctx
