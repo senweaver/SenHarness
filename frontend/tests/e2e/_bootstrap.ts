@@ -56,9 +56,10 @@ export async function bootstrapPersonalIdentity(
                 id: string;
                 slug: string;
             }>;
-            if (arr.length > 0) {
-                workspaceId = arr[0].id;
-                workspaceSlug = arr[0].slug;
+            const [first] = arr;
+            if (first) {
+                workspaceId = first.id;
+                workspaceSlug = first.slug;
             }
         }
     }
@@ -135,9 +136,10 @@ export async function loginAdmin(
             id: string;
             slug: string;
         }>;
-        if (arr.length > 0) {
-            workspaceId = arr[0].id;
-            workspaceSlug = arr[0].slug;
+        const [first] = arr;
+        if (first) {
+            workspaceId = first.id;
+            workspaceSlug = first.slug;
         }
     }
 

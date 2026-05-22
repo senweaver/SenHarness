@@ -106,7 +106,7 @@ export default function CrossPlatformSettingsPage() {
                       })}
                     </p>
                   </div>
-                  <Badge variant="secondary">
+                  <Badge variant="outline">
                     {t("threads.idShort", { id: it.id.slice(0, 8) })}
                   </Badge>
                 </li>

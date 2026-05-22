@@ -5,9 +5,8 @@ name: ci
 #   * backend     · pytest unit + integration, with real Postgres + Redis
 #   * frontend    · vitest, typecheck, next build
 #
-# Playwright E2E lives in `ci-e2e.yml` (nightly) to keep PR cycle
-# time down — E2E against a full compose stack is slow and flaky by
-# nature, so it doesn't gate PRs.
+# Playwright E2E is run locally with `pnpm test:e2e`; it is not gated
+# in CI (a full compose stack spin-up is too slow and flaky for PRs).
 
 on:
   push:

@@ -16,7 +16,7 @@ function makeTranslator(
     return template.replace(/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g, (_, name: string) =>
       String(values?.[name] ?? `{${name}}`),
     );
-  }) as NamespaceTranslator;
+  }) as unknown as NamespaceTranslator;
   return fn;
 }
 

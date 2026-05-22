@@ -144,7 +144,7 @@ export default function WorkspaceSkillsCuratorPage() {
         }
         const patch: CuratorConfigPatch = {};
         dirtyFields.forEach((k) => {
-            patch[k] = draft[k];
+            (patch as Record<keyof DraftConfig, unknown>)[k] = draft[k];
         });
         if (Object.keys(patch).length === 0) {
             return;

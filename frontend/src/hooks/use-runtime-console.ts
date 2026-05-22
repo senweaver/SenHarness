@@ -33,7 +33,7 @@ export function useInflightRuns(options: UseInflightRunsOptions = {}) {
   search.set("limit", String(limit));
   if (stateParam) {
     const [, value] = stateParam.split("=");
-    search.set("state", value);
+    search.set("state", value ?? "");
   }
 
   return useQuery<InflightRunListOut>({

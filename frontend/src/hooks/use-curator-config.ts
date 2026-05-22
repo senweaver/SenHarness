@@ -26,7 +26,7 @@ export interface CuratorConfig {
   archive_after_days: number;
   min_idle_hours: number;
   active_skills_soft_cap: number;
-  source: Record<string, CuratorFieldSource>;
+  source: Record<CuratorFieldName, CuratorFieldSource>;
 }
 
 export interface CuratorConfigPatch {

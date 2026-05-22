@@ -5,15 +5,16 @@ FROM node:${NODE_VERSION}-alpine AS base
 RUN sed -i 's|dl-cdn.alpinelinux.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apk/repositories \
  && apk add --no-cache libc6-compat
 WORKDIR /app
-ENV PNPM_HOME=/pnpm PATH=$PNPM_HOME:$PATH \
-    NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate \
  && pnpm config set registry https://registry.npmmirror.com
 
 # ─── deps ────────────────────────────────────────────────
 FROM base AS deps
 COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile || pnpm install
+RUN pnpm install --frozen-lockfile
 
 # ─── dev (hot reload) ────────────────────────────────────
 FROM base AS dev
