@@ -18,6 +18,7 @@ import asyncio
 import os
 import uuid
 from collections.abc import AsyncIterator, Iterator
+from contextlib import asynccontextmanager
 
 import pytest
 import pytest_asyncio
@@ -154,6 +155,30 @@ async def db_session(_migrated_engine) -> AsyncIterator:
             yield session
         finally:
             await session.rollback()
+
+
+@pytest.fixture
+def share_session_for_subagent_hooks(monkeypatch, db_session) -> None:
+    """Route subagent lifecycle ``get_session_factory()`` opens through ``db_session``.
+
+    Lifecycle hooks call ``commit()``; remap to ``flush()`` so rows stay inside
+    the per-test transaction (fixture rollback) and the asyncpg pool is not left
+    bound to a closed loop. A lock serializes concurrent hook access — shared
+    ``AsyncSession`` is not safe under parallel ``delegate_batch`` children.
+    """
+    lock = asyncio.Lock()
+
+    async def _flush_not_commit() -> None:
+        await db_session.flush()
+
+    monkeypatch.setattr(db_session, "commit", _flush_not_commit)
+
+    @asynccontextmanager
+    async def _ctx():
+        async with lock:
+            yield db_session
+
+    monkeypatch.setattr("app.db.session.get_session_factory", lambda: _ctx)
 
 
 # ─── HTTP client ─────────────────────────────────────────────

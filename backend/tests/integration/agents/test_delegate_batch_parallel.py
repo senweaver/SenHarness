@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from contextlib import asynccontextmanager
 
 import pytest
 
@@ -50,29 +49,6 @@ def _config(**overrides) -> ResolvedSubagentBatchConfig:
     return ResolvedSubagentBatchConfig(**base)
 
 
-def _share_session_factory(monkeypatch, db_session) -> None:
-    """Reroute every short-lived session opened by ``subagents.py`` and
-    its lifecycle helpers through the test's ``db_session`` so the
-    spine rows land where the test assertions can read them.
-
-    A lock serializes DB access: ``delegate_batch`` runs children
-    concurrently but lifecycle hooks each ``commit()`` on the shared
-    session — SQLAlchemy ``AsyncSession`` is not safe for overlapping
-    use from multiple tasks.
-    """
-    lock = asyncio.Lock()
-
-    @asynccontextmanager
-    async def _ctx():
-        async with lock:
-            yield db_session
-
-    def _factory():
-        return _ctx
-
-    monkeypatch.setattr("app.db.session.get_session_factory", _factory)
-
-
 async def _patch_config(monkeypatch, config: ResolvedSubagentBatchConfig) -> None:
     async def _load(*, workspace_id):
         return config
@@ -81,11 +57,10 @@ async def _patch_config(monkeypatch, config: ResolvedSubagentBatchConfig) -> Non
 
 
 async def test_batch_writes_one_spine_row_per_task_sharing_parent_run(
-    db_session, workspace, monkeypatch
+    db_session, workspace, monkeypatch, share_session_for_subagent_hooks
 ):
     """5 children, max_concurrent=3 → 5 rows + parent_run_id query
     returns all 5 in a single fetch."""
-    _share_session_factory(monkeypatch, db_session)
     await _patch_config(monkeypatch, _config(max_concurrent=3))
 
     parent_run_id = uuid.uuid4()
@@ -142,9 +117,10 @@ async def test_batch_writes_one_spine_row_per_task_sharing_parent_run(
     assert states == {SubAgentRunState.COMPLETED}
 
 
-async def test_one_failed_child_does_not_block_others(db_session, workspace, monkeypatch):
+async def test_one_failed_child_does_not_block_others(
+    db_session, workspace, monkeypatch, share_session_for_subagent_hooks
+):
     """1 child raises mid-run → 4 still complete + 1 lands FAILED."""
-    _share_session_factory(monkeypatch, db_session)
     await _patch_config(monkeypatch, _config(max_concurrent=5))
 
     parent_run_id = uuid.uuid4()
@@ -219,9 +195,10 @@ async def test_one_failed_child_does_not_block_others(db_session, workspace, mon
     assert row.state == SubAgentRunState.FAILED
 
 
-async def test_one_timeout_child_marks_status_timeout(db_session, workspace, monkeypatch):
+async def test_one_timeout_child_marks_status_timeout(
+    db_session, workspace, monkeypatch, share_session_for_subagent_hooks
+):
     """A single timeout sibling shows ``status='timeout'`` + spine FAILED."""
-    _share_session_factory(monkeypatch, db_session)
     await _patch_config(monkeypatch, _config(max_concurrent=3))
 
     parent_run_id = uuid.uuid4()
@@ -312,7 +289,6 @@ async def test_one_timeout_child_marks_status_timeout(db_session, workspace, mon
 
 async def test_max_concurrent_caps_in_flight(monkeypatch, db_session, workspace):
     """Concurrency cap actually limits in-flight children at runtime."""
-    _share_session_factory(monkeypatch, db_session)
     await _patch_config(monkeypatch, _config(max_concurrent=2))
 
     parent_run_id = uuid.uuid4()

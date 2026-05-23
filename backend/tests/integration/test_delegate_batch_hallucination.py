@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from contextlib import asynccontextmanager
 
 import pytest
 from sqlalchemy import select
@@ -30,23 +29,12 @@ from app.services.subagent_batch_config import ResolvedSubagentBatchConfig
 pytestmark = pytest.mark.asyncio
 
 
-def _share_session_factory(monkeypatch, db_session) -> None:
-    lock = asyncio.Lock()
-
-    @asynccontextmanager
-    async def _ctx():
-        async with lock:
-            yield db_session
-
-    monkeypatch.setattr("app.db.session.get_session_factory", lambda: _ctx)
-
-
-async def test_one_child_hallucinates_others_complete(db_session, workspace, monkeypatch):
+async def test_one_child_hallucinates_others_complete(
+    db_session, workspace, monkeypatch, share_session_for_subagent_hooks
+):
     """3 children: one returns text the aux scores 0.20 → halluc_review;
     two return text scoring 0.80 → completed. Tally + spine rows
     reflect the split."""
-    _share_session_factory(monkeypatch, db_session)
-
     config = ResolvedSubagentBatchConfig(
         batch_enabled=True,
         max_batch_size=20,
