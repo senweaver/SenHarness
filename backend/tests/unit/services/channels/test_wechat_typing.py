@@ -26,10 +26,12 @@ from app.services.channels.wechat import WeChatProvider
 
 
 @pytest.fixture(autouse=True)
-def _clear_ticket_cache():
+def _reset_ilink_globals():
     ilink._TYPING_TICKET_CACHE.clear()
+    ilink._OUTBOUND_CLIENT = None
     yield
     ilink._TYPING_TICKET_CACHE.clear()
+    ilink._OUTBOUND_CLIENT = None
 
 
 class _FakeResponse:
@@ -44,6 +46,8 @@ class _FakeResponse:
 
 
 class _FakeClient:
+    is_closed = False
+
     def __init__(self, responses: dict[str, _FakeResponse]):
         self._responses = responses
         self.calls: list[tuple[str, dict[str, Any]]] = []
@@ -55,7 +59,7 @@ class _FakeClient:
         return None
 
     async def post(
-        self, url: str, *, json: dict[str, Any], headers: dict[str, str]
+        self, url: str, *, json: dict[str, Any], headers: dict[str, str], **_: Any
     ) -> _FakeResponse:
         for path, resp in self._responses.items():
             if url.endswith(path):
@@ -69,6 +73,7 @@ def _patch_client(monkeypatch: pytest.MonkeyPatch, client: _FakeClient) -> None:
         return client
 
     monkeypatch.setattr(ilink.httpx, "AsyncClient", factory)
+    ilink._OUTBOUND_CLIENT = None
 
 
 async def test_fetch_typing_ticket_caches_per_bot(monkeypatch: pytest.MonkeyPatch) -> None:

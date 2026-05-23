@@ -42,7 +42,7 @@ def test_redact_replaces_password_and_token_keys():
             "nested": {"client_secret": "shhh"},
             "ok": "fine",
         },
-        "list_with_secrets": [
+        "items": [
             {"token": "tok"},
             {"name": "ok"},
         ],
@@ -52,8 +52,8 @@ def test_redact_replaces_password_and_token_keys():
     assert out["config"]["api_key"] == "***"
     assert out["config"]["nested"]["client_secret"] == "***"
     assert out["config"]["ok"] == "fine"
-    assert out["list_with_secrets"][0]["token"] == "***"
-    assert out["list_with_secrets"][1]["name"] == "ok"
+    assert out["items"][0]["token"] == "***"
+    assert out["items"][1]["name"] == "ok"
 
 
 def test_redact_handles_empty_and_none_values():

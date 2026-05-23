@@ -5,11 +5,15 @@ Unit tests need no external resources and get the lightweight path
 
 Integration tests need a Postgres + Redis pair. When ``testcontainers``
 is installed we spin up ephemeral containers per test *session*; when
-it isn't we fall back to env-supplied connection strings (the CI
-workflow provisions real services and sets env before pytest starts).
-Tests that require DB/Redis but get neither get ``pytest.skip()`` via
-the ``db_available`` / ``redis_available`` fixtures so running
-``pytest tests/unit`` on a dev laptop still passes cleanly.
+it isn't we fall back to env-supplied connection strings.
+
+CI policy: the GitHub Actions ``backend-test`` job runs
+``pytest -m "not requires_db"`` against a stripped runner (no Postgres,
+no Redis, no alembic step). Any test that transitively pulls in one
+of the DB-bound fixtures listed in ``_DB_BOUND_FIXTURES`` is auto-tagged
+``requires_db`` by ``pytest_collection_modifyitems`` below and therefore
+deselected on CI. Running ``make test`` locally provisions Postgres
+(via ``testcontainers`` or ``make up``) and runs the full suite.
 """
 
 from __future__ import annotations
@@ -22,6 +26,31 @@ from contextlib import asynccontextmanager
 
 import pytest
 import pytest_asyncio
+
+# Fixtures that ultimately require a live Postgres (and, for ``async_client``,
+# also Redis). Any test pulling one of these in — directly or transitively —
+# is marked ``requires_db`` at collection time and skipped on CI.
+_DB_BOUND_FIXTURES = frozenset(
+    {
+        "_pg_container",
+        "_migrated_engine",
+        "db_session",
+        "identity",
+        "workspace",
+        "agent",
+        "async_client",
+        "share_session_for_subagent_hooks",
+    }
+)
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    requires_db = pytest.mark.requires_db
+    for item in items:
+        fixturenames = getattr(item, "fixturenames", ())
+        if any(name in _DB_BOUND_FIXTURES for name in fixturenames):
+            item.add_marker(requires_db)
+
 
 # ─── Test environment defaults ───────────────────────────────
 os.environ.setdefault("APP_ENV", "development")

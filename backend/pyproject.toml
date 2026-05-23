@@ -218,6 +218,9 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = "test_*.py"
 addopts = "-ra --strict-markers"
+markers = [
+  "requires_db: test transitively uses a Postgres/Redis fixture; auto-applied by conftest and deselected on the GitHub Actions backend-test job (which runs `pytest -m 'not requires_db'`). Run the full suite locally via `make test`.",
+]
 filterwarnings = [
   "ignore::DeprecationWarning:passlib.*",
 ]

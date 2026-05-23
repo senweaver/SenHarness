@@ -2,12 +2,15 @@ name: ci
 
 # Single CI workflow for SenHarness — three parallel jobs:
 #   * lint        · ruff / ty / eslint — fails fast on style
-#   * backend     · pytest tests/unit, with real Postgres + Redis
+#   * backend     · pure unit tests (`pytest -m "not requires_db"`)
 #   * frontend    · vitest, typecheck, next build
 #
-# Integration tests (tests/integration/) and Playwright E2E run
-# locally via `make test` / `pnpm test:e2e`; they are too slow and
-# stack-dependent to gate on every PR.
+# The backend job deliberately does NOT provision Postgres / Redis /
+# alembic. Any test transitively using a DB-bound fixture is tagged
+# ``requires_db`` by ``backend/tests/conftest.py`` and deselected here.
+# The full suite (DB-backed unit tests + tests/integration/ + Playwright
+# E2E) runs locally via `make test` / `pnpm test:e2e`; those depend on
+# a real stack and would only flake on every PR.
 
 on:
   push:
@@ -63,38 +66,10 @@ jobs:
         working-directory: frontend
         run: pnpm typecheck
 
-  # ═══ Backend unit tests ═══════════════════════════════════
+  # ═══ Backend unit tests (no external services) ════════════
   backend-test:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: pgvector/pgvector:pg16
-        env:
-          POSTGRES_USER: senharness
-          POSTGRES_PASSWORD: senharness
-          POSTGRES_DB: senharness_test
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U senharness"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-      redis:
-        image: redis:7-alpine
-        ports: ["6379:6379"]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
     env:
-      DB_HOST: localhost
-      DB_PORT: 5432
-      DB_USER: senharness
-      DB_PASSWORD: senharness
-      DB_NAME: senharness_test
-      REDIS_HOST: localhost
-      REDIS_PORT: 6379
       SENHARNESS_MASTER_KEY: test-master-key-do-not-use-in-prod-123456789
       JWT_SECRET_KEY: test-jwt-secret-do-not-use-in-prod
       APP_ENV: development
@@ -106,13 +81,10 @@ jobs:
       - name: Sync deps
         working-directory: backend
         run: uv sync --all-extras --dev
-      - name: Apply migrations
-        working-directory: backend
-        run: uv run alembic upgrade head
-      - name: Unit tests (with coverage)
+      - name: Unit tests (DB-free, with coverage)
         working-directory: backend
         run: |
-          uv run pytest tests/unit \
+          uv run pytest tests/unit -m "not requires_db" \
             --cov=app \
             --cov-report=xml \
             --cov-report=term-missing:skip-covered
