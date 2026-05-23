@@ -113,9 +113,15 @@ def redis_available(_redis_url) -> bool:
 
 
 # ─── Application engine + session ────────────────────────────
-@pytest_asyncio.fixture(scope="session")
-async def _migrated_engine(_pg_container, db_available):
-    """Apply alembic migrations once per session to the test DB."""
+@pytest.fixture(scope="session")
+def _migrated_engine(_pg_container, db_available):
+    """Apply alembic migrations once per session to the test DB.
+
+    Sync fixture — alembic ``env.py`` already wraps the upgrade in
+    ``asyncio.run()``, which needs a fresh loop. A sync fixture runs
+    outside any pytest-asyncio loop, so ``asyncio.run`` is free to own
+    one. ``get_engine()`` is lazy: no asyncpg pool is created here.
+    """
     if not db_available:
         pytest.skip("Postgres not available — install testcontainers or set DB_HOST")
 
@@ -125,18 +131,8 @@ async def _migrated_engine(_pg_container, db_available):
     from app.db.session import get_engine
 
     cfg = Config("alembic.ini")
-    # Run alembic on a worker thread. env.py's online path ends with
-    # `asyncio.run(run_migrations_online())`, which needs to own its
-    # event loop; calling it directly from this pytest-asyncio fixture
-    # nests loops, raises at the `asyncio.run` boundary, leaves the
-    # coroutine un-awaited, and surfaces as a collection-time `E` plus
-    # a `coroutine 'run_migrations_online' was never awaited`
-    # RuntimeWarning at gc time. The worker thread has no running
-    # loop, so `asyncio.run` is free to create one.
-    await asyncio.to_thread(command.upgrade, cfg, "head")
-
-    engine = get_engine()
-    yield engine
+    command.upgrade(cfg, "head")
+    return get_engine()
 
 
 @pytest_asyncio.fixture
@@ -146,8 +142,17 @@ async def db_session(_migrated_engine) -> AsyncIterator:
     Tests that mutate (create workspace, insert agents) don't leak
     between each other — everything happens inside a transaction that
     never commits.
+
+    The asyncpg pool is disposed at fixture entry so it rebinds to the
+    current test's event loop. pytest-asyncio defaults to a fresh
+    function-scoped loop per test, while ``get_engine()`` is an
+    ``lru_cache`` singleton — without dispose, the second test inherits
+    a pool tied to the first test's closed loop and every query raises
+    ``RuntimeError: Future attached to a different loop``.
     """
-    from app.db.session import get_session_factory
+    from app.db.session import get_engine, get_session_factory
+
+    await get_engine().dispose()
 
     factory = get_session_factory()
     async with factory() as session:
@@ -254,16 +259,3 @@ async def agent(db_session, workspace, identity):
     )
     await db_session.flush()
     return a
-
-
-# ─── Asyncio loop policy ─────────────────────────────────────
-@pytest.fixture(scope="session")
-def event_loop():
-    """Session-scoped loop so session-scoped async fixtures can use it.
-
-    Default pytest-asyncio loop is function-scoped which conflicts with
-    our session-scoped testcontainers / migration fixtures.
-    """
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()

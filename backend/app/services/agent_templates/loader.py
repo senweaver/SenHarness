@@ -42,12 +42,15 @@ _SKIP_NAMES: frozenset[str] = frozenset(
         # planner); they live next to the catalogued templates but are not
         # marketplace agents.
         "planner.md",
+        "evolver_persona.md",
+        "judge_run.md",
+        "session_search_summary.md",
     }
 )
 
 # Subdirectories whose contents are NOT marketplace agents (system prompt
 # partials, helper Markdown). The loader recurses everything else.
-_SKIP_DIRS: frozenset[str] = frozenset({"_partials"})
+_SKIP_DIRS: frozenset[str] = frozenset({"_partials", "reflection"})
 
 # Max length for ``Agent.description`` per the column definition.
 _DESC_MAX = 512

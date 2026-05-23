@@ -324,7 +324,7 @@ async def test_mark_skip_records_audit_and_returns_stop(
     )
     assert result["status"] == "skipped"
     assert result["stop"] is True
-    assert "no SkillPack proposals" in result["final_message"].lower()
+    assert "no skillpack proposals" in result["final_message"].lower()
 
     audits = list(
         (

@@ -77,8 +77,12 @@ async def test_fetch_typing_ticket_caches_per_bot(monkeypatch: pytest.MonkeyPatc
     )
     _patch_client(monkeypatch, client)
 
-    first = await ilink.fetch_typing_ticket(bot_token="bot-1", base_url=ilink._BASE)
-    second = await ilink.fetch_typing_ticket(bot_token="bot-1", base_url=ilink._BASE)
+    first = await ilink.fetch_typing_ticket(
+        bot_token="bot-1", base_url=ilink._BASE, ilink_user_id="me-1"
+    )
+    second = await ilink.fetch_typing_ticket(
+        bot_token="bot-1", base_url=ilink._BASE, ilink_user_id="me-1"
+    )
     assert first == "tkt-A"
     assert second == "tkt-A"
     assert len(client.calls) == 1
@@ -90,7 +94,12 @@ async def test_fetch_typing_ticket_returns_none_on_empty(monkeypatch: pytest.Mon
     )
     _patch_client(monkeypatch, client)
 
-    assert await ilink.fetch_typing_ticket(bot_token="bot-2", base_url=ilink._BASE) is None
+    assert (
+        await ilink.fetch_typing_ticket(
+            bot_token="bot-2", base_url=ilink._BASE, ilink_user_id="me-2"
+        )
+        is None
+    )
 
 
 async def test_fetch_typing_ticket_returns_none_on_http_error(
@@ -99,7 +108,12 @@ async def test_fetch_typing_ticket_returns_none_on_http_error(
     client = _FakeClient({"/ilink/bot/getconfig": _FakeResponse(status_code=502)})
     _patch_client(monkeypatch, client)
 
-    assert await ilink.fetch_typing_ticket(bot_token="bot-3", base_url=ilink._BASE) is None
+    assert (
+        await ilink.fetch_typing_ticket(
+            bot_token="bot-3", base_url=ilink._BASE, ilink_user_id="me-3"
+        )
+        is None
+    )
     assert "bot-3" not in ilink._TYPING_TICKET_CACHE
 
 
@@ -116,6 +130,7 @@ async def test_send_typing_status_invalidates_ticket_on_session_expired(
         await ilink.send_typing_status(
             bot_token="bot-4",
             base_url=ilink._BASE,
+            ilink_user_id="me-4",
             to_user_id="u1",
             typing_ticket="stale",
             status=1,
@@ -134,6 +149,7 @@ async def test_typing_keepalive_sends_start_then_stop_on_cancel(
         ilink.run_typing_keepalive(
             bot_token="bot-5",
             base_url=ilink._BASE,
+            ilink_user_id="me-5",
             to_user_id="u1",
             typing_ticket="tkt",
         )
@@ -176,7 +192,7 @@ async def test_provider_send_processing_uses_native_typing_when_available(
     )
 
     provider = WeChatProvider()
-    config = {"bot_token": "bot-6"}
+    config = {"bot_token": "bot-6", "ilink_user_id": "me-6"}
     task = asyncio.create_task(
         provider.send_processing_indicator(
             channel_config=config,

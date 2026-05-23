@@ -48,6 +48,7 @@ def test_log_transport_logs_with_address_hash_only(caplog):
     """
     import logging
 
+    caplog.set_level(logging.INFO)
     caplog.set_level(logging.INFO, logger="app.services.email_transport")
     transport = LogEmailTransport()
     expected = hashlib.sha256(b"alice@example.com").hexdigest()[:16]

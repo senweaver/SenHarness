@@ -51,8 +51,10 @@ async def _make_message(db_session, workspace, session_id) -> uuid.UUID:
     await db_session.execute(
         text(
             "INSERT INTO messages (id, workspace_id, session_id, role, "
-            "content_json, created_at) "
-            "VALUES (:id, :ws, :sid, 'assistant', '{}'::jsonb, now())"
+            "content_json, attachments_json, token_usage_json, metadata_json, "
+            "created_at) "
+            "VALUES (:id, :ws, :sid, 'assistant', '{}'::jsonb, "
+            "'[]'::jsonb, '{}'::jsonb, '{}'::jsonb, now())"
         ),
         {"id": mid, "ws": workspace.id, "sid": session_id},
     )
@@ -222,13 +224,11 @@ async def test_cascade_for_workspace_soft_deletes_workspace_scoped(db_session, w
 
 
 async def test_cascade_skips_missing_tables(db_session, workspace, identity):
-    """``judge_verdicts`` / ``pending_memories`` etc. ship later — the
-    cascade must silently omit them rather than raising or counting
-    zero rows on a non-existent table.
+    """Cascade silently omits tables not present in the schema rather than
+    raising. Asserts on a table whose migration hasn't shipped — once it
+    does, replace it with another not-yet-migrated table.
     """
     affected = await retention_svc.cascade_for_identity(db_session, identity_id=identity.id)
-    assert "judge_verdicts" not in affected
-    assert "pending_memories" not in affected
     assert "workspace_creation_logs" not in affected
 
 

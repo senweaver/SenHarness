@@ -67,13 +67,28 @@ def test_rehydrated_prefix_is_stable_across_injection() -> None:
     """The runner's ``_rehydrate_history`` reads only ``role`` + text, so even
     if a future turn happens after a reflection-injected turn, the rebuilt
     history (which is what gets sent to the model) excludes the ephemeral
-    SystemPromptPart and matches the pre-injection prefix exactly."""
+    SystemPromptPart and matches the pre-injection prefix exactly.
+
+    pydantic-ai stamps ``UserPromptPart.timestamp = datetime.now()`` at
+    construction time, so two back-to-back rehydrations are never
+    structurally identical at the object level — compare the cache-
+    relevant projection (role + content text) instead.
+    """
     from app.agents.kernels.native.runner import _rehydrate_history
+
+    def _projection(msgs: list) -> list[tuple[str, tuple[tuple[str, str], ...]]]:
+        out = []
+        for msg in msgs:
+            parts: list[tuple[str, str]] = []
+            for part in getattr(msg, "parts", []) or []:
+                parts.append((type(part).__name__, getattr(part, "content", "")))
+            out.append((type(msg).__name__, tuple(parts)))
+        return out
 
     history = _persisted_history_snapshot()
     prefix_before = _rehydrate_history(history)
     prefix_after = _rehydrate_history(history)
-    assert prefix_before == prefix_after
+    assert _projection(prefix_before) == _projection(prefix_after)
     for msg in prefix_after:
         for part in getattr(msg, "parts", []) or []:
             assert type(part).__name__ != "SystemPromptPart"

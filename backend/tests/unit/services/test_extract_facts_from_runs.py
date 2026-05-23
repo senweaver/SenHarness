@@ -96,7 +96,7 @@ def _patch_aux(monkeypatch, *, draft):
     async def _stub_extract(*, config, artifacts):
         return draft
 
-    async def _silent_audit(**kwargs):
+    async def _silent_audit(*args, **kwargs):
         return None
 
     monkeypatch.setattr(svc, "is_breaker_open", _no_breaker)

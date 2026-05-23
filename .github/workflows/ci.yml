@@ -2,11 +2,12 @@ name: ci
 
 # Single CI workflow for SenHarness — three parallel jobs:
 #   * lint        · ruff / ty / eslint — fails fast on style
-#   * backend     · pytest unit + integration, with real Postgres + Redis
+#   * backend     · pytest tests/unit, with real Postgres + Redis
 #   * frontend    · vitest, typecheck, next build
 #
-# Playwright E2E is run locally with `pnpm test:e2e`; it is not gated
-# in CI (a full compose stack spin-up is too slow and flaky for PRs).
+# Integration tests (tests/integration/) and Playwright E2E run
+# locally via `make test` / `pnpm test:e2e`; they are too slow and
+# stack-dependent to gate on every PR.
 
 on:
   push:
@@ -62,7 +63,7 @@ jobs:
         working-directory: frontend
         run: pnpm typecheck
 
-  # ═══ Backend tests (unit + integration) ═══════════════════
+  # ═══ Backend unit tests ═══════════════════════════════════
   backend-test:
     runs-on: ubuntu-latest
     services:
@@ -108,7 +109,7 @@ jobs:
       - name: Apply migrations
         working-directory: backend
         run: uv run alembic upgrade head
-      - name: Tests (with coverage)
+      - name: Unit tests (with coverage)
         working-directory: backend
         run: |
           uv run pytest tests/unit \

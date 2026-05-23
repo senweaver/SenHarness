@@ -91,9 +91,11 @@ async def test_stale_candidate_skips_pack_used_within_min_idle_hours(db_session,
     pack = await _make_pack(
         db_session,
         workspace_id=workspace.id,
-        # Older than the 30-day stale window AND inside the 24-hour
-        # idle window — should still be excluded.
-        last_used_at=now - timedelta(days=40, hours=-23),
+        # ACTIVE for >30 days (qualifies as "stale" by age) but the
+        # last invocation lands inside the 24-hour idle window —
+        # ``min_idle_hours`` must filter it out.
+        state_changed_at=now - timedelta(days=40),
+        last_used_at=now - timedelta(hours=23),
     )
     found = await svc.find_stale_candidates(
         db_session,

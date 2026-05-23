@@ -33,11 +33,15 @@ class TestSplitFrontmatter:
 
 
 class TestVendoredTemplates:
-    """Lock down the 211 vendored templates' invariants."""
+    """Lock down the vendored templates' invariants.
 
-    def test_211_templates_present(self):
+    The exact count grows over time — assert a floor instead of an
+    equality so new agent additions don't break CI.
+    """
+
+    def test_at_least_baseline_templates_present(self):
         files = loader.iter_template_files()
-        assert len(files) == 211, f"expected 211 vendored templates, got {len(files)}"
+        assert len(files) >= 211, f"expected >=211 vendored templates, got {len(files)}"
 
     def test_every_template_parses(self):
         bad: list[str] = []

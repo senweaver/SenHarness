@@ -450,7 +450,7 @@ class TestPostReplyStreamMode:
             )
 
         assert client.calls == []
-        assert any("malformed thread_key" in rec.message for rec in caplog.records)
+        assert any("malformed thread_key" in rec.getMessage() for rec in caplog.records)
 
     async def test_token_failure_drops_reply(self, monkeypatch, caplog):
         provider = DingTalkProvider()
@@ -513,5 +513,5 @@ class TestPostReplyWebhookMode:
 
         assert client.calls == []
         assert any(
-            "neither client_id/secret nor webhook_url" in rec.message for rec in caplog.records
+            "neither client_id/secret nor webhook_url" in rec.getMessage() for rec in caplog.records
         )

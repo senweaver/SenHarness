@@ -16,8 +16,6 @@ from __future__ import annotations
 
 import uuid
 
-import pytest
-
 from app.db.models.job_run import (
     ARGS_JSON_MAX_BYTES,
     ERROR_MESSAGE_MAX_CHARS,
@@ -32,8 +30,6 @@ from app.services.job_run import (
     truncate_error_message,
     truncate_json_for_storage,
 )
-
-pytestmark = pytest.mark.asyncio
 
 
 # ── Pure-function tests (no DB) ───────────────────────────────

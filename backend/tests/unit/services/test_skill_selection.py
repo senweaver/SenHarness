@@ -133,7 +133,7 @@ def test_pinned_packs_exempt_from_count_cap(caplog):
     # truncated; the warn log is the auditor's signal.
     assert result.truncated_by_count is False
     assert result.truncated_by_chars is False
-    assert any("skill.cap_pinned_above_count_cap" in rec.message for rec in caplog.records)
+    assert any("skill.cap_pinned_above_count_cap" in rec.getMessage() for rec in caplog.records)
 
 
 def test_effectiveness_then_recency_tiebreak_is_stable():
