@@ -29,6 +29,7 @@ FROM base AS builder
 ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN mkdir -p public
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ARG NEXT_PUBLIC_WS_BASE_URL=ws://localhost:8000
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
