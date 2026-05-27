@@ -86,9 +86,7 @@ async def read_me(
         memberships[0].workspace_id if memberships else None
     )
     raw_locale = (identity.profile_json or {}).get("locale")
-    out.preferred_locale = (
-        raw_locale if isinstance(raw_locale, str) and raw_locale else None
-    )
+    out.preferred_locale = raw_locale if isinstance(raw_locale, str) and raw_locale else None
 
     # Surface role + permissions of the active workspace. Falls back to the
     # first membership when no specific workspace is requested.
@@ -141,9 +139,10 @@ async def update_me(
         # If the caller also sent ``profile_json`` directly, the
         # convenience field wins for the ``locale`` key only.
         if "profile_json" in payload and isinstance(payload["profile_json"], dict):
-            payload["profile_json"] = {**payload["profile_json"], **{
-                k: v for k, v in merged_profile.items() if k == "locale"
-            }}
+            payload["profile_json"] = {
+                **payload["profile_json"],
+                **{k: v for k, v in merged_profile.items() if k == "locale"},
+            }
             if not cleaned:
                 payload["profile_json"].pop("locale", None)
         else:

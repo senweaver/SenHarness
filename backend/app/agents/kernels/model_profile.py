@@ -221,9 +221,7 @@ def resolve_profile(
     return base
 
 
-def desired_thinking_state(
-    *, profile: ModelProfile, policy: dict[str, Any] | None
-) -> str:
+def desired_thinking_state(*, profile: ModelProfile, policy: dict[str, Any] | None) -> str:
     """Return ``"on"`` or ``"off"`` — the wire-level thinking phase to request.
 
     Mode rules:

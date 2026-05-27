@@ -41,9 +41,7 @@ class BootstrapOut(BaseModel):
 async def read_bootstrap(db: DBSession) -> BootstrapOut:
     """Return the tiny payload the unauthenticated UI needs to render."""
     general = await ps_svc.get_section(db, section=PlatformSettingsSection.GENERAL)
-    mode = await get_system_setting(
-        db, SystemSettingKey.REGISTRATION_MODE, default="open_personal"
-    )
+    mode = await get_system_setting(db, SystemSettingKey.REGISTRATION_MODE, default="open_personal")
     return BootstrapOut(
         site_name=getattr(general, "site_name", "SenHarness"),
         primary_color_hex=getattr(general, "primary_color_hex", "#3B82F6"),

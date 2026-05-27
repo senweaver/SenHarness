@@ -95,8 +95,7 @@ def _safe_stream_available(provider: ChannelProvider) -> bool:
         return bool(type(provider).stream_available())
     except Exception:  # pragma: no cover — degraded SDK install
         log.warning(
-            "stream_available probe failed for channel kind %r; "
-            "reporting unavailable",
+            "stream_available probe failed for channel kind %r; reporting unavailable",
             provider.kind,
             exc_info=True,
         )

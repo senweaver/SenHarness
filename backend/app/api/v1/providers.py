@@ -6,9 +6,9 @@ import uuid
 
 from fastapi import APIRouter, status
 
+from app.agents.kernels.model_profile import resolve_profile
 from app.api.deps import CurrentIdentityId, CurrentWorkspaceId, DBSession
 from app.core.errors import Unauthorized
-from app.agents.kernels.model_profile import resolve_profile
 from app.schemas.provider import (
     DiscoverApplyRequest,
     DiscoveredModel,

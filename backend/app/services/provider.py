@@ -243,9 +243,7 @@ async def provider_has_key(session: AsyncSession, *, provider_id: uuid.UUID) -> 
     return await repo.exists(provider_id=provider_id, enabled=True)
 
 
-async def provider_key_hint(
-    session: AsyncSession, *, provider_id: uuid.UUID
-) -> str | None:
+async def provider_key_hint(session: AsyncSession, *, provider_id: uuid.UUID) -> str | None:
     """Return ``last4`` of the stored default key, or ``None`` when absent.
 
     Reads ``model_keys.metadata_json["key_tail"]`` only — never touches

@@ -1112,9 +1112,7 @@ async def _pydantic_ai_stream(
     # policy override so a single message can still escalate.
     if profile.reasoning.preferred_effort:
         try:
-            _ensure_model_settings(agent)["reasoning_effort"] = (
-                profile.reasoning.preferred_effort
-            )
+            _ensure_model_settings(agent)["reasoning_effort"] = profile.reasoning.preferred_effort
         except Exception:  # pragma: no cover
             log.debug(
                 "could not apply preferred_effort=%s",
@@ -1212,7 +1210,9 @@ async def _pydantic_ai_stream(
                 reliability.tick_iteration()
                 warning = reliability.limit_warning()
                 if warning:
-                    yield RunEvent(_visible_status_event_kind(thinking_on=show_thinking), {"text": warning})
+                    yield RunEvent(
+                        _visible_status_event_kind(thinking_on=show_thinking), {"text": warning}
+                    )
 
                 if Agent.is_model_request_node(node):
                     # Reflection injection happens *before* this node streams
@@ -1572,7 +1572,9 @@ async def _pydantic_ai_stream(
     except Exception:  # pragma: no cover
         pass
     if not final_text:
-        raw_output = getattr(agent_run.result, "output", None) if agent_run.result is not None else None
+        raw_output = (
+            getattr(agent_run.result, "output", None) if agent_run.result is not None else None
+        )
         if raw_output is None and agent_run.result is not None:
             raw_output = getattr(agent_run.result, "data", None)
         if isinstance(raw_output, str) and raw_output:
