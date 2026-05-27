@@ -85,6 +85,10 @@ async def read_me(
     out.current_workspace_id = workspace_id or (
         memberships[0].workspace_id if memberships else None
     )
+    raw_locale = (identity.profile_json or {}).get("locale")
+    out.preferred_locale = (
+        raw_locale if isinstance(raw_locale, str) and raw_locale else None
+    )
 
     # Surface role + permissions of the active workspace. Falls back to the
     # first membership when no specific workspace is requested.
@@ -98,6 +102,12 @@ async def read_me(
     return out
 
 
+# Locales the frontend's next-intl bundle ships. Kept in sync with
+# ``frontend/src/lib/i18n.ts`` ``locales``; any new locale needs both
+# sides flipped on.
+_SUPPORTED_LOCALES: frozenset[str] = frozenset({"en-US", "zh-CN"})
+
+
 @router.patch("", response_model=IdentityRead)
 async def update_me(
     body: IdentityUpdate,
@@ -108,9 +118,38 @@ async def update_me(
     identity = await repo.get(identity_id)
     if identity is None:
         raise NotFound("identity_not_found", code="identity.not_found")
-    updated = await repo.update(
-        identity, **{k: v for k, v in body.model_dump(exclude_none=True).items()}
-    )
+
+    payload = body.model_dump(exclude_none=True)
+    preferred_locale = payload.pop("preferred_locale", None)
+    if preferred_locale is not None:
+        # Merge the locale onto ``profile_json`` so the existing JSONB
+        # column stays the source of truth — keeps schema migrations off
+        # the critical path.
+        cleaned = preferred_locale.strip()
+        if cleaned and cleaned not in _SUPPORTED_LOCALES:
+            from app.core.errors import ValidationFailed
+
+            raise ValidationFailed(
+                f"unsupported locale: {preferred_locale!r}",
+                code="identity.unsupported_locale",
+            )
+        merged_profile = dict(identity.profile_json or {})
+        if cleaned:
+            merged_profile["locale"] = cleaned
+        else:
+            merged_profile.pop("locale", None)
+        # If the caller also sent ``profile_json`` directly, the
+        # convenience field wins for the ``locale`` key only.
+        if "profile_json" in payload and isinstance(payload["profile_json"], dict):
+            payload["profile_json"] = {**payload["profile_json"], **{
+                k: v for k, v in merged_profile.items() if k == "locale"
+            }}
+            if not cleaned:
+                payload["profile_json"].pop("locale", None)
+        else:
+            payload["profile_json"] = merged_profile
+
+    updated = await repo.update(identity, **payload)
     await db.commit()
     return IdentityRead.model_validate(updated)
 

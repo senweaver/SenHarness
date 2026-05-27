@@ -21,20 +21,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { ApiError, api } from "@/lib/api";
 import type { WorkspaceRead } from "@/hooks/use-workspace";
 import { useWorkspaceQuota } from "@/hooks/use-workspace-quota";
-import { switchActiveWorkspace } from "@/lib/workspace";
+import { slugifyWorkspaceName, switchActiveWorkspace } from "@/lib/workspace";
 
 interface CreateWorkspaceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
 }
 
 export function CreateWorkspaceDialog({
@@ -51,7 +42,7 @@ export function CreateWorkspaceDialog({
   const [slugTouched, setSlugTouched] = useState(false);
   const [slugInput, setSlugInput] = useState("");
   const [description, setDescription] = useState("");
-  const slug = slugTouched ? slugInput : slugify(name);
+  const slug = slugTouched ? slugInput : slugifyWorkspaceName(name);
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {

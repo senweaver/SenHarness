@@ -179,8 +179,10 @@ export class SenHarnessWsTransport
           if (!controller) return;
           try {
             dispatch(event, controller, this);
-          } catch (err) {
-            console.warn("ws.dispatch error:", err);
+          } catch {
+            // Dispatch errors are surfaced to the user through the
+            // ``error`` SDK event below; silent here so the production
+            // console stays clean.
           }
         },
         onClose: () => {
@@ -273,7 +275,7 @@ export class SenHarnessWsTransport
         let ws: WebSocket;
         try {
           ws = await this.ensureSocket();
-        } catch (err) {
+        } catch {
           try {
             controller.enqueue({
               type: "error",
@@ -284,13 +286,23 @@ export class SenHarnessWsTransport
             /* already closed */
           }
           this.streamController = null;
-          console.warn("ws.ensureSocket error:", err);
           return;
         }
         // Honour cancellation requests from the SDK (``stop()`` flips this).
         options.abortSignal?.addEventListener("abort", () => {
           if (ws.readyState === WebSocket.OPEN) {
             sendCancel(ws, this.currentRunId ?? undefined);
+          }
+          finalizeText(controller, this);
+          finalizeReasoning(controller, this);
+          resetHadContent(this);
+          try {
+            controller.close();
+          } catch {
+            /* already closed */
+          }
+          if (this.streamController === controller) {
+            this.streamController = null;
           }
         });
         sendUserMessage(ws, text, {
@@ -326,8 +338,9 @@ export class SenHarnessWsTransport
     try {
       const ws = await this.ensureSocket();
       sendResume(ws, this.lastSeenSeq, this.currentRunId ?? undefined);
-    } catch (err) {
-      console.warn("ws.reconnect error:", err);
+    } catch {
+      // ``ensureSocket`` already routes connection failures through the
+      // shared ``ws.connection_error`` chunk; nothing more to do.
     }
     // The replay arrives through the active per-turn stream controller
     // (if any). No second stream — SDK resume is implicit.

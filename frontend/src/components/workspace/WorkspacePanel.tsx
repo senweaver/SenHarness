@@ -63,11 +63,13 @@ import { SimpleTooltip } from "@/components/ui/tooltip";
 import { ApprovalCard } from "@/components/chat/ApprovalCard";
 import { TerminalTab } from "@/components/workspace/TerminalTab";
 import { cn } from "@/lib/utils";
+import { useSessionMessages } from "@/hooks/use-session-messages";
 import {
   useSessionTrace,
   type TraceEvent,
   type TraceRole,
 } from "@/hooks/use-traces";
+import type { MessageRead } from "@/types/api";
 import {
   type WorkspaceTab,
   useWorkspacePaneStore,
@@ -137,6 +139,10 @@ export function WorkspacePanel({
   // We only fetch when the pane is open + a session exists, and the existing
   // tab content readers all derive from this one query (no extra requests).
   const traceQuery = useSessionTrace(
+    sessionId ?? undefined,
+    !collapsed && Boolean(sessionId),
+  );
+  const messagesQuery = useSessionMessages(
     sessionId ?? undefined,
     !collapsed && Boolean(sessionId),
   );
@@ -229,7 +235,9 @@ export function WorkspacePanel({
                 focusToolCallId={traceFocusToolCallId}
               />
             )}
-            {activeTab === "plan" && <PlanTab events={events} />}
+            {activeTab === "plan" && (
+              <PlanTab events={events} messages={messagesQuery.data ?? []} />
+            )}
             {activeTab === "files" && <FilesTab events={events} />}
             {activeTab === "sources" && <SourcesTab events={events} />}
             {activeTab === "memory" && <MemoryTab events={events} />}
@@ -441,38 +449,171 @@ function TraceRow({
   );
 }
 
-function PlanTab({ events }: { events: TraceEvent[] }) {
+// ``pydantic-ai-todo`` exposes these five tools. Tool *results* are
+// plain strings (no structured state), so we replay the *arguments*
+// of each call in chronological order to fold the final list.
+const TODO_TOOL_NAMES = new Set([
+  "write_todos",
+  "read_todos",
+  "add_todo",
+  "update_todo_status",
+  "remove_todo",
+]);
+
+type TodoStatus = "pending" | "in_progress" | "completed" | "cancelled";
+type TodoItem = { id: string; content: string; status: TodoStatus };
+
+function normalizeTodoStatus(raw: unknown): TodoStatus {
+  const s = String(raw ?? "pending");
+  if (s === "done" || s === "completed") return "completed";
+  if (s === "in_progress") return "in_progress";
+  if (s === "cancelled") return "cancelled";
+  return "pending";
+}
+
+function normalizeTodoBulk(input: unknown): TodoItem[] {
+  const list = Array.isArray(input)
+    ? input
+    : input && typeof input === "object" && Array.isArray((input as { todos?: unknown }).todos)
+      ? (input as { todos: unknown[] }).todos
+      : [];
+  return list
+    .map((raw, idx) => {
+      const item = raw as {
+        id?: string;
+        text?: string;
+        content?: string;
+        title?: string;
+        status?: string;
+      };
+      const content = String(item.content ?? item.text ?? item.title ?? "").trim();
+      if (!content) return null;
+      return {
+        id: item.id ?? `todo-${idx}`,
+        content,
+        status: normalizeTodoStatus(item.status),
+      } as TodoItem;
+    })
+    .filter((todo): todo is TodoItem => Boolean(todo));
+}
+
+function PlanTab({
+  events,
+  messages,
+}: {
+  events: TraceEvent[];
+  messages: MessageRead[];
+}) {
   const t = useTranslations("chat.workspace");
-  // Pick the most recent ``write_todos`` tool_call. The tool ships its full
-  // todo list on every invocation, so the latest call is the source of truth.
+
   const todos = useMemo(() => {
-    for (let i = events.length - 1; i >= 0; i--) {
-      const ev = events[i];
-      if (!ev || ev.role !== "tool_call") continue;
-      const call = ev.tool_call as { name?: string; arguments?: unknown };
-      if (call?.name !== "write_todos") continue;
-      const args = (call.arguments ?? {}) as { todos?: unknown };
-      const list = Array.isArray(args.todos) ? args.todos : [];
-      return list
-        .map((raw, idx) => {
-          const r = raw as {
-            id?: string;
-            text?: string;
-            status?: string;
-          };
-          const status = (r.status === "done" || r.status === "in_progress"
-            ? r.status
-            : "pending") as "pending" | "in_progress" | "done";
-          return {
-            id: r.id ?? `todo-${idx}`,
-            text: String(r.text ?? ""),
-            status,
-          };
-        })
-        .filter((todo) => todo.text.length > 0);
+    type Invocation = {
+      id: string;
+      name: string;
+      args: Record<string, unknown>;
+      result: unknown;
+    };
+    const invocations: Invocation[] = [];
+    const byId = new Map<string, Invocation>();
+
+    const ingest = (payload: unknown) => {
+      const evs = Array.isArray(
+        (payload as { events?: unknown[] } | null)?.events,
+      )
+        ? ((payload as { events: unknown[] }).events)
+        : [];
+      for (const raw of evs) {
+        if (!raw || typeof raw !== "object") continue;
+        const entry = raw as {
+          id?: string;
+          name?: string;
+          args?: unknown;
+          arguments?: unknown;
+          result?: unknown;
+        };
+        const id = typeof entry.id === "string" ? entry.id : "";
+        if (!id) continue;
+        if (typeof entry.name === "string" && TODO_TOOL_NAMES.has(entry.name)) {
+          if (!byId.has(id)) {
+            const inv: Invocation = {
+              id,
+              name: entry.name,
+              args: (entry.args ?? entry.arguments ?? {}) as Record<string, unknown>,
+              result: undefined,
+            };
+            invocations.push(inv);
+            byId.set(id, inv);
+          }
+        } else if ("result" in entry) {
+          const inv = byId.get(id);
+          if (inv) inv.result = entry.result;
+        }
+      }
+    };
+
+    for (const ev of events) {
+      if (ev.tool_call) ingest(ev.tool_call);
+      if (ev.role === "tool_result" && ev.tool_result) {
+        const tr = ev.tool_result as { id?: unknown; result?: unknown };
+        if (typeof tr.id === "string") {
+          ingest({ events: [tr] });
+        }
+      }
     }
-    return [] as { id: string; text: string; status: "pending" | "in_progress" | "done" }[];
-  }, [events]);
+    if (invocations.length === 0) {
+      for (const msg of messages) {
+        ingest(msg.tool_call_json);
+      }
+    }
+
+    const state = new Map<string, TodoItem>();
+    const order: string[] = [];
+    const upsert = (item: TodoItem) => {
+      if (!state.has(item.id)) order.push(item.id);
+      state.set(item.id, item);
+    };
+
+    for (const inv of invocations) {
+      const args = inv.args;
+      if (inv.name === "write_todos") {
+        state.clear();
+        order.length = 0;
+        for (const item of normalizeTodoBulk(args)) upsert(item);
+        continue;
+      }
+      if (inv.name === "add_todo") {
+        const content = String(args.content ?? "").trim();
+        if (!content) continue;
+        // The package's add_todo returns "Added todo '...' with ID: <id>"
+        // — parse it so subsequent update/remove calls referencing that
+        // id can land. Fall back to a synthetic id keyed by call_id.
+        const resultText = typeof inv.result === "string" ? inv.result : "";
+        const match = /ID:\s*([^\s'")]+)/i.exec(resultText);
+        const id = match?.[1] ?? `add-${inv.id}`;
+        upsert({ id, content, status: normalizeTodoStatus(args.status) });
+        continue;
+      }
+      if (inv.name === "update_todo_status") {
+        const id = String(args.todo_id ?? args.id ?? "");
+        if (!id) continue;
+        const existing = state.get(id);
+        if (!existing) continue;
+        upsert({ ...existing, status: normalizeTodoStatus(args.status) });
+        continue;
+      }
+      if (inv.name === "remove_todo") {
+        const id = String(args.todo_id ?? args.id ?? "");
+        if (!id || !state.has(id)) continue;
+        state.delete(id);
+        const idx = order.indexOf(id);
+        if (idx >= 0) order.splice(idx, 1);
+        continue;
+      }
+      // read_todos: output is a string, no state change to apply.
+    }
+
+    return order.map((id) => state.get(id)).filter((t): t is TodoItem => Boolean(t));
+  }, [events, messages]);
 
   if (todos.length === 0) {
     return <p className="text-xs sh-muted">{t("plan.empty")}</p>;
@@ -484,17 +625,20 @@ function PlanTab({ events }: { events: TraceEvent[] }) {
           key={todo.id}
           className={cn(
             "flex items-start gap-2",
-            todo.status === "done" && "sh-muted line-through",
+            (todo.status === "completed" || todo.status === "cancelled") &&
+              "sh-muted line-through",
           )}
         >
           <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full border text-[10px]">
-            {todo.status === "done"
+            {todo.status === "completed"
               ? "✓"
               : todo.status === "in_progress"
                 ? "·"
-                : i + 1}
+                : todo.status === "cancelled"
+                  ? "×"
+                  : i + 1}
           </span>
-          <span>{todo.text}</span>
+          <span>{todo.content}</span>
         </li>
       ))}
     </ul>
@@ -723,33 +867,66 @@ const MEMORY_TOOL_NAMES = new Set([
 function MemoryTab({ events }: { events: TraceEvent[] }) {
   const t = useTranslations("chat.workspace");
   const items = useMemo(() => {
-    const out: Array<{
+    type Item = {
       id: string;
       kind: "memorize" | "recall" | "session_search" | "list_memories" | "forget";
       args: Record<string, unknown>;
       ts: string | null;
-    }> = [];
+      result?: Record<string, unknown> | null;
+      status?: string;
+      effective?: string;
+      headline: string;
+    };
+    const byCallId = new Map<string, Item>();
+    const orderedIds: string[] = [];
     for (const ev of events) {
-      if (ev.role !== "tool_call") continue;
-      const call = ev.tool_call as {
-        name?: string;
-        arguments?: Record<string, unknown>;
-      };
-      const name = call?.name ?? "";
-      if (!MEMORY_TOOL_NAMES.has(name)) continue;
-      out.push({
-        id: ev.message_id,
-        kind: name as
-          | "memorize"
-          | "recall"
-          | "session_search"
-          | "list_memories"
-          | "forget",
-        args: call.arguments ?? {},
-        ts: ev.created_at,
-      });
+      if (ev.role === "tool_call") {
+        const call = ev.tool_call as {
+          id?: string;
+          name?: string;
+          arguments?: Record<string, unknown>;
+        };
+        const name = call?.name ?? "";
+        if (!MEMORY_TOOL_NAMES.has(name)) continue;
+        const callId = String(call?.id ?? ev.message_id);
+        const args = call.arguments ?? {};
+        const headline =
+          (args.text as string) ||
+          (args.content as string) ||
+          (args.query as string) ||
+          (args.key as string) ||
+          (args.scope as string) ||
+          name;
+        if (!byCallId.has(callId)) orderedIds.push(callId);
+        byCallId.set(callId, {
+          id: callId,
+          kind: name as Item["kind"],
+          args,
+          ts: ev.created_at,
+          headline,
+        });
+      } else if (ev.role === "tool_result") {
+        const res = ev.tool_result as {
+          id?: string;
+          result?: Record<string, unknown> | null;
+        };
+        const callId = String(res?.id ?? ev.message_id);
+        const existing = byCallId.get(callId);
+        if (!existing) continue;
+        const result = res?.result ?? null;
+        existing.result = result;
+        if (result && typeof result === "object") {
+          const status = (result as { status?: string }).status;
+          const effective = (result as { effective?: string }).effective;
+          if (typeof status === "string") existing.status = status;
+          if (typeof effective === "string") existing.effective = effective;
+        }
+      }
     }
-    return out.reverse(); // newest first — easier to scan during a chat
+    const ordered = orderedIds
+      .map((id) => byCallId.get(id))
+      .filter((it): it is Item => Boolean(it));
+    return ordered.reverse(); // newest first
   }, [events]);
 
   if (items.length === 0) {
@@ -764,22 +941,57 @@ function MemoryTab({ events }: { events: TraceEvent[] }) {
             : m.kind === "session_search"
               ? "memory.sessionSearch"
               : "memory.recall";
-        const headline =
-          (m.args.text as string) ||
-          (m.args.query as string) ||
-          (m.args.key as string) ||
-          (m.args.scope as string) ||
-          m.kind;
+        const result = m.result;
+        const hits =
+          result && Array.isArray((result as { hits?: unknown[] }).hits)
+            ? ((result as { hits: Record<string, unknown>[] }).hits ?? [])
+            : result && Array.isArray((result as { items?: unknown[] }).items)
+              ? ((result as { items: Record<string, unknown>[] }).items ?? [])
+              : [];
+        const tone: "default" | "outline" | "success" | "warning" | "danger" =
+          m.status === "applied"
+            ? "success"
+            : m.status === "deferred"
+              ? "outline"
+              : m.status === "rejected"
+                ? "danger"
+                : "outline";
         return (
           <li key={m.id} className="rounded-lg border p-2">
             <div className="flex items-center gap-1.5">
               <Badge variant="outline">{t(labelKey)}</Badge>
-              <span className="truncate font-medium" title={headline}>
-                {headline}
+              {m.status ? <Badge variant={tone}>{m.status}</Badge> : null}
+              {m.effective ? (
+                <span className="rounded bg-black/5 px-1 text-[10px] sh-muted dark:bg-white/10">
+                  {m.effective}
+                </span>
+              ) : null}
+              <span className="truncate font-medium" title={m.headline}>
+                {m.headline}
               </span>
             </div>
             {m.args.scope ? (
-              <p className="mt-1 text-[10px] sh-muted">scope: {String(m.args.scope)}</p>
+              <p className="mt-1 text-[10px] sh-muted">
+                scope: {String(m.args.scope)}
+              </p>
+            ) : null}
+            {hits.length > 0 ? (
+              <ul className="mt-1 space-y-1">
+                {hits.map((hit, i) => (
+                  <li
+                    key={i}
+                    className="rounded bg-black/5 px-1.5 py-1 text-[11px] dark:bg-white/5"
+                  >
+                    <span className="line-clamp-3">
+                      {String(
+                        (hit as { content?: string }).content ??
+                          (hit as { text?: string }).text ??
+                          "",
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             ) : null}
           </li>
         );

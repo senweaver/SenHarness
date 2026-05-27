@@ -4,7 +4,7 @@ import { IntlErrorCode, NextIntlClientProvider } from "next-intl";
 import type { AbstractIntlMessages } from "next-intl";
 import type { ReactNode } from "react";
 
-import type { Locale } from "@/lib/i18n";
+import type { Locale } from "@/lib/i18n-config";
 
 export function IntlClientShell({
   locale,

@@ -8,9 +8,9 @@ import {
   IconGripVertical,
   IconLoader2,
   IconPlus,
-  IconRobot,
   IconTrash,
 } from "@tabler/icons-react";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -303,17 +303,12 @@ export function SquadForm({ mode, initial }: SquadFormProps) {
                         <IconGripVertical className="size-3" />
                       </button>
                     </div>
-                    {a?.avatar_url ? (
-                      <img
-                        src={a.avatar_url}
-                        alt=""
-                        className="size-7 shrink-0 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-black/10 dark:bg-white/10">
-                        <IconRobot className="size-4" />
-                      </div>
-                    )}
+                    <AgentAvatar
+                      name={a?.name ?? m.agent_id}
+                      avatarUrl={a?.avatar_url}
+                      className="size-7 rounded-full"
+                      fallbackClassName="text-[11px]"
+                    />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium">
                         {a?.name ?? m.agent_id}

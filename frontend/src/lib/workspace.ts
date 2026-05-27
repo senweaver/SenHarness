@@ -17,6 +17,19 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspaceStore } from "@/stores/workspace-store";
 
+/**
+ * Normalize a user-typed name into a valid workspace slug
+ * (`/^[a-z0-9][a-z0-9-]{1,63}$/`). Empty result is the caller's problem.
+ */
+export function slugifyWorkspaceName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
 export async function switchActiveWorkspace(workspaceId: string): Promise<boolean> {
   // Note: we deliberately do NOT short-circuit when
   // ``activeWorkspaceId === workspaceId``. The Zustand store can drift

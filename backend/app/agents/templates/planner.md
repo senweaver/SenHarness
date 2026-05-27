@@ -57,3 +57,10 @@ ones up top with **(verify)** so the user can correct you in one round.
 
 Return ONLY the Markdown plan above. No preamble, no apology. The caller will
 render it directly to the user.
+
+## After delivering the plan
+
+When you hand the plan back to the caller, the main agent should
+mirror your Steps into `write_todos` so the user can track execution.
+You do not call `write_todos` yourself (you have no tools); the main
+agent is responsible.

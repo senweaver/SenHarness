@@ -7,7 +7,7 @@ import {
   IconLoader2,
   IconPlugConnected,
 } from "@tabler/icons-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,14 @@ import {
   useProviderCatalog,
   useProviders,
   useTestProvider,
+  type DiscoverResponse,
   type ProviderCatalogEntry,
+  type ProviderModelRead,
   type ProviderRead,
 } from "@/hooks/use-providers";
+import { ProviderAvatar } from "@/components/providers/ProviderAvatar";
+import { labelOf, descOf } from "@/components/providers/_localize";
+import { api } from "@/lib/api";
 import { useOnboardingStore } from "@/stores/onboarding-store";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +35,7 @@ interface OnboardingStepProviderProps {
 
 export function OnboardingStepProvider({ onNext }: OnboardingStepProviderProps) {
   const t = useTranslations("onboarding.provider");
+  const locale = useLocale();
   const setDraft = useOnboardingStore((s) => s.setDraft);
 
   const { data: catalog } = useProviderCatalog();
@@ -44,7 +50,7 @@ export function OnboardingStepProvider({ onNext }: OnboardingStepProviderProps) 
 
   const recommendedEntries = useMemo<ProviderCatalogEntry[]>(() => {
     if (!catalog) return [];
-    return catalog.slice(0, 8);
+    return catalog.filter((entry) => entry.kind !== "custom");
   }, [catalog]);
 
   const selectedEntry = useMemo(
@@ -64,6 +70,39 @@ export function OnboardingStepProvider({ onNext }: OnboardingStepProviderProps) 
     setTestProviderId(null);
   };
 
+  const autoDiscoverAndApply = async (providerId: string) => {
+    // First-run shortcut: run discover then apply the recommended set so
+    // the agent step finds usable models without a second manual visit
+    // to /settings/workspace/providers. Static fallback is fine — the
+    // catalog ships a sensible default for every supported provider.
+    let discovered: DiscoverResponse;
+    try {
+      discovered = await api.post<DiscoverResponse>(
+        `/api/v1/providers/${providerId}/discover`,
+        undefined,
+      );
+    } catch {
+      return;
+    }
+    const candidates = discovered.discovered;
+    if (!candidates.length) return;
+    const recommended = candidates.filter((m) => m.recommended);
+    const picks = (recommended.length > 0 ? recommended : candidates.slice(0, 3))
+      .filter((m) => !m.in_db)
+      .map((m) => m.model);
+    if (!picks.length) return;
+    try {
+      await api.post<ProviderModelRead[]>(
+        `/api/v1/providers/${providerId}/discover/apply`,
+        { model_ids: picks, replace: false },
+      );
+    } catch {
+      // Apply failure isn't fatal — user can still pick models manually
+      // later. Onboarding intentionally continues so the chat step
+      // doesn't strand them.
+    }
+  };
+
   const saveAndContinue = async () => {
     if (!pickedKind || !selectedEntry) {
       toast.error(t("pickRequired"));
@@ -74,13 +113,18 @@ export function OnboardingStepProvider({ onNext }: OnboardingStepProviderProps) 
       return;
     }
     try {
-      const created = await create.mutateAsync({
-        kind: pickedKind,
-        name: selectedEntry.display_name,
-        api_key: apiKey.trim(),
-        base_url: baseUrl.trim() || null,
-      });
-      setDraft({ providerId: created.id });
+      let providerId = testProviderId;
+      if (!providerId) {
+        const created = await create.mutateAsync({
+          kind: pickedKind,
+          name: labelOf(selectedEntry, locale),
+          api_key: apiKey.trim(),
+          base_url: baseUrl.trim() || null,
+        });
+        providerId = created.id;
+      }
+      setDraft({ providerId });
+      await autoDiscoverAndApply(providerId);
       onNext();
     } catch {
       toast.error(t("saveFailed"));
@@ -97,7 +141,7 @@ export function OnboardingStepProvider({ onNext }: OnboardingStepProviderProps) 
       try {
         const created = await create.mutateAsync({
           kind: pickedKind,
-          name: selectedEntry.display_name,
+          name: labelOf(selectedEntry, locale),
           api_key: apiKey.trim(),
           base_url: baseUrl.trim() || null,
         });
@@ -145,9 +189,10 @@ export function OnboardingStepProvider({ onNext }: OnboardingStepProviderProps) 
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className="grid max-h-[280px] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3 md:grid-cols-4">
         {recommendedEntries.map((entry) => {
           const isActive = entry.kind === pickedKind;
+          const name = labelOf(entry, locale);
           return (
             <button
               key={entry.kind}
@@ -160,11 +205,16 @@ export function OnboardingStepProvider({ onNext }: OnboardingStepProviderProps) 
                   : "sh-card hover:bg-black/5 dark:hover:bg-white/5",
               )}
             >
-              <span className="text-[13px] font-semibold">
-                {entry.display_name}
+              <span className="flex items-center gap-2">
+                <ProviderAvatar
+                  displayName={name}
+                  family={entry.family}
+                  size="sm"
+                />
+                <span className="text-[13px] font-semibold">{name}</span>
               </span>
               <span className="line-clamp-2 text-[11px] sh-muted">
-                {entry.description}
+                {descOf(entry, locale)}
               </span>
             </button>
           );

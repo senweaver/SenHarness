@@ -49,6 +49,7 @@ from app.api.v1 import (
     project_boards,
     provider_catalog,
     providers,
+    public,
     runtimes,
     search_providers,
     secrets,
@@ -73,6 +74,7 @@ api_router = APIRouter()
 
 api_router.include_router(health.router, tags=["health"])
 api_router.include_router(version.router, tags=["health"])
+api_router.include_router(public.router, prefix="/public", tags=["public"])
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(me.router, prefix="/me", tags=["me"])
 api_router.include_router(workspaces.router, prefix="/workspaces", tags=["workspaces"])

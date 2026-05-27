@@ -73,6 +73,7 @@ type UnifiedRow = {
   dbId?: string;
   sortOrder: number;
   source?: string;
+  metadataJson?: Record<string, unknown> | null;
 };
 
 export function ModelManagementSection({ provider, catalogEntry }: Props) {
@@ -88,6 +89,9 @@ export function ModelManagementSection({ provider, catalogEntry }: Props) {
   const [discoverResult, setDiscoverResult] = useState<{
     source: "remote" | "static";
     rows: DiscoveredModel[];
+    /** Stable code carried over from the backend so the banner copy
+     *  matches the i18n key the toast/banner picks. */
+    error?: string | null;
   } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [manualName, setManualName] = useState("");
@@ -167,6 +171,7 @@ export function ModelManagementSection({ provider, catalogEntry }: Props) {
         dbId: r.id,
         sortOrder: r.sort_order ?? 0,
         source: r.source,
+        metadataJson: r.metadata_json ?? null,
       });
     }
     return Array.from(byModel.values());
@@ -225,11 +230,23 @@ export function ModelManagementSection({ provider, catalogEntry }: Props) {
   async function runDiscover() {
     try {
       const r = await discover.mutateAsync(provider.id);
-      if (r.error) {
-        toast.error(t.has(`errors.${r.error}`) ? t(`errors.${r.error}`) : r.error);
-        return;
+      const friendlyError = (code: string | null | undefined): string => {
+        if (!code) return t("discoverFailed");
+        return t.has(`errors.${code}`) ? t(`errors.${code}`) : t("errors.unknown");
+      };
+      // When the backend fell back to the static catalog because the
+      // remote was unreachable, surface an inline banner instead of an
+      // error toast — the user still has a usable list of models, the
+      // toast just made it feel like Discover broke entirely. Other
+      // error codes (auth_failed, rate_limited, ...) still toast because
+      // they're recoverable signals the user needs to act on.
+      if (r.error && !(r.source === "static" && r.error === "network_unreachable")) {
+        toast.error(friendlyError(r.error));
+        if (r.source !== "static" || r.discovered.length === 0) {
+          return;
+        }
       }
-      setDiscoverResult({ source: r.source, rows: r.discovered });
+      setDiscoverResult({ source: r.source, rows: r.discovered, error: r.error });
       setSelected(
         new Set(
           r.discovered
@@ -237,7 +254,9 @@ export function ModelManagementSection({ provider, catalogEntry }: Props) {
             .map((m) => m.model),
         ),
       );
-      toast.success(t("discoverSuccess", { count: r.discovered.length }));
+      if (!r.error) {
+        toast.success(t("discoverSuccess", { count: r.discovered.length }));
+      }
     } catch {
       toast.error(t("discoverFailed"));
     }
@@ -359,6 +378,13 @@ export function ModelManagementSection({ provider, catalogEntry }: Props) {
       </div>
 
       <CategoryTabs active={tab} counts={categoryCounts} onChange={setTab} />
+
+      {discoverResult?.source === "static" &&
+      discoverResult.error === "network_unreachable" ? (
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
+          {t("errors.network_unreachable")}
+        </div>
+      ) : null}
 
       {discoverResult && newlyDiscovered.length > 0 ? (
         <div className="rounded-md border bg-muted/40 p-3 space-y-2.5">

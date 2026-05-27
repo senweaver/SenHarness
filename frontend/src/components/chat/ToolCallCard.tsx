@@ -276,7 +276,12 @@ function WebFetchRenderer({ result }: { result: unknown }) {
   );
 }
 
-/** `knowledge_search` → `{ ok, collection_name, hits: [...] }`. */
+/** `knowledge_search` → `{ ok, collection_name, hits: [...] }`.
+ *
+ *  Vertical, no-horizontal-scroll layout. Each hit is one full-width row
+ *  with a 2-line snippet preview; clicking the row expands the full
+ *  chunk text inline (no second panel, no carousel). Designed to fit
+ *  narrow message columns without bubbling overflow up to the parent. */
 function KnowledgeSearchRenderer({
   result,
   query,
@@ -311,9 +316,9 @@ function KnowledgeSearchRenderer({
   }
 
   return (
-    <div className="space-y-2 py-1">
+    <div className="flex min-w-0 flex-col gap-1.5 py-1">
       <div className="flex flex-wrap items-center gap-1.5 text-[11px] sh-muted">
-        <IconSearch className="size-3.5" />
+        <IconSearch className="size-3.5 shrink-0" />
         <span>
           {hits.length} hit{hits.length === 1 ? "" : "s"}
           {query ? <span className="ml-1 italic">for &ldquo;{query}&rdquo;</span> : null}
@@ -324,89 +329,72 @@ function KnowledgeSearchRenderer({
           </Badge>
         )}
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <ul className="m-0 flex min-w-0 list-none flex-col gap-1 p-0">
         {hits.map((hit, idx) => {
           const score = typeof hit.score === "number" ? hit.score : 0;
           const docTitle =
             typeof hit.doc_title === "string" ? hit.doc_title : "(untitled)";
           const text = typeof hit.text === "string" ? hit.text : "";
           const ord = typeof hit.ord === "number" ? hit.ord : null;
+          const open = expandedIdx === idx;
           const scoreColor =
             score >= 0.7
               ? "text-green-600 dark:text-green-400"
               : score >= 0.4
                 ? "text-amber-600 dark:text-amber-400"
-                : "text-red-600 dark:text-red-400";
+                : "sh-muted";
           return (
-            <button
-              type="button"
-              key={`${docTitle}-${idx}`}
-              onClick={() =>
-                setExpandedIdx(expandedIdx === idx ? null : idx)
-              }
-              className={cn(
-                "min-w-[220px] max-w-[280px] shrink-0 rounded-md border bg-black/[0.02] dark:bg-white/[0.02] p-2 text-left transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.05]",
-                expandedIdx === idx &&
-                  "ring-2 ring-[rgb(var(--color-primary))]",
-              )}
-            >
-              <div className="mb-1 flex items-center gap-1">
-                <IconFileText className="size-3 shrink-0 sh-muted" />
-                <span className="text-[11px] font-medium truncate flex-1">
-                  {docTitle}
-                </span>
-                <span
-                  className={cn(
-                    "text-[10px] font-mono tabular-nums",
-                    scoreColor,
-                  )}
-                >
-                  {score.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex items-center gap-1 mb-1">
-                <Badge variant="outline">[{idx + 1}]</Badge>
-                {ord != null && (
-                  <Badge variant="outline">chunk {ord}</Badge>
+            <li key={`${docTitle}-${idx}`} className="min-w-0">
+              <button
+                type="button"
+                onClick={() => setExpandedIdx(open ? null : idx)}
+                aria-expanded={open}
+                className={cn(
+                  "flex w-full min-w-0 items-start gap-2 rounded-md border bg-black/[0.02] dark:bg-white/[0.02] p-2 text-left transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.05]",
+                  open && "ring-1 ring-[rgb(var(--color-primary))]/40",
                 )}
-              </div>
-              <p className="text-[11px] sh-muted line-clamp-2">{text}</p>
-            </button>
+              >
+                <Badge variant="outline" className="mt-0.5 shrink-0 font-mono">
+                  {idx + 1}
+                </Badge>
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <IconFileText className="size-3 shrink-0 sh-muted" />
+                    <span className="min-w-0 truncate text-[11px] font-medium">
+                      {docTitle}
+                    </span>
+                    {ord != null && (
+                      <span className="shrink-0 text-[10px] sh-muted">
+                        chunk {ord}
+                      </span>
+                    )}
+                    <span
+                      className={cn(
+                        "ml-auto shrink-0 font-mono text-[10px] tabular-nums",
+                        scoreColor,
+                      )}
+                    >
+                      {score.toFixed(2)}
+                    </span>
+                  </div>
+                  {text ? (
+                    <p
+                      className={cn(
+                        "min-w-0 break-words text-[11px] sh-muted",
+                        open
+                          ? "whitespace-pre-wrap leading-relaxed"
+                          : "line-clamp-2",
+                      )}
+                    >
+                      {text}
+                    </p>
+                  ) : null}
+                </div>
+              </button>
+            </li>
           );
         })}
-      </div>
-      {expandedIdx !== null &&
-        hits[expandedIdx] &&
-        (() => {
-          const hit = hits[expandedIdx];
-          const text = typeof hit.text === "string" ? hit.text : "";
-          const docTitle =
-            typeof hit.doc_title === "string"
-              ? hit.doc_title
-              : "(untitled)";
-          return (
-            <div className="rounded-md border-2 border-[rgb(var(--color-primary))]/30 bg-[rgb(var(--color-primary))]/5 p-2.5">
-              <div className="mb-1.5 flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Badge variant="primary">[{expandedIdx + 1}]</Badge>
-                  <span className="text-xs font-medium">{docTitle}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-6"
-                  onClick={() => setExpandedIdx(null)}
-                  aria-label="collapse"
-                >
-                  <IconChevronUp className="size-3.5" />
-                </Button>
-              </div>
-              <p className="text-xs leading-relaxed whitespace-pre-wrap">
-                {text}
-              </p>
-            </div>
-          );
-        })()}
+      </ul>
     </div>
   );
 }
@@ -586,7 +574,7 @@ export function ToolCallCard({ toolCall, className }: ToolCallCardProps) {
   return (
     <div
       className={cn(
-        "rounded-lg border sh-card overflow-hidden",
+        "w-full min-w-0 rounded-lg border sh-card overflow-hidden",
         errored && "border-red-300 dark:border-red-900",
         className,
       )}

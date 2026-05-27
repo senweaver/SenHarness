@@ -4,23 +4,8 @@ import { Link } from "@/lib/navigation";
 import { useTranslations } from "next-intl";
 
 import { useAgents } from "@/hooks/use-agents";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
-
-const ICON_PALETTE = [
-  "bg-[rgb(var(--color-primary)/0.15)] text-[rgb(var(--color-primary))]",
-  "bg-amber-500/15 text-amber-600",
-  "bg-emerald-500/15 text-emerald-600",
-  "bg-violet-500/15 text-violet-600",
-  "bg-rose-500/15 text-rose-600",
-  "bg-sky-500/15 text-sky-600",
-];
-
-function pickPaletteIndex(seed: string): number {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
-  return Math.abs(h) % ICON_PALETTE.length;
-}
 
 /**
  * "Active agents" bento tile.
@@ -63,7 +48,6 @@ export function ActiveAgentsList() {
       ) : (
         <ul className="flex-1 space-y-1 overflow-y-auto pr-1">
           {items.map((agent) => {
-            const palette = ICON_PALETTE[pickPaletteIndex(agent.id)];
             const status = pickStatus(agent.autonomy_level);
             return (
               <li key={agent.id}>
@@ -72,23 +56,12 @@ export function ActiveAgentsList() {
                   className="flex items-center justify-between rounded-lg border border-transparent p-2 transition-colors hover:border-[rgb(var(--color-border))] hover:bg-black/5 dark:hover:bg-white/5"
                 >
                   <div className="flex min-w-0 items-center gap-3">
-                    {agent.avatar_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={agent.avatar_url}
-                        alt=""
-                        className="size-10 rounded-lg object-cover"
-                      />
-                    ) : (
-                      <div
-                        className={cn(
-                          "flex size-10 items-center justify-center rounded-lg text-[15px] font-semibold",
-                          palette,
-                        )}
-                      >
-                        {agent.name.trim().charAt(0).toUpperCase() || "?"}
-                      </div>
-                    )}
+                    <AgentAvatar
+                      name={agent.name}
+                      avatarUrl={agent.avatar_url}
+                      className="size-10"
+                      fallbackClassName="text-[15px]"
+                    />
                     <div className="min-w-0">
                       <div className="truncate text-[14px] font-medium">
                         {agent.name}

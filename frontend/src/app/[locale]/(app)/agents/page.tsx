@@ -9,7 +9,10 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { useAgentTerm } from "@/components/nav/AgentTermLabel";
-import { BlankAgentDialog } from "@/components/agents/BlankAgentDialog";
+import {
+  BlankAgentDialog,
+  type BlankAgentDialogInitial,
+} from "@/components/agents/BlankAgentDialog";
 import { NewAgentDialog } from "@/components/agents/NewAgentDialog";
 import { AgentsListBody } from "@/components/agents/AgentsListBody";
 
@@ -22,6 +25,8 @@ export default function AgentsPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [blankOpen, setBlankOpen] = useState(false);
+  const [blankInitial, setBlankInitial] =
+    useState<BlankAgentDialogInitial | undefined>(undefined);
 
   useEffect(() => {
     if (searchParams.get("new") === "1") {
@@ -57,13 +62,21 @@ export default function AgentsPage() {
       <NewAgentDialog
         open={dialogOpen}
         onOpenChange={onDialogChange}
-        onPickBlank={() => {
+        onPickBlank={(initial) => {
           onDialogChange(false);
+          setBlankInitial(initial);
           setBlankOpen(true);
         }}
       />
 
-      <BlankAgentDialog open={blankOpen} onOpenChange={setBlankOpen} />
+      <BlankAgentDialog
+        open={blankOpen}
+        onOpenChange={(open) => {
+          setBlankOpen(open);
+          if (!open) setBlankInitial(undefined);
+        }}
+        initial={blankInitial}
+      />
 
       <span className="sr-only">{t("common.loading")}</span>
     </div>

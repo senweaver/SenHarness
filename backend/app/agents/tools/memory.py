@@ -23,6 +23,7 @@ without breaking the run.
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
@@ -34,6 +35,8 @@ from app.db.models.pending_memory import PendingMemoryTargetTable
 from app.db.session import get_session_factory
 from app.services import memory as mem_svc
 from app.services import pending_memory as pending_memory_svc
+
+log = logging.getLogger(__name__)
 
 
 def _resolve_scope(scope: str, ctx) -> tuple[MemoryScope, uuid.UUID | None]:
@@ -231,15 +234,32 @@ async def run_recall(args: RecallArgs) -> dict:
         }
 
     async with factory() as db:
-        rows = await mem_svc.recall(
-            db,
-            workspace_id=ctx.workspace_id,
-            identity_id=ctx.identity_id,
-            agent_id=ctx.agent_id,
-            query=args.query,
-            limit=args.limit,
-            min_score=args.min_score,
-        )
+        try:
+            rows = await mem_svc.recall(
+                db,
+                workspace_id=ctx.workspace_id,
+                identity_id=ctx.identity_id,
+                agent_id=ctx.agent_id,
+                query=args.query,
+                limit=args.limit,
+                min_score=args.min_score,
+            )
+        except Exception:
+            log.exception(
+                "memory.recall failed workspace=%s query_len=%d",
+                ctx.workspace_id,
+                len((args.query or "").strip()),
+            )
+            return {
+                "query": args.query,
+                "status": "error",
+                "code": "memory.recall_failed",
+                "hits": [],
+                "message": (
+                    "Recall could not run — embeddings may be unavailable "
+                    "in this workspace. Try listing recent memories instead."
+                ),
+            }
     return {
         "query": args.query,
         "hits": [

@@ -8,6 +8,12 @@ export interface UpdateMeInput {
   name?: string;
   avatar_url?: string | null;
   profile_json?: Record<string, unknown>;
+  /**
+   * Convenience field — server folds it into ``profile_json.locale``
+   * and validates it against the supported locale list. Pass ``""`` to
+   * clear the override.
+   */
+  preferred_locale?: string;
 }
 
 export function useUpdateMe() {

@@ -115,7 +115,7 @@ async def run_agent_one_shot(
             "code_mode": agent.metadata_json.get("code_mode"),
             "context": agent.metadata_json.get("context") or {},
             "skills": agent.metadata_json.get("skills"),
-            "todos": agent.metadata_json.get("todos"),
+            "todos": agent.metadata_json.get("todos", True),
             "sandbox": agent.metadata_json.get("sandbox"),
             # Channels / Flows can't reasonably do HITL — force approvals off.
             "approvals": False,

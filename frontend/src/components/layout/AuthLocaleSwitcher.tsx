@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { usePathname, useRouter } from "@/lib/navigation";
-import { type Locale, locales } from "@/lib/i18n";
+import { type Locale, locales } from "@/lib/i18n-config";
 
 const LABELS: Record<Locale, string> = {
   "en-US": "English",

@@ -1,10 +1,13 @@
 """Todo / task planning harness via ``pydantic-ai-todo``.
 
-Opt-in per agent via ``metadata_json.todos``:
+Per-agent shape on ``metadata_json.todos`` / ``policy.todos``:
 
-  - ``true`` / ``"enabled"``  → attach ``TodoCapability`` with an in-memory store
-  - ``{"enable_subtasks": true}`` → also enable nested subtasks
-  - omitted / ``false``       → no todo tools
+  - omitted / ``true`` / ``"enabled"`` → ``TodoCapability`` with default config
+  - ``{"enable_subtasks": true}``      → enabled + nested subtasks
+  - ``false``                           → explicitly disabled (no todo tools)
+
+Default is **on** so the frontend PlanTab can light up without per-agent
+opt-in; ``metadata_json.todos = false`` remains the escape hatch.
 
 Todos live **per run** (in-memory). Phase 3+ will migrate to PG-backed storage
 scoped to session/agent/workspace when we want persistent plans.
@@ -20,7 +23,7 @@ log = logging.getLogger(__name__)
 
 def build_todo_capability(*, policy: dict[str, Any] | None) -> Any | None:
     spec = (policy or {}).get("todos")
-    if not spec:
+    if spec is False:
         return None
 
     try:
@@ -29,7 +32,7 @@ def build_todo_capability(*, policy: dict[str, Any] | None) -> Any | None:
         log.info("pydantic-ai-todo not installed; todos disabled")
         return None
 
-    enable_subtasks = bool(spec.get("enable_subtasks") if isinstance(spec, dict) else False)
+    enable_subtasks = bool(spec.get("enable_subtasks")) if isinstance(spec, dict) else False
 
     try:
         storage = AsyncMemoryStorage()

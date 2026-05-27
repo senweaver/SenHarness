@@ -8,6 +8,7 @@ from fastapi import APIRouter, status
 
 from app.api.deps import CurrentIdentityId, CurrentWorkspaceId, DBSession
 from app.core.errors import Unauthorized
+from app.agents.kernels.model_profile import resolve_profile
 from app.schemas.provider import (
     DiscoverApplyRequest,
     DiscoveredModel,
@@ -22,6 +23,7 @@ from app.schemas.provider import (
     ProviderTestRequest,
     ProviderTestResponse,
     ProviderUpdate,
+    ResolvedReasoningProfile,
 )
 from app.services import provider as svc
 from app.services import workspace as ws_svc
@@ -37,8 +39,10 @@ def _require_workspace(workspace_id: uuid.UUID | None) -> uuid.UUID:
 
 async def _attach_has_key(db, provider) -> ProviderRead:
     has_key = await svc.provider_has_key(db, provider_id=provider.id)
+    hint = await svc.provider_key_hint(db, provider_id=provider.id) if has_key else None
     out = ProviderRead.model_validate(provider)
     out.has_key = has_key
+    out.api_key_hint = hint
     return out
 
 
@@ -204,9 +208,49 @@ async def update_provider_model(
         context_window=body.context_window,
         capabilities=body.capabilities,
         sort_order=body.sort_order,
+        metadata_json=body.metadata_json,
     )
     await db.commit()
     return ProviderModelRead.model_validate(pm)
+
+
+@router.get(
+    "/{provider_id}/models/{model_id}/profile",
+    response_model=ResolvedReasoningProfile,
+)
+async def get_resolved_model_profile(
+    provider_id: uuid.UUID,
+    model_id: uuid.UUID,
+    db: DBSession,
+    identity_id: CurrentIdentityId,
+    workspace_id: CurrentWorkspaceId,
+) -> ResolvedReasoningProfile:
+    """Return the model's **effective** reasoning profile.
+
+    Merges ``BUILTIN_PROFILES`` with ``provider_models.metadata_json``
+    so the operator dialog opens pre-filled with the values that
+    actually drive the runner — instead of showing all-false defaults
+    whenever the row inherits a builtin (e.g. ``qwen3*``,
+    ``deepseek-reasoner``) without an explicit DB override.
+    """
+    ws_id = _require_workspace(workspace_id)
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
+    provider = await svc.get_or_404(db, provider_id, workspace_id=ws_id)
+    pm = await svc.get_provider_model(db, model_id, provider_id=provider.id)
+    profile = resolve_profile(
+        provider_kind=str(provider.kind),
+        model_name=pm.model,
+        db_metadata=pm.metadata_json,
+    )
+    return ResolvedReasoningProfile(
+        supported=profile.reasoning.supported,
+        hybrid=profile.reasoning.hybrid,
+        default=profile.reasoning.default,
+        tool_call_safe=profile.reasoning.tool_call_safe,
+        preferred_effort=profile.reasoning.preferred_effort,
+        flash_alternative=profile.flash_alternative,
+        has_db_override=bool((pm.metadata_json or {}).get("profile")),
+    )
 
 
 @router.delete(

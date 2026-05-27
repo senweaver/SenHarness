@@ -9,7 +9,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
-import { type Locale } from "@/lib/i18n";
+import { type Locale } from "@/lib/i18n-config";
 
 const LABELS: Record<Locale, string> = {
   "zh-CN": "简体中文",

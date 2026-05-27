@@ -1,16 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Link, useRouter } from "@/lib/navigation";
+import { Link } from "@/lib/navigation";
 import {
   IconChevronRight,
-  IconLoader2,
   IconPlus,
   IconSearch,
   IconSparkles,
 } from "@tabler/icons-react";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 import { useLocale, useTranslations } from "next-intl";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,9 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useCreateAgent } from "@/hooks/use-agent-mutations";
 import {
-  useCloneAgent,
   useDiscoverAgents,
   useDiscoverCategories,
 } from "@/hooks/use-marketplace";
@@ -30,7 +27,18 @@ import type { AgentPublicCard } from "@/types/api";
 interface NewAgentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onPickBlank: () => void;
+  /**
+   * Open the editable blank-agent dialog. ``initial`` carries the
+   * prefill the caller wants the editor to show — the user can change
+   * the name (and any other field) before clicking Save. When
+   * ``initial.templateId`` is set, Save calls clone instead of create.
+   */
+  onPickBlank: (initial?: {
+    name?: string;
+    description?: string;
+    defaultModel?: string | null;
+    templateId?: string;
+  }) => void;
 }
 
 export function NewAgentDialog({
@@ -40,11 +48,7 @@ export function NewAgentDialog({
 }: NewAgentDialogProps) {
   const t = useTranslations("newAgent");
   const tCommon = useTranslations("common");
-  const router = useRouter();
   const locale = useLocale();
-
-  const clone = useCloneAgent();
-  const create = useCreateAgent();
 
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
@@ -96,34 +100,18 @@ export function NewAgentDialog({
       });
   }, [filteredTemplates, categories, locale]);
 
-  const cloneTemplate = async (id: string, defaultName: string) => {
-    try {
-      const cloned = await clone.mutateAsync({
-        agent_id: id,
-        name: defaultName,
-      });
-      toast.success(t("created"));
-      onOpenChange(false);
-      router.push(`/agents/${cloned.id}`);
-    } catch {
-      toast.error(t("createFailed"));
-    }
+  const cloneTemplate = (id: string, defaultName: string, description: string | null) => {
+    onOpenChange(false);
+    onPickBlank({
+      name: defaultName,
+      description: description ?? "",
+      templateId: id,
+    });
   };
 
-  const createGeneral = async () => {
-    try {
-      const created = await create.mutateAsync({
-        name: t("general.defaultName"),
-        description: null,
-        default_model: null,
-        visibility: "private",
-      });
-      toast.success(t("created"));
-      onOpenChange(false);
-      router.push(`/agents/${created.id}`);
-    } catch {
-      toast.error(t("createFailed"));
-    }
+  const createGeneral = () => {
+    onOpenChange(false);
+    onPickBlank({ name: t("general.defaultName") });
   };
 
   return (
@@ -181,7 +169,7 @@ export function NewAgentDialog({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button
                 type="button"
-                onClick={onPickBlank}
+                onClick={() => onPickBlank()}
                 data-testid="new-agent-blank-tile"
                 className="group flex w-full items-center gap-3 rounded-md border border-dashed p-4 text-left transition-all hover:-translate-y-px hover:border-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary)/0.06)]"
               >
@@ -201,16 +189,11 @@ export function NewAgentDialog({
 
               <button
                 type="button"
-                onClick={() => void createGeneral()}
-                disabled={create.isPending}
-                className="group flex w-full items-center gap-3 rounded-md border p-4 text-left transition-all hover:-translate-y-px hover:border-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary)/0.06)] disabled:cursor-wait disabled:opacity-60"
+                onClick={createGeneral}
+                className="group flex w-full items-center gap-3 rounded-md border p-4 text-left transition-all hover:-translate-y-px hover:border-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary)/0.06)]"
               >
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-[rgb(var(--color-primary)/0.12)] text-[rgb(var(--color-primary))]">
-                  {create.isPending ? (
-                    <IconLoader2 className="size-5 animate-spin" />
-                  ) : (
-                    <IconSparkles className="size-5" />
-                  )}
+                  <IconSparkles className="size-5" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-semibold">
@@ -240,8 +223,9 @@ export function NewAgentDialog({
                       <TemplateCard
                         key={agent.id}
                         agent={agent}
-                        disabled={clone.isPending}
-                        onPick={() => void cloneTemplate(agent.id, agent.name)}
+                        onPick={() =>
+                          cloneTemplate(agent.id, agent.name, agent.description ?? null)
+                        }
                       />
                     ))}
                   </div>
@@ -270,34 +254,25 @@ export function NewAgentDialog({
 
 function TemplateCard({
   agent,
-  disabled,
   onPick,
 }: {
   agent: AgentPublicCard;
-  disabled?: boolean;
   onPick: () => void;
 }) {
   return (
     <button
       type="button"
-      disabled={disabled}
       onClick={onPick}
-      className="group relative flex h-full flex-col items-start gap-2 rounded-md border sh-card p-3 text-left transition-all hover:-translate-y-px hover:border-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary)/0.06)] disabled:cursor-wait disabled:opacity-60"
+      className="group relative flex h-full flex-col items-start gap-2 rounded-md border sh-card p-3 text-left transition-all hover:-translate-y-px hover:border-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary)/0.06)]"
     >
       <IconChevronRight className="absolute right-2 top-2 size-4 shrink-0 sh-muted" />
       <div className="flex w-full items-center gap-2 pr-5">
-        {agent.avatar_url ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={agent.avatar_url}
-            alt=""
-            className="size-8 shrink-0 rounded-md object-cover"
-          />
-        ) : (
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[rgb(var(--color-primary)/0.1)] text-[rgb(var(--color-primary))]">
-            <IconSparkles className="size-4" />
-          </div>
-        )}
+        <AgentAvatar
+          name={agent.name}
+          avatarUrl={agent.avatar_url}
+          className="size-8 rounded-md"
+          fallbackClassName="rounded-md"
+        />
         <span className="truncate text-[13px] font-semibold">{agent.name}</span>
       </div>
       {agent.description && (

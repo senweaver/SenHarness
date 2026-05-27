@@ -88,6 +88,7 @@ TAGS_BY_SLUG: dict[str, list[str]] = {
     "engineering-software-architect": ["architecture", "design"],
     "engineering-code-reviewer": ["review", "quality", "code"],
     "engineering-codebase-onboarding-engineer": ["onboarding", "codebase"],
+    "engineering-github-opensource": ["opensource", "github"],
     "engineering-cms-developer": ["cms", "content"],
     "engineering-technical-writer": ["docs", "writing"],
     "engineering-git-workflow-master": ["git", "workflow"],

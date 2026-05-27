@@ -84,9 +84,15 @@ class DiscordProvider(ChannelProvider):
 
     @classmethod
     def stream_available(cls) -> bool:
+        # The ``discord`` SDK pulls in ``orjson`` lazily and breaks at
+        # import time when an incompatible orjson wheel is installed
+        # (AttributeError on ``orjson.loads``). Any failure here means
+        # stream mode is unusable, so report unavailable instead of
+        # blowing up the channel-kinds endpoint that surveys every
+        # provider.
         try:
             import discord  # noqa: F401
-        except ImportError:
+        except Exception:
             return False
         return True
 

@@ -195,11 +195,19 @@ async def poll_qr_login(*, channel: Channel, qr_id: str) -> dict[str, Any]:
     """Poll the QR status. Returns ``{status, bot_token?, ...}``.
 
     Statuses:
-        ``pending``    — waiting for scan
+        ``pending``    — waiting for scan (also covers transient upstream
+                         hiccups — see below)
         ``scanned``    — QR scanned, waiting for confirm
         ``confirmed``  — token issued; route writes it back to ``config_json``
         ``expired``    — QR timed out, frontend should regen
-        ``error``      — log + show error toast
+        ``error``      — iLink explicitly rejected the QR session
+
+    Transient policy: network timeouts, connection resets, and non-2xx
+    upstream responses are mapped to ``pending`` so the dialog keeps
+    polling. The frontend owns a 120 s local TTL timer that flips the
+    dialog to ``expired`` if no positive result arrives — this gives
+    the operator the friendly "refresh" path instead of an opaque
+    "upstream_http_500" error that the i18n catalog can't localize.
     """
     url = f"{_BASE}/ilink/bot/get_qrcode_status"
     try:
@@ -211,10 +219,16 @@ async def poll_qr_login(*, channel: Channel, qr_id: str) -> dict[str, Any]:
             )
         data = resp.json() if resp.content else {}
     except httpx.HTTPError as e:
-        return {"status": "error", "error": str(e)}
+        log.warning("wechat ilink get_qrcode_status transport error: %s", e)
+        return {"status": "pending"}
 
     if resp.status_code >= 400:
-        return {"status": "error", "error": f"upstream_http_{resp.status_code}"}
+        log.warning(
+            "wechat ilink get_qrcode_status HTTP %s: %s",
+            resp.status_code,
+            (resp.text or "")[:200],
+        )
+        return {"status": "pending"}
 
     body = data.get("data") if isinstance(data.get("data"), dict) else data
     status = body.get("status") or data.get("status") or ""

@@ -44,8 +44,10 @@ export function CopyButton({
       }
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.warn("CopyButton: clipboard failed", err);
+    } catch {
+      // Clipboard API failures (denied permission, non-secure context
+      // without the textarea fallback succeeding) leave ``copied`` at
+      // false — the absent check icon is signal enough.
     }
   };
 

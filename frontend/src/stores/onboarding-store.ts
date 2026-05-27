@@ -12,6 +12,7 @@ export interface OnboardingDraft {
 interface PersistedShape {
   step: OnboardingStep;
   draft: OnboardingDraft;
+  identityId: string | null;
 }
 
 const STORAGE_KEY = "senharness:onboarding";
@@ -21,7 +22,7 @@ function readPersisted(): PersistedShape | null {
   try {
     const raw = window.sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as PersistedShape;
+    const parsed = JSON.parse(raw) as Partial<PersistedShape>;
     if (
       parsed &&
       typeof parsed === "object" &&
@@ -29,7 +30,12 @@ function readPersisted(): PersistedShape | null {
       parsed.step >= 1 &&
       parsed.step <= 5
     ) {
-      return { step: parsed.step as OnboardingStep, draft: parsed.draft ?? {} };
+      return {
+        step: parsed.step as OnboardingStep,
+        draft: parsed.draft ?? {},
+        identityId:
+          typeof parsed.identityId === "string" ? parsed.identityId : null,
+      };
     }
     return null;
   } catch {
@@ -60,6 +66,7 @@ interface OnboardingState {
   hydrated: boolean;
   step: OnboardingStep;
   draft: OnboardingDraft;
+  boundIdentityId: string | null;
   hydrate: () => void;
   restart: () => void;
   start: () => void;
@@ -68,6 +75,19 @@ interface OnboardingState {
   back: () => void;
   goTo: (step: OnboardingStep) => void;
   setDraft: (patch: Partial<OnboardingDraft>) => void;
+  bindIdentity: (identityId: string) => void;
+}
+
+function snapshot(state: {
+  step: OnboardingStep;
+  draft: OnboardingDraft;
+  boundIdentityId: string | null;
+}): PersistedShape {
+  return {
+    step: state.step,
+    draft: state.draft,
+    identityId: state.boundIdentityId,
+  };
 }
 
 export const useOnboardingStore = create<OnboardingState>((set, get) => ({
@@ -75,6 +95,7 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
   hydrated: false,
   step: 1,
   draft: {},
+  boundIdentityId: null,
   hydrate: () => {
     if (get().hydrated) return;
     const restored = readPersisted();
@@ -83,6 +104,7 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
         hydrated: true,
         step: restored.step,
         draft: restored.draft,
+        boundIdentityId: restored.identityId,
       });
     } else {
       set({ hydrated: true });
@@ -90,13 +112,13 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
   },
   restart: () => {
     clearPersisted();
+    const id = get().boundIdentityId;
     set({ open: true, step: 1, draft: {} });
-    writePersisted({ step: 1, draft: {} });
+    writePersisted({ step: 1, draft: {}, identityId: id });
   },
   start: () => {
-    const { step, draft } = get();
     set({ open: true });
-    writePersisted({ step, draft });
+    writePersisted(snapshot(get()));
   },
   close: ({ clear } = {}) => {
     if (clear) {
@@ -108,24 +130,38 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
   },
   next: () => {
     const nextStep = Math.min(get().step + 1, 5) as OnboardingStep;
-    const draft = get().draft;
     set({ step: nextStep });
-    writePersisted({ step: nextStep, draft });
+    writePersisted(snapshot(get()));
   },
   back: () => {
     const prev = Math.max(get().step - 1, 1) as OnboardingStep;
-    const draft = get().draft;
     set({ step: prev });
-    writePersisted({ step: prev, draft });
+    writePersisted(snapshot(get()));
   },
   goTo: (step) => {
-    const draft = get().draft;
     set({ step });
-    writePersisted({ step, draft });
+    writePersisted(snapshot(get()));
   },
   setDraft: (patch) => {
     const draft = { ...get().draft, ...patch };
     set({ draft });
-    writePersisted({ step: get().step, draft });
+    writePersisted(snapshot(get()));
+  },
+  bindIdentity: (identityId) => {
+    const current = get().boundIdentityId;
+    if (current && current !== identityId) {
+      clearPersisted();
+      set({
+        open: false,
+        step: 1,
+        draft: {},
+        boundIdentityId: identityId,
+      });
+      return;
+    }
+    if (current !== identityId) {
+      set({ boundIdentityId: identityId });
+      writePersisted(snapshot(get()));
+    }
   },
 }));

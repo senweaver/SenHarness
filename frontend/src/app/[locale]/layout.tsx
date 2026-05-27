@@ -8,7 +8,7 @@ import { NextThemesScriptTagFilter } from "@/components/providers/NextThemesScri
 import { HtmlLangSync } from "@/components/providers/HtmlLangSync";
 import { Toaster } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { isLocale, locales } from "@/lib/i18n";
+import { isLocale, locales } from "@/lib/i18n-config";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));

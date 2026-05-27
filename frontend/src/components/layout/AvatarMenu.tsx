@@ -48,6 +48,7 @@ export function AvatarMenu({ collapsed }: { collapsed: boolean }) {
     }
     useAuthStore.getState().clear();
     useWorkspaceStore.getState().clear();
+    useOnboardingStore.getState().close({ clear: true });
     window.location.href = "/login";
   };
 

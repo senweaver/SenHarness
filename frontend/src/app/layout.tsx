@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { defaultLocale } from "@/lib/i18n";
+import { defaultLocale } from "@/lib/i18n-config";
 
 export const metadata: Metadata = {
   title: "SenHarness",

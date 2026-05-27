@@ -82,8 +82,22 @@ export function inferCapabilities(m: ModelLike): string[] {
   if (cat === "asr") set.add("asr");
   if (cat === "tts") set.add("tts");
 
-  if (family.includes("reasoning") || /\b(o\d|reasoner|thinking|r1)\b/.test(id))
+  // Explicit ``metadata_json.profile.reasoning.supported = true`` wins
+  // over regex sniffing so an operator-tagged thinking model gets the
+  // badge regardless of its naming pattern.
+  const reasoningProfile =
+    "metadata_json" in m && m.metadata_json
+      ? ((m.metadata_json as { profile?: { reasoning?: { supported?: boolean } } })
+          ?.profile?.reasoning?.supported ?? null)
+      : null;
+  if (reasoningProfile === true) {
     set.add("reasoning");
+  } else if (
+    family.includes("reasoning") ||
+    /\b(o\d|reasoner|thinking|r1)\b/.test(id)
+  ) {
+    set.add("reasoning");
+  }
   if (/\b(vision|vl|-v|gpt-4o|claude-3|gemini)\b/.test(id) && cat === "chat")
     set.add("vision");
   if (/\b(tools|function|tool-use)\b/.test(id) || cat === "chat")

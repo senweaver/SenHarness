@@ -87,6 +87,11 @@ class ProviderRead(Timestamped):
     metadata_json: dict
     sort_order: int = 0
     has_key: bool = False
+    # Last 4 characters of the stored key (or ``None`` when no key is
+    # configured / a legacy row hasn't been re-saved since the hint
+    # column was introduced). The plaintext key itself never leaves the
+    # backend — this is the **only** key material the frontend gets.
+    api_key_hint: str | None = None
 
 
 class ProviderReorderRequest(ORMModel):
@@ -136,6 +141,11 @@ class ProviderModelUpdate(ORMModel):
     context_window: int | None = None
     capabilities: list[str] | None = None
     sort_order: int | None = None
+    # Sparse JSON patch — only the keys present (typically just
+    # ``profile``) get merged onto the stored row. Pass
+    # ``metadata_json: {"profile": null}`` to clear the per-row
+    # reasoning override and fall back to ``BUILTIN_PROFILES``.
+    metadata_json: dict | None = None
 
 
 class ProviderModelReorderRequest(ORMModel):
@@ -189,3 +199,26 @@ class ProviderTestResponse(ORMModel):
     latency_ms: int | None = None
     detail: str | None = None
     error: str | None = None
+
+
+class ResolvedReasoningProfile(ORMModel):
+    """Effective reasoning profile for one model row.
+
+    Backend merges the static builtin profile with whatever override the
+    workspace stored on ``provider_models.metadata_json["profile"]`` —
+    the dialog opens with the **resolved** values so operators see what
+    actually drives the runner instead of an all-false placeholder.
+    """
+
+    supported: bool
+    hybrid: bool
+    default: str
+    tool_call_safe: bool
+    # Operator-configured effort knob. ``None`` means "no preference —
+    # keep whatever the builtin enable payload already sets". Values
+    # follow the OpenAI o-series vocabulary (``minimal`` / ``low`` /
+    # ``medium`` / ``high``) which the runner re-uses for every
+    # provider that accepts a reasoning_effort string.
+    preferred_effort: str | None = None
+    flash_alternative: str | None = None
+    has_db_override: bool = False

@@ -28,10 +28,18 @@ import {
 import { Tool } from "@/components/ai-elements/tool";
 import { AlignmentDot } from "@/components/chat/AlignmentDot";
 import {
+  AttachmentView,
+  type AttachmentRef,
+} from "@/components/chat/AttachmentView";
+import {
   ChatInput,
   type ChatInputHandle,
   type ChatInputSubmission,
 } from "@/components/chat/ChatInput";
+import {
+  collectKnowledgeHits,
+  MessageKnowledgeSources,
+} from "@/components/chat/MessageKnowledgeSources";
 import { RatingButtons } from "@/components/chat/RatingButtons";
 import { SessionGoalBanner } from "@/components/chat/SessionGoalBanner";
 import { ShareDialog } from "@/components/chat/ShareDialog";
@@ -122,14 +130,50 @@ function friendlyErrorMessage(
   }
 }
 
+/** Compose the ``parts`` array for an outgoing user turn.
+ *
+ *  Mirrors the shape ``buildInitialMessages`` synthesises from history so
+ *  the user bubble renders identically before and after a page reload —
+ *  in particular the attachment chips above the text. Without this the
+ *  composer's pending attachments vanish on submit and the user can't
+ *  tell which file they actually sent. */
+function buildOutgoingUserParts(
+  text: string,
+  attachments: AttachmentRef[],
+): UIMessage["parts"] {
+  const parts: UIMessage["parts"] = [];
+  for (const att of attachments) {
+    parts.push({
+      type: "attachment",
+      attachment: att,
+    } as unknown as UIMessage["parts"][number]);
+  }
+  if (text) {
+    parts.push({ type: "text", text } as UIMessage["parts"][number]);
+  }
+  return parts;
+}
+
 function buildInitialMessages(history: MessageRead[]): UIMessage[] {
   const out: UIMessage[] = [];
   for (const m of history) {
     if (m.role !== "user" && m.role !== "assistant") continue;
     const text = (m.content_json as { text?: string })?.text ?? "";
-    if (!text && (!m.tool_call_json || m.role !== "assistant")) continue;
+    const rawAttachments = Array.isArray(
+      (m as { attachments_json?: unknown }).attachments_json,
+    )
+      ? ((m as { attachments_json?: AttachmentRef[] }).attachments_json ?? [])
+      : [];
+    const hasAttachments = rawAttachments.length > 0;
+    if (!text && !hasAttachments && (!m.tool_call_json || m.role !== "assistant")) continue;
 
     const parts: UIMessage["parts"] = [];
+    for (const att of rawAttachments) {
+      parts.push({
+        type: "attachment",
+        attachment: att,
+      } as unknown as UIMessage["parts"][number]);
+    }
     if (text) parts.push({ type: "text", text } as UIMessage["parts"][number]);
 
     if (m.role === "assistant" && m.tool_call_json) {
@@ -232,9 +276,8 @@ export default function ChatSessionPage({
           }
         }
         if (!cancelled) setWsReady(true);
-      } catch (err) {
+      } catch {
         if (!cancelled) {
-          console.warn("session preflight failed:", err);
           setWsReady(true);
         }
       }
@@ -324,10 +367,9 @@ export default function ChatSessionPage({
         if (cancelled) return;
         const initial = buildInitialMessages(msgs);
         if (initial.length > 0) setMessages(initial);
-      } catch (err) {
+      } catch {
         if (!cancelled) {
           toast.error(t("loadHistoryFailed"));
-          console.warn("chat history load failed:", err);
         }
       }
     })();
@@ -360,8 +402,10 @@ export default function ChatSessionPage({
     if (!ctx) return;
     try {
       ctx.scrollToBottom();
-    } catch (err) {
-      console.warn("scrollToBottom failed:", err);
+    } catch {
+      // Non-critical: ``use-stick-to-bottom`` may throw transiently
+      // while the conversation container is being torn down. Skipping
+      // is harmless — the next paint reschedules the auto-scroll.
     }
   }, []);
 
@@ -375,12 +419,20 @@ export default function ChatSessionPage({
     const text = pending.webSearch
       ? `[web_search] ${pending.text}`.trim()
       : pending.text;
-    if (pending.attachments?.length) {
-      transport.setAttachmentIds(pending.attachments.map((a) => a.id));
+    const pendingAttachments = pending.attachments ?? [];
+    if (pendingAttachments.length) {
+      transport.setAttachmentIds(pendingAttachments.map((a) => a.id));
     }
     if (pending.mode) transport.setMode(pending.mode);
     if (pending.model !== undefined) transport.setModel(pending.model);
-    sendMessage({ text });
+    if (pendingAttachments.length) {
+      sendMessage({
+        role: "user",
+        parts: buildOutgoingUserParts(text, pendingAttachments),
+      });
+    } else {
+      sendMessage({ text });
+    }
     scrollChatToBottom();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wsReady]);
@@ -451,7 +503,17 @@ export default function ChatSessionPage({
           ? submission.attachments.map((a) => a.id)
           : undefined,
       );
-      sendMessage({ text: submission.text });
+      if (submission.attachments.length) {
+        sendMessage({
+          role: "user",
+          parts: buildOutgoingUserParts(
+            submission.text,
+            submission.attachments,
+          ),
+        });
+      } else {
+        sendMessage({ text: submission.text });
+      }
       // Re-pin the viewport to the new turn before the assistant tokens
       // start streaming back. Without this the user sees the chat appear
       // to freeze for as long as the model thinks, then the entire
@@ -559,6 +621,16 @@ export default function ChatSessionPage({
               <Message key={m.id} role={m.role}>
                 {(m.parts ?? []).map((part, idx) => {
                   const type = (part as { type?: string }).type ?? "";
+                  if (type === "attachment") {
+                    const att = (part as { attachment?: AttachmentRef })
+                      .attachment;
+                    if (!att?.id) return null;
+                    return (
+                      <div key={`att-${idx}`} className="mb-1">
+                        <AttachmentView att={att} compact />
+                      </div>
+                    );
+                  }
                   if (type === "text") {
                     const text = (part as { text?: string }).text ?? "";
                     return (
@@ -617,6 +689,16 @@ export default function ChatSessionPage({
                   }
                   return null;
                 })}
+                {m.role === "assistant" ? (
+                  <MessageKnowledgeSources
+                    hits={collectKnowledgeHits(
+                      (m.parts ?? []) as ReadonlyArray<{
+                        type?: string;
+                        output?: unknown;
+                      }>,
+                    )}
+                  />
+                ) : null}
                 {m.role === "assistant" && !isStreamingThis && (
                   <Actions className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                     {UUID_RE.test(m.id) ? (
@@ -756,8 +838,10 @@ function CopyMessageAction({
       }
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.warn("copy message failed:", err);
+    } catch {
+      // Clipboard write failed (denied permission, non-secure context
+      // without the textarea fallback succeeding, etc.) — the user
+      // sees no copy indicator which is signal enough.
     }
   }, [text]);
 

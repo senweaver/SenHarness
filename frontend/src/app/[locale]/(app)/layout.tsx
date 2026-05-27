@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { SiderNav } from "@/components/layout/SiderNav";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { OnboardingOverlay } from "@/components/onboarding/OnboardingOverlay";
+import { WorkspaceRequiredGuard } from "@/components/workspace/WorkspaceRequiredGuard";
 import { useAuthStore } from "@/stores/auth-store";
 import { useAutoCollapseOnChat } from "@/hooks/use-auto-collapse-on-chat";
 import { useSyncWorkspaceBranding } from "@/hooks/use-workspace";
@@ -63,7 +64,7 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
     <div className="flex h-screen overflow-hidden">
       <SiderNav />
       <main className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto">
-        {children}
+        <WorkspaceRequiredGuard>{children}</WorkspaceRequiredGuard>
       </main>
       <CommandPalette />
       <OnboardingOverlay />

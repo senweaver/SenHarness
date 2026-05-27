@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   IconKey,
+  IconLanguage,
   IconLoader2,
   IconRefresh,
   IconUser,
@@ -24,6 +25,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PageHeader } from "@/components/ui/page-header";
 import { MfaCard } from "@/components/auth/MfaCard";
 import { ProfileTabs, type ProfileTabKey } from "@/components/settings/ProfileTabs";
@@ -50,6 +58,9 @@ export default function ProfileSettingsPage() {
             <ProfileCard />
             <PasswordCard canChange={!me?.oauth_provider} />
             <div className="lg:col-span-2">
+              <LanguageCard />
+            </div>
+            <div className="lg:col-span-2">
               <MfaCard isSso={Boolean(me?.oauth_provider)} />
             </div>
             <div className="lg:col-span-2">
@@ -59,6 +70,74 @@ export default function ProfileSettingsPage() {
         </>
       )}
     </div>
+  );
+}
+
+function LanguageCard() {
+  const t = useTranslations("settings.account.language");
+  const tCommon = useTranslations("common");
+  const router = useRouter();
+  const { data: me } = useMe();
+  const update = useUpdateMe();
+  const [value, setValue] = useState<string>("");
+
+  useEffect(() => {
+    setValue(me?.preferred_locale ?? "");
+  }, [me?.preferred_locale]);
+
+  const onSave = async () => {
+    try {
+      await update.mutateAsync({ preferred_locale: value });
+      if (typeof document !== "undefined") {
+        const cleaned = value.trim();
+        const ttl = 60 * 60 * 24 * 365;
+        if (cleaned) {
+          document.cookie = `NEXT_LOCALE=${cleaned}; Path=/; Max-Age=${ttl}; SameSite=Lax`;
+        } else {
+          document.cookie = "NEXT_LOCALE=; Path=/; Max-Age=0; SameSite=Lax";
+        }
+      }
+      toast.success(t("saved"));
+      router.refresh();
+    } catch {
+      toast.error(t("saveFailed"));
+    }
+  };
+
+  const dirty = (me?.preferred_locale ?? "") !== value;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <IconLanguage className="size-4" />
+          {t("title")}
+        </CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-1.5">
+          <Label htmlFor="profile-language">{t("label")}</Label>
+          <Select value={value || "__platform__"} onValueChange={(v) => setValue(v === "__platform__" ? "" : v)}>
+            <SelectTrigger id="profile-language">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__platform__">{t("usePlatformDefault")}</SelectItem>
+              <SelectItem value="en-US">English (en-US)</SelectItem>
+              <SelectItem value="zh-CN">简体中文 (zh-CN)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] sh-muted">{t("hint")}</p>
+        </div>
+        <div className="flex justify-end">
+          <Button onClick={onSave} disabled={!dirty || update.isPending}>
+            {update.isPending && <IconLoader2 className="size-4 animate-spin" />}
+            {tCommon("save")}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

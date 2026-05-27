@@ -167,6 +167,43 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     except Exception:  # pragma: no cover - never block API boot on plugin host
         log.exception("plugin_loader: startup hook failed")
 
+    # Idempotent reload of vendored agent templates: drops new built-in
+    # agents (e.g. newly-added Markdown personas) into the system
+    # workspace on every boot so operators don't have to remember
+    # ``make seed`` after a code update. The system identity +
+    # workspace are auto-provisioned when missing so a fresh deploy
+    # (where ``make seed`` was never run) still gets templates ready
+    # for cloning — this is the path open-source users hit first.
+    try:
+        from app.db.session import get_session_factory as _factory_for_templates
+        from app.services.agent_templates import loader as _tpl_loader
+        from app.services.seed import (
+            _ensure_system_identity,
+            _ensure_system_workspace,
+        )
+
+        _factory = _factory_for_templates()
+        async with _factory() as fresh:
+            sys_ident = await _ensure_system_identity(fresh)
+            sys_ws_id, sys_created = await _ensure_system_workspace(
+                fresh, owner_identity_id=sys_ident.id
+            )
+            created, updated = await _tpl_loader.load_all(
+                fresh,
+                system_workspace_id=sys_ws_id,
+                system_identity_id=sys_ident.id,
+            )
+            await fresh.commit()
+            log.info(
+                "agent_templates: reloaded built-ins "
+                "(system_workspace_created=%s created=%d updated=%d)",
+                sys_created,
+                created,
+                updated,
+            )
+    except Exception:  # pragma: no cover - never block API boot on templates
+        log.exception("agent_templates: startup reload failed")
+
     # Cold-start mitigation: warm the pydantic-ai model build cache so the
     # first chat turn doesn't eat the import + provider-construction tax.
     # Scheduled as a background task so HTTP routes accept traffic the

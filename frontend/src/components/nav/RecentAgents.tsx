@@ -3,6 +3,7 @@
 import { Link } from "@/lib/navigation";
 import { IconSparkles } from "@tabler/icons-react";
 import { useTranslations, useLocale } from "next-intl";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 import { useRecentAgents } from "@/hooks/use-agents";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { relativeTime } from "@/lib/utils";
@@ -22,13 +23,12 @@ export function RecentAgents() {
             className="flex size-10 items-center justify-center rounded-md hover:bg-black/5 dark:hover:bg-white/10"
             title={`${a.name}${a.last_message_at ? " · " + relativeTime(a.last_message_at, locale) : ""}`}
           >
-            {a.avatar_url ? (
-              <img src={a.avatar_url} alt="" className="size-7 rounded-full object-cover" />
-            ) : (
-              <span className="flex size-7 items-center justify-center rounded-full bg-[rgb(var(--color-primary)/0.12)] text-[12px] font-semibold text-[rgb(var(--color-primary))]">
-                {a.name.trim().charAt(0).toUpperCase() || "?"}
-              </span>
-            )}
+            <AgentAvatar
+              name={a.name}
+              avatarUrl={a.avatar_url}
+              className="size-7"
+              fallbackClassName="text-[12px]"
+            />
           </Link>
         ))}
       </div>
@@ -62,13 +62,12 @@ export function RecentAgents() {
           href={`/chat/new?agent=${a.id}`}
           className="group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/10"
         >
-          {a.avatar_url ? (
-            <img src={a.avatar_url} alt="" className="size-6 rounded-full object-cover" />
-          ) : (
-            <div className="flex size-6 items-center justify-center rounded-full bg-[rgb(var(--color-primary)/0.12)] text-[11px] font-semibold text-[rgb(var(--color-primary))]">
-              {a.name.trim().charAt(0).toUpperCase() || "?"}
-            </div>
-          )}
+          <AgentAvatar
+            name={a.name}
+            avatarUrl={a.avatar_url}
+            className="size-6"
+            fallbackClassName="text-[11px]"
+          />
           <span className="flex-1 truncate">{a.name}</span>
           {a.last_message_at && (
             <span className="text-[10px] sh-muted tabular-nums">

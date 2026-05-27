@@ -68,29 +68,11 @@ import { ProviderAvatar } from "@/components/providers/ProviderAvatar";
 import { CredentialField } from "@/components/providers/CredentialField";
 import { ModelManagementSection } from "@/components/providers/ModelManagementSection";
 import { getCategory } from "@/components/providers/_modelMeta";
+import { labelOf, descOf } from "@/components/providers/_localize";
 import { BuiltinModelsPreview } from "@/components/providers/BuiltinModelsPreview";
 import { AddCustomProviderDialog } from "@/components/providers/AddCustomProviderDialog";
-import { AuxiliaryModelsCard } from "@/components/providers/AuxiliaryModelsCard";
 import { ServedAliasesCard } from "@/components/providers/ServedAliasesCard";
 import { cn } from "@/lib/utils";
-
-function isZh(locale: string): boolean {
-  return locale.toLowerCase().startsWith("zh");
-}
-
-function labelOf(entry: ProviderCatalogEntry, locale: string): string {
-  if (isZh(locale)) {
-    return entry.display_name_zh || entry.display_name;
-  }
-  return entry.display_name || entry.display_name_zh;
-}
-
-function descOf(entry: ProviderCatalogEntry, locale: string): string {
-  if (isZh(locale)) {
-    return entry.description_zh || entry.description;
-  }
-  return entry.description || entry.description_zh;
-}
 
 function isCustomProvider(provider: ProviderRead | null): boolean {
   if (!provider) return false;
@@ -340,7 +322,6 @@ export default function ProvidersSettingsPage() {
               </div>
             )}
           </div>
-          <AuxiliaryModelsCard />
           <ServedAliasesCard />
         </div>
       </section>
@@ -767,6 +748,7 @@ function ProviderDetail({
           kind={entry.kind}
           type={credentialType}
           hasKey={provider?.has_key ?? false}
+          keyHint={provider?.api_key_hint ?? null}
           value={apiKey}
           onChange={(v) => {
             setApiKey(v);

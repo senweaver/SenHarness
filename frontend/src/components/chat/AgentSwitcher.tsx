@@ -10,6 +10,7 @@ import {
 } from "@tabler/icons-react";
 
 import { Link, useRouter } from "@/lib/navigation";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 import { useAgents } from "@/hooks/use-agents";
 import { useSession } from "@/hooks/use-sessions";
 import {
@@ -111,9 +112,11 @@ export function AgentSwitcher({
             className,
           )}
         >
-          <AgentBadge
-            avatarUrl={currentAgent?.avatar_url ?? null}
-            fallback={currentAgent?.name ?? null}
+          <AgentAvatar
+            name={currentAgent?.name}
+            avatarUrl={currentAgent?.avatar_url}
+            className="size-6"
+            fallbackClassName="text-[11px]"
           />
           <span className="min-w-0 flex-1 truncate text-left font-medium">
             {currentAgent?.name ?? tNoAgent("noAgent")}
@@ -141,10 +144,16 @@ export function AgentSwitcher({
                 title={t("startNewChat")}
                 className="flex min-w-0 flex-1 items-center gap-2 text-left"
               >
-                <AgentBadge
+                <AgentAvatar
+                  name={a.name}
                   avatarUrl={a.avatar_url}
-                  fallback={a.name}
-                  active={a.id === currentAgent?.id}
+                  className={cn(
+                    "size-6",
+                    a.id === currentAgent?.id
+                      ? "ring-2 ring-[rgb(var(--color-primary))] ring-offset-1"
+                      : "",
+                  )}
+                  fallbackClassName="text-[11px]"
                 />
                 <div className="flex min-w-0 flex-col">
                   <span className="truncate text-sm">{a.name}</span>
@@ -175,40 +184,5 @@ export function AgentSwitcher({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
-}
-
-function AgentBadge({
-  avatarUrl,
-  fallback,
-  active = false,
-}: {
-  avatarUrl: string | null;
-  fallback: string | null;
-  active?: boolean;
-}) {
-  const ring = active
-    ? "ring-2 ring-[rgb(var(--color-primary))] ring-offset-1"
-    : "";
-  if (avatarUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={avatarUrl}
-        alt=""
-        className={cn("size-6 shrink-0 rounded-full object-cover", ring)}
-      />
-    );
-  }
-  const initial = (fallback ?? "?").trim().charAt(0).toUpperCase() || "?";
-  return (
-    <div
-      className={cn(
-        "flex size-6 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-primary)/0.12)] text-[11px] font-semibold text-[rgb(var(--color-primary))]",
-        ring,
-      )}
-    >
-      {initial}
-    </div>
   );
 }

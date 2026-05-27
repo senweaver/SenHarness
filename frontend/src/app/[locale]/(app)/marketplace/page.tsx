@@ -8,12 +8,12 @@ import {
   IconDotsVertical,
   IconFlag,
   IconMessagePlus,
-  IconRobot,
   IconSearch,
   IconSparkles,
   IconStarFilled,
   IconX,
 } from "@tabler/icons-react";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 
@@ -216,17 +216,11 @@ export default function MarketplacePage() {
                 <Card key={a.id} className="flex flex-col">
                   <CardHeader className="flex-1">
                     <div className="flex items-center gap-2">
-                      {a.avatar_url ? (
-                        <img
-                          src={a.avatar_url}
-                          alt=""
-                          className="size-9 shrink-0 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-black/10 dark:bg-white/10">
-                          <IconRobot className="size-5" />
-                        </div>
-                      )}
+                      <AgentAvatar
+                        name={a.name}
+                        avatarUrl={a.avatar_url}
+                        className="size-9 rounded-full"
+                      />
                       <div className="min-w-0 flex-1">
                         <CardTitle className="truncate">
                           <Link

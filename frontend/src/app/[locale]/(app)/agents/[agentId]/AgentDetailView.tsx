@@ -11,6 +11,7 @@ import {
   IconStarFilled,
   IconTrash,
 } from "@tabler/icons-react";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
@@ -150,18 +151,12 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps) {
       <section className="flex min-w-0 flex-1 flex-col overflow-y-auto">
         <header className="sticky top-0 z-10 border-b bg-[rgb(var(--color-bg))]/95 px-6 py-3 backdrop-blur">
           <div className="flex items-center gap-3">
-            {agent.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={agent.avatar_url}
-                alt=""
-                className="size-9 rounded-lg object-cover"
-              />
-            ) : (
-              <div className="flex size-9 items-center justify-center rounded-lg bg-[rgb(var(--color-primary)/0.12)] text-base font-semibold text-[rgb(var(--color-primary))]">
-                {agent.name.trim().charAt(0).toUpperCase() || "?"}
-              </div>
-            )}
+            <AgentAvatar
+              name={agent.name}
+              avatarUrl={agent.avatar_url}
+              className="size-9 rounded-lg"
+              fallbackClassName="text-base rounded-lg"
+            />
             <div className="min-w-0 flex-1">
               <EditableHeaderName
                 agentId={agent.id}

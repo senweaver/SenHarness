@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { IconEye, IconEyeOff, IconLoader2 } from "@tabler/icons-react";
+import { IconLoader2 } from "@tabler/icons-react";
 import {
   Dialog,
   DialogContent,
@@ -50,7 +50,6 @@ export function AddCustomProviderDialog({ open, onOpenChange, onCreated }: Props
   const [baseUrl, setBaseUrl] = useState(PROTOCOL_DEFAULT_BASE_URL.openai);
   const [apiKey, setApiKey] = useState("");
   const [defaultModel, setDefaultModel] = useState("");
-  const [showKey, setShowKey] = useState(false);
 
   function handleProtocolChange(p: Protocol) {
     setProtocol(p);
@@ -65,7 +64,6 @@ export function AddCustomProviderDialog({ open, onOpenChange, onCreated }: Props
     setBaseUrl(PROTOCOL_DEFAULT_BASE_URL.openai);
     setApiKey("");
     setDefaultModel("");
-    setShowKey(false);
   }
 
   async function submit() {
@@ -166,28 +164,13 @@ export function AddCustomProviderDialog({ open, onOpenChange, onCreated }: Props
 
           <div className="space-y-1.5">
             <Label className="text-sm">{t("apiKey")}</Label>
-            <div className="relative">
-              <Input
-                type={showKey ? "text" : "password"}
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={t("apiKeyPlaceholder")}
-                autoComplete="off"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-1 top-1 size-7"
-                onClick={() => setShowKey((s) => !s)}
-              >
-                {showKey ? (
-                  <IconEyeOff className="size-3.5" />
-                ) : (
-                  <IconEye className="size-3.5" />
-                )}
-              </Button>
-            </div>
+            <Input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={t("apiKeyPlaceholder")}
+              autoComplete="off"
+            />
           </div>
 
           <div className="space-y-1.5">

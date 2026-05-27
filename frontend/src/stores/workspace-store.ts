@@ -17,19 +17,48 @@ export interface WorkspaceBrief {
 interface WorkspaceState {
   workspaces: WorkspaceBrief[];
   activeWorkspaceId: string | null;
+  /**
+   * Identity the persisted workspace state belongs to. When ``useMe``
+   * reports a different identity (e.g. account switch in the same
+   * browser, OAuth login after a previous user signed out) the store
+   * is cleared before re-binding so the previous account's
+   * ``activeWorkspaceId`` cannot leak into the new session.
+   */
+  boundIdentityId: string | null;
   setWorkspaces: (list: WorkspaceBrief[]) => void;
-  setActive: (id: string) => void;
+  setActive: (id: string | null) => void;
+  bindIdentity: (identityId: string) => void;
   clear: () => void;
 }
 
 export const useWorkspaceStore = create<WorkspaceState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       workspaces: [],
       activeWorkspaceId: null,
+      boundIdentityId: null,
       setWorkspaces: (list) => set({ workspaces: list }),
       setActive: (id) => set({ activeWorkspaceId: id }),
-      clear: () => set({ workspaces: [], activeWorkspaceId: null }),
+      bindIdentity: (identityId) => {
+        const current = get().boundIdentityId;
+        if (current && current !== identityId) {
+          set({
+            workspaces: [],
+            activeWorkspaceId: null,
+            boundIdentityId: identityId,
+          });
+          return;
+        }
+        if (!current) {
+          set({ boundIdentityId: identityId });
+        }
+      },
+      clear: () =>
+        set({
+          workspaces: [],
+          activeWorkspaceId: null,
+          boundIdentityId: null,
+        }),
     }),
     { name: "senharness.workspace" },
   ),

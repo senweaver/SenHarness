@@ -26,7 +26,7 @@ interface WelcomeBannerProps {
  * hero we shipped first. Three CTAs in priority order:
  *
  *   - **New chat session** (primary, opens compose dialog)
- *   - **Deploy agent** (secondary, jumps to /agents?new=1)
+ *   - **New agent** (secondary, jumps to /agents?new=1)
  *   - **Upload knowledge** (tertiary, jumps to /knowledge)
  */
 export function WelcomeBanner({ channelsCount = 0 }: WelcomeBannerProps) {
@@ -88,7 +88,7 @@ export function WelcomeBanner({ channelsCount = 0 }: WelcomeBannerProps) {
               className="inline-flex items-center gap-2 rounded-md border bg-transparent px-4 py-2 text-[13px] font-medium shadow-sm transition-colors hover:bg-black/5 dark:hover:bg-white/10"
             >
               <IconRobot className="size-4" />
-              {t("deployAgentCta")}
+              {t("newAgentCta")}
             </Link>
             <Link
               href="/knowledge"

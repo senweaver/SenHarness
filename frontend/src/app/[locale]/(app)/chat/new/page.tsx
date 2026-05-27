@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { useRouter } from "@/lib/navigation";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 import {
   ChatInput,
   type ChatInputHandle,
@@ -105,18 +106,12 @@ export default function NewChatRoute() {
       <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-10 text-center">
         {agent ? (
           <>
-            {agent.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={agent.avatar_url}
-                alt=""
-                className="size-14 rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex size-14 items-center justify-center rounded-full bg-black/10 dark:bg-white/10">
-                <IconRobot className="size-7 sh-muted" />
-              </div>
-            )}
+            <AgentAvatar
+              name={agent.name}
+              avatarUrl={agent.avatar_url}
+              className="size-14"
+              fallbackClassName="text-xl"
+            />
             <h2 className="text-lg font-medium">
               {t("draftEmpty.greeting", { name: agent.name })}
             </h2>

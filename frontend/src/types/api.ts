@@ -23,8 +23,17 @@ export interface MeOut {
   current_role: string | null;
   current_department_id: string | null;
   permissions: string[];
+  preferred_locale: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface PublicBootstrap {
+  site_name: string;
+  primary_color_hex: string;
+  default_locale: string;
+  default_timezone: string;
+  registration_mode: string;
 }
 
 export type SidebarItemType = "agent" | "squad" | "session";

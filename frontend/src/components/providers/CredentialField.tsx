@@ -24,6 +24,7 @@ export function CredentialField({
   kind,
   type,
   hasKey,
+  keyHint,
   value,
   onChange,
   customHeaders,
@@ -33,6 +34,7 @@ export function CredentialField({
   kind: string;
   type: CredentialType;
   hasKey: boolean;
+  keyHint?: string | null;
   value: string;
   onChange: (value: string) => void;
   customHeaders?: string;
@@ -40,6 +42,8 @@ export function CredentialField({
   trailingAction?: ReactNode;
 }) {
   const t = useTranslations("settings.providers.credentials");
+  const maskedHint =
+    hasKey && keyHint && keyHint.length > 0 ? `••••••${keyHint}` : null;
 
   if (type === "oauth_token") {
     const helper = OAUTH_HELPERS[kind];
@@ -127,6 +131,11 @@ export function CredentialField({
         }
         trailingAction={trailingAction}
       />
+      {maskedHint ? (
+        <p className="font-mono text-[11px] text-muted-foreground">
+          {maskedHint}
+        </p>
+      ) : null}
     </div>
   );
 }

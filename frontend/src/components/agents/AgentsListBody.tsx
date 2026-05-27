@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 import {
   Card,
   CardContent,
@@ -64,18 +65,12 @@ export function AgentsListBody({ onNew }: AgentsListBodyProps) {
             />
             <CardHeader>
               <div className="flex items-center gap-2">
-                {a.avatar_url ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={a.avatar_url}
-                    alt=""
-                    className="size-8 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="flex size-8 items-center justify-center rounded-full bg-[rgb(var(--color-primary)/0.12)] text-sm font-semibold text-[rgb(var(--color-primary))]">
-                    {a.name.slice(0, 1).toUpperCase() || "?"}
-                  </div>
-                )}
+                <AgentAvatar
+                  name={a.name}
+                  avatarUrl={a.avatar_url}
+                  className="size-8"
+                  fallbackClassName="text-sm"
+                />
                 <CardTitle className="flex-1 truncate">{a.name}</CardTitle>
               </div>
               {a.description && (

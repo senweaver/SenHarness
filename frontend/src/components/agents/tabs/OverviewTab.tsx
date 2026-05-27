@@ -3,7 +3,8 @@
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { useRouter } from "@/lib/navigation";
 import { useSearchParams } from "next/navigation";
-import { IconCheck, IconLoader2, IconRobot } from "@tabler/icons-react";
+import { IconCheck, IconLoader2 } from "@tabler/icons-react";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 
@@ -260,18 +261,12 @@ export function OverviewTab({ agent }: OverviewTabProps) {
     <div className="space-y-5">
       <section className="rounded-md border sh-card p-5">
         <div className="flex items-start gap-4">
-          {agent.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={agent.avatar_url}
-              alt=""
-              className="size-14 shrink-0 rounded-lg object-cover"
-            />
-          ) : (
-            <div className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-[rgb(var(--color-primary)/0.1)] text-[rgb(var(--color-primary))]">
-              <IconRobot className="size-7" />
-            </div>
-          )}
+          <AgentAvatar
+            name={agent.name}
+            avatarUrl={agent.avatar_url}
+            className="size-14 rounded-lg"
+            fallbackClassName="text-2xl rounded-lg"
+          />
           <div className="min-w-0 flex-1 space-y-2">
             <InlineTextarea
               ref={descriptionRef}

@@ -59,6 +59,13 @@ from app.agents.kernels.model_client import (
     build_pydantic_ai_model,
     resolve_for_agent,
 )
+from app.agents.kernels.model_profile import (
+    ModelProfile,
+    apply_reasoning_payload,
+    desired_thinking_state,
+    load_provider_model_metadata,
+    resolve_profile,
+)
 from app.agents.kernels.native._cache_wiring import (
     CacheWiringResult,
 )
@@ -94,6 +101,16 @@ from app.services.provider_chain import (
 from app.services.served_model import resolve_served_model
 
 log = logging.getLogger(__name__)
+
+
+def _apply_plan_mode_overrides(policy: dict[str, Any]) -> dict[str, Any]:
+    """Plan mode forces ``todos`` on, even when the agent's metadata
+    disabled them. Keeps the PlanTab populated for any plan-mode turn
+    without mutating per-agent metadata.
+    """
+    if policy.get("plan"):
+        return {**policy, "todos": True}
+    return policy
 
 
 class _ServedEnvelope:
@@ -332,6 +349,31 @@ class NativeBackend(AgentBackend):
         # request object so ``_pydantic_ai_stream`` can lift it onto
         # the per-run context without re-querying the DB.
         served_name = served_envelope.served_name or resolved.model_name
+
+        # Profile-driven flash routing: a dedicated reasoner model can declare
+        # ``flash_alternative`` so ``mode=flash`` quietly switches to the
+        # cheaper sibling SKU. Replaces the old ``_flash_non_reasoning_override``
+        # which hardcoded ``deepseek-reasoner → deepseek-chat``.
+        mode_lower = str((req.policy or {}).get("mode") or "").strip().lower()
+        if mode_lower == "flash":
+            db_meta = await load_provider_model_metadata(
+                workspace_id=req.workspace_id,
+                provider_kind=resolved.provider_kind,
+                model_name=resolved.model_name,
+            )
+            initial_profile = resolve_profile(
+                provider_kind=resolved.provider_kind,
+                model_name=resolved.model_name,
+                db_metadata=db_meta,
+            )
+            if initial_profile.flash_alternative:
+                alt_resolved = await resolve_for_agent(
+                    workspace_id=req.workspace_id,
+                    agent_id=req.agent_id,
+                    override=f"{resolved.provider_kind}:{initial_profile.flash_alternative}",
+                )
+                if alt_resolved is not None:
+                    resolved = alt_resolved
         if isinstance(req.policy, dict):
             req.policy["served_model_name"] = served_name
 
@@ -618,6 +660,7 @@ async def _build_capabilities(
     backend: Any = None
     NativeBackend._injected_skill_ids[req.run_id] = []
     policy = merge_planner_into_subagents(req.policy or {})
+    policy = _apply_plan_mode_overrides(policy)
     autonomy = str(policy.get("autonomy_level", "l2")).lower()
     if autonomy == "l1":
         return caps, None
@@ -904,6 +947,18 @@ def resolve_reasoning_effort_for_run(
     return pick_reasoning_effort(user_text, policy=policy or {})
 
 
+def _visible_status_event_kind(*, thinking_on: bool) -> RunEventKind:
+    return RunEventKind.THINKING if thinking_on else RunEventKind.DELTA
+
+
+def _ensure_model_settings(agent: Any) -> dict[str, Any]:
+    ms = getattr(agent, "model_settings", None)
+    if not isinstance(ms, dict):
+        ms = {}
+        agent.model_settings = ms  # type: ignore[attr-defined]
+    return ms
+
+
 async def _pydantic_ai_stream(
     req: RunRequest,
     *,
@@ -995,10 +1050,39 @@ async def _pydantic_ai_stream(
         user_text=req.user_text,
     )
 
+    # Resolve the per-model profile (DB override > builtin default) BEFORE
+    # building the agent so the ``system_suffix`` (e.g. ``/no_think``) can be
+    # folded into the assembled system prompt in a single pass — replaces the
+    # old ``_qwen3_*`` / ``_deepseek_*`` brand-name special cases.
+    profile_db_meta = await load_provider_model_metadata(
+        workspace_id=req.workspace_id,
+        provider_kind=resolved.provider_kind,
+        model_name=resolved.model_name,
+    )
+    profile = resolve_profile(
+        provider_kind=resolved.provider_kind,
+        model_name=resolved.model_name,
+        db_metadata=profile_db_meta,
+    )
+    thinking_state = desired_thinking_state(profile=profile, policy=req.policy)
+    show_thinking = thinking_state == "on"
+    reasoning_payload = (
+        profile.reasoning.enable if thinking_state == "on" else profile.reasoning.disable
+    )
+    system_suffix: str | None = None
+    if isinstance(reasoning_payload, dict):
+        suffix_candidate = reasoning_payload.get("system_suffix")
+        if isinstance(suffix_candidate, str) and suffix_candidate.strip():
+            system_suffix = suffix_candidate
+
     agent = await _build_agent(
         req,
         model=model,
-        system_prompt=_assemble_prompt(req, memory_fragment=memory_fragment, resolved=resolved),
+        system_prompt=_assemble_prompt(
+            req,
+            memory_fragment=memory_fragment,
+            system_suffix=system_suffix,
+        ),
     )
 
     # Reliability state governs stuck-loop detection, tool retry budgets,
@@ -1015,42 +1099,52 @@ async def _pydantic_ai_stream(
         reflection_config=reflection_config,
     )
 
+    if reasoning_payload:
+        try:
+            apply_reasoning_payload(
+                model_settings=_ensure_model_settings(agent),
+                payload=reasoning_payload,
+            )
+        except Exception:  # pragma: no cover
+            log.debug("could not apply reasoning payload=%s", reasoning_payload)
+
+    # Operator-set "preferred effort" from the per-model dialog takes
+    # priority over the builtin enable payload but loses to a per-run
+    # policy override so a single message can still escalate.
+    if profile.reasoning.preferred_effort:
+        try:
+            _ensure_model_settings(agent)["reasoning_effort"] = (
+                profile.reasoning.preferred_effort
+            )
+        except Exception:  # pragma: no cover
+            log.debug(
+                "could not apply preferred_effort=%s",
+                profile.reasoning.preferred_effort,
+            )
+
     effort = resolve_reasoning_effort_for_run(policy=req.policy, user_text=req.user_text)
     if effort is not None:
         try:
-            ms = getattr(agent, "model_settings", None)
-            if ms is None:
-                # Some pydantic-ai versions lazily allocate ``model_settings``;
-                # create a fresh dict so the flag actually lands.
-                agent.model_settings = {"reasoning_effort": effort}  # type: ignore[attr-defined]
-            else:
-                ms["reasoning_effort"] = effort  # type: ignore[index]
+            _ensure_model_settings(agent)["reasoning_effort"] = effort
         except Exception:  # pragma: no cover
             log.debug("could not apply reasoning_effort=%s", effort)
 
-    qwen3_extra = _qwen3_extra_body(req.policy, resolved)
-    if qwen3_extra is not None:
+    # Hybrid models that need ``reasoning_content`` round-trip on every
+    # assistant tool-call message (Kimi K2.6, Qwen3, GLM-5, DeepSeek-V4)
+    # treat the presence of ``reasoning_effort`` as a thinking-enabled
+    # signal — even when ``extra_body.thinking={"type": "disabled"}``
+    # is also set. Strip ``reasoning_effort`` whenever thinking should
+    # stay off so the wire request matches the harness intent and the
+    # server doesn't 400 on the next tool call.
+    if (
+        thinking_state == "off"
+        and profile.reasoning.hybrid
+        and not profile.reasoning.tool_call_safe
+    ):
         try:
-            ms = getattr(agent, "model_settings", None)
-            if ms is None:
-                agent.model_settings = {"extra_body": dict(qwen3_extra)}  # type: ignore[attr-defined]
-            else:
-                existing = ms.get("extra_body") or {}  # type: ignore[union-attr]
-                ms["extra_body"] = {**existing, **qwen3_extra}  # type: ignore[index]
+            _ensure_model_settings(agent).pop("reasoning_effort", None)
         except Exception:  # pragma: no cover
-            log.debug("could not apply qwen3 extra_body=%s", qwen3_extra)
-
-    deepseek_extra = _deepseek_extra_body(req.policy, resolved)
-    if deepseek_extra is not None:
-        try:
-            ms = getattr(agent, "model_settings", None)
-            if ms is None:
-                agent.model_settings = {"extra_body": dict(deepseek_extra)}  # type: ignore[attr-defined]
-            else:
-                existing = ms.get("extra_body") or {}  # type: ignore[union-attr]
-                ms["extra_body"] = {**existing, **deepseek_extra}  # type: ignore[index]
-        except Exception:  # pragma: no cover
-            log.debug("could not apply deepseek extra_body=%s", deepseek_extra)
+            log.debug("could not strip reasoning_effort for tool-call-unsafe hybrid")
 
     history = _rehydrate_history(req.message_history)
     history = repair_orphan_tool_calls(history)
@@ -1119,7 +1213,7 @@ async def _pydantic_ai_stream(
                 reliability.tick_iteration()
                 warning = reliability.limit_warning()
                 if warning:
-                    yield RunEvent(RunEventKind.THINKING, {"text": warning})
+                    yield RunEvent(_visible_status_event_kind(thinking_on=show_thinking), {"text": warning})
 
                 if Agent.is_model_request_node(node):
                     # Reflection injection happens *before* this node streams
@@ -1176,7 +1270,7 @@ async def _pydantic_ai_stream(
                                         yield RunEvent(RunEventKind.DELTA, {"text": chunk})
                                 elif isinstance(event.delta, ThinkingPartDelta):
                                     chunk = event.delta.content_delta or ""
-                                    if chunk:
+                                    if chunk and show_thinking:
                                         yield RunEvent(RunEventKind.THINKING, {"text": chunk})
                     await plugin_host.fire(
                         "post_llm_call",
@@ -1205,7 +1299,7 @@ async def _pydantic_ai_stream(
                                 stuck, repeated = reliability.is_stuck()
                                 if stuck:
                                     yield RunEvent(
-                                        RunEventKind.THINKING,
+                                        _visible_status_event_kind(thinking_on=show_thinking),
                                         {
                                             "text": (
                                                 f"⚠ 检测到 `{repeated}` 被反复调用，"
@@ -1449,7 +1543,12 @@ async def _pydantic_ai_stream(
                 await _fire_session_end("provider_failover_hint")
                 raise ProviderFailoverHint(original=e, failure_kind=failure_kind) from e
 
-        log.exception("pydantic-ai run failed")
+        log.exception(
+            "pydantic-ai run failed provider=%s model=%s show_thinking=%s",
+            resolved.provider_kind,
+            resolved.model_name,
+            show_thinking,
+        )
         yield RunEvent(
             RunEventKind.ERROR,
             {
@@ -1473,6 +1572,13 @@ async def _pydantic_ai_stream(
             usage_total["output"] = int(getattr(u, "output_tokens", 0) or 0)
     except Exception:  # pragma: no cover
         pass
+    if not final_text:
+        raw_output = getattr(agent_run.result, "output", None) if agent_run.result is not None else None
+        if raw_output is None and agent_run.result is not None:
+            raw_output = getattr(agent_run.result, "data", None)
+        if isinstance(raw_output, str) and raw_output:
+            final_text = raw_output
+            yield RunEvent(RunEventKind.DELTA, {"text": final_text})
 
     # M2.5.9 — record hit/miss against the adaptive tracker, audit the
     # outcome, and surface the cache-hit token count on the USAGE
@@ -1548,82 +1654,11 @@ async def _pydantic_ai_stream(
 
 
 # ─── Helpers ──────────────────────────────────────────────────
-def _qwen3_no_think(policy: dict[str, Any] | None, resolved: ResolvedModel) -> bool:
-    """True when a Qwen3 model should run without the extended reasoning phase.
-
-    Qwen3 models on DashScope honour ``/no_think`` at the end of the system
-    prompt as a per-request reasoning toggle.  We disable thinking unless the
-    caller explicitly opted into it via ``mode=thinking`` or a non-trivial
-    ``reasoning_effort`` override, because the thinking phase can consume 30+
-    seconds before emitting any visible text token.
-    """
-    mode = str((policy or {}).get("mode") or "").strip().lower()
-    if mode == "thinking":
-        return False
-    explicit_effort = (policy or {}).get("reasoning_effort")
-    if isinstance(explicit_effort, str) and explicit_effort.strip().lower() in ("medium", "high"):
-        return False
-    model_flat = resolved.model_name.lower().replace("-", "").replace("_", "").replace(".", "")
-    return "qwen3" in model_flat
-
-
-def _qwen3_extra_body(
-    policy: dict[str, Any] | None, resolved: ResolvedModel
-) -> dict[str, Any] | None:
-    """Return ``extra_body`` to hard-disable thinking for Qwen3 on DashScope.
-
-    ``/no_think`` in the system prompt only softly reduces the thinking phase;
-    the API-level ``enable_thinking=false`` is the reliable way to eliminate it.
-    We scope this to Qwen3 models only — GLM-series models return empty
-    content when ``enable_thinking`` is set to false.
-    """
-    if not _qwen3_no_think(policy, resolved):
-        return None
-    return {"enable_thinking": False}
-
-
-def _deepseek_no_think(policy: dict[str, Any] | None, resolved: ResolvedModel) -> bool:
-    """True when a DeepSeek hybrid model should skip the thinking phase.
-
-    DeepSeek V4 (``deepseek-v4-pro`` / ``deepseek-v4-flash``) ships hybrid
-    chat+reasoning behind one endpoint with thinking ON by default.  We
-    flip it off unless the caller opts into reasoning, for two reasons:
-
-    1. Latency — thinking adds 1–10s before the first visible token.
-    2. Correctness — once thinking emits ``reasoning_content``, the API
-       requires the client to echo it back on every subsequent turn, or
-       it 400s with ``reasoning_content ... must be passed back``.  Our
-       history pipeline only round-trips visible text, so leaving
-       thinking on breaks multi-turn channel conversations.
-
-    Scope is restricted to ``deepseek-v4-*``: the dedicated
-    ``deepseek-reasoner`` model is reasoning-only and ``deepseek-chat``
-    is already non-thinking — neither honours this toggle.
-    """
-    mode = str((policy or {}).get("mode") or "").strip().lower()
-    if mode == "thinking":
-        return False
-    explicit_effort = (policy or {}).get("reasoning_effort")
-    if isinstance(explicit_effort, str) and explicit_effort.strip().lower() in ("medium", "high"):
-        return False
-    name = resolved.model_name.lower()
-    return name.startswith("deepseek-v4-")
-
-
-def _deepseek_extra_body(
-    policy: dict[str, Any] | None, resolved: ResolvedModel
-) -> dict[str, Any] | None:
-    """Return ``extra_body`` to disable thinking on DeepSeek V4 hybrid models."""
-    if not _deepseek_no_think(policy, resolved):
-        return None
-    return {"thinking": {"type": "disabled"}}
-
-
 def _assemble_prompt(
     req: RunRequest,
     *,
     memory_fragment: str | None = None,
-    resolved: ResolvedModel | None = None,
+    system_suffix: str | None = None,
 ) -> str:
     from app.agents.prompts import assemble_system
 
@@ -1636,8 +1671,8 @@ def _assemble_prompt(
     if coding_fragment:
         fragment = coding_fragment if not fragment else f"{coding_fragment}\n\n{fragment}"
     prompt = assemble_system(persona, memory_fragment=fragment)
-    if resolved is not None and _qwen3_no_think(req.policy, resolved):
-        prompt = prompt + "\n/no_think"
+    if system_suffix:
+        prompt = prompt + "\n" + system_suffix
     return prompt
 
 

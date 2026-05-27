@@ -110,17 +110,7 @@
     "summarySuccess": "{n} success",
     "summaryPartial": "{n} partial",
     "summaryFailure": "{n} failure",
-    "auxiliarySectionTitle": "Auxiliary models",
-    "auxiliarySectionHelp": "Read-only view. Editing moves to Platform Admin in M0.13.",
-    "auxModelDefault": "Default aux model",
-    "auxModelJudge": "Run-quality judge",
-    "auxModelGoalAlignment": "Goal alignment",
-    "rateBudget": "Judge rate budget",
-    "rateBudgetUsage": "{used}/{limit} per minute",
-    "breakerHealthy": "Healthy",
-    "breakerDegraded": "Degraded",
-    "breakerLastSeen": "Last degraded {when}",
-    "moveToAdminLink": "Auxiliary settings will move to Platform Admin in M0.13."
+    "breakerLastSeen": "Last degraded {when}"
   },
   "home": {
     "welcome": "Hi {name}. What should we work on today?",
@@ -1051,9 +1041,9 @@
     "title": "Dashboard",
     "welcomeBack": "Welcome back, {name}.",
     "welcomeBackNoName": "Welcome back.",
-    "welcomeBody": "Your centralized AI Workstation is ready. Deploy new agents, connect channels, or pick up where you left off — {agents} agents active across {channels} channels.",
+    "welcomeBody": "Your centralized AI Workstation is ready. Create new agents, connect channels, or pick up where you left off — {agents} agents active across {channels} channels.",
     "newChatCta": "New chat session",
-    "deployAgentCta": "Deploy agent",
+    "newAgentCta": "New agent",
     "uploadKnowledgeCta": "Upload knowledge",
     "metricsTokens": "Total tokens",
     "metricsTokensHint": "this week",
@@ -1662,7 +1652,10 @@
       "slashClearDesc": "Empty the composer without sending.",
       "mentionEmpty": "No matching agents, knowledge, or files",
       "suggestionsTitle": "Follow-ups",
-      "suggestionsRefresh": "Suggest follow-ups"
+      "suggestionsRefresh": "Suggest follow-ups",
+      "sourcesUsed": "Cited from {count, plural, one {# knowledge source} other {# knowledge sources}}",
+      "sourcesChunk": "chunk {ord}",
+      "sourcesScore": "Relevance score (cosine similarity)"
     },
     "workspace": {
       "title": "Workspace",
@@ -1718,7 +1711,7 @@
         "openFull": "Open full trace in a new tab"
       },
       "plan": {
-        "empty": "No plan yet — switch to Plan mode and ask the planner."
+        "empty": "No plan yet. It appears after the agent calls read_todos or write_todos."
       },
       "files": {
         "empty": "No files produced or written this session.",
@@ -1990,6 +1983,15 @@
       "workspace": "Workspace",
       "system": "System"
     },
+    "workspace": {
+      "guard": {
+        "title": "Pick or create a workspace first",
+        "description": "Workspace settings need an active tenant. Create a new one or switch to an existing workspace to continue.",
+        "createCta": "Create workspace",
+        "switchCta": "Pick existing workspace",
+        "switchUnavailable": "Couldn't switch — try again or create one"
+      }
+    },
     "hub": {
       "title": "Settings",
       "description": "Pick where you want to go.",
@@ -2218,6 +2220,17 @@
         "status": "Status",
         "allStatuses": "All",
         "search": "Search"
+      }
+    },
+    "account": {
+      "language": {
+        "title": "Display language",
+        "description": "Pick the language used across the SenHarness UI.",
+        "label": "Language",
+        "usePlatformDefault": "Use platform default",
+        "hint": "Saved per account — overrides the platform-wide default. Stored as a cookie so it survives logout.",
+        "saved": "Language preference saved",
+        "saveFailed": "Couldn't save the language preference — try again"
       }
     },
     "profile": {
@@ -2990,11 +3003,18 @@
         "copyQrLink": "Copy image link",
         "linkCopied": "Image link copied",
         "copyFailed": "Copy failed",
-        "qrLinkLabel": "Image URL (share or open elsewhere if the preview fails)"
+        "qrLinkLabel": "Image URL (share or open elsewhere if the preview fails)",
+        "errors": {
+          "unknown": "QR login could not complete — try again",
+          "cancelled": "Login cancelled on the phone",
+          "bind_taken": "This WeChat account is already bound to another channel",
+          "network": "Network error reaching iLink — check connectivity",
+          "internal_error": "Upstream internal error — try again"
+        }
       },
       "form": {
         "name": "Name",
-        "namePlaceholder": "e.g. Product chat",
+        "namePlaceholder": "e.g. My channel",
         "kind": "Provider",
         "agent": "Default agent (who replies)",
         "agentPlaceholder": "Pick an agent…",
@@ -3022,7 +3042,11 @@
         "agent_id": "Agent ID (numeric)",
         "secret": "App secret",
         "encoding_aes_key": "EncodingAESKey",
-        "verify_signatures": "Verify signatures"
+        "verify_signatures": "Verify signatures",
+        "client_id": "Client ID",
+        "client_secret": "Client secret",
+        "bot_id": "Bot ID",
+        "bot_secret": "Bot secret"
       },
       "fieldHint": {
         "bot_token": "Used for outbound replies (Slack: xoxb-…, Discord: bot token)",
@@ -3043,7 +3067,11 @@
         "corp_id": "WeCom Corp ID",
         "agent_id": "Numeric AgentId of the self-built app",
         "secret": "Self-built app Secret",
-        "encoding_aes_key": "EncodingAESKey from the callback config (43 chars)"
+        "encoding_aes_key": "EncodingAESKey from the callback config (43 chars)",
+        "client_id": "DingTalk Stream client ID (from the open-platform app)",
+        "client_secret": "DingTalk Stream client secret (paired with the client ID)",
+        "bot_id": "WeCom AIBot ID (Stream mode)",
+        "bot_secret": "WeCom AIBot secret (paired with the bot ID)"
       },
       "setupHint": {
         "slack": "Slack admin → Event Subscriptions → Enable → Request URL = the URL above. Subscribe to 'message.channels' / 'app_mention'. Slack sends url_verification; we auto-ACK.",
@@ -3219,6 +3247,34 @@
         "customHeadersHint": "Use for service-account or enterprise gateway scenarios that need extra headers.",
         "customHeadersFallback": "or use API key (fallback)"
       },
+      "modelDialog": {
+        "reasoning": {
+          "sectionTitle": "Thinking",
+          "supportedHint": "Let this model think before answering.",
+          "effortLabel": "Effort",
+          "effortHint": "Off keeps the model quick. Higher levels spend more on reasoning before each reply.",
+          "effort": {
+            "off": "Off",
+            "low": "Low",
+            "medium": "Medium",
+            "high": "High"
+          },
+          "defaultLabel": "Default state",
+          "defaultHint": "Thinking phase used when the chat doesn't override it.",
+          "defaultOn": "On",
+          "defaultOff": "Off",
+          "advancedToggle": "Advanced",
+          "hybridLabel": "Hybrid mode",
+          "hybridHint": "Same SKU exposes thinking and non-thinking. Only override for non-catalog models.",
+          "toolCallSafeLabel": "Safe across tool calls",
+          "toolCallSafeHint": "Off when the provider requires round-tripping reasoning content with each tool call (e.g. Kimi K2.6).",
+          "flashAlternativeLabel": "Flash alternative model",
+          "flashAlternativePlaceholder": "e.g. deepseek-chat",
+          "flashAlternativeHint": "When mode=flash, the runner quietly switches to this sibling SKU.",
+          "resetCta": "Reset to builtin defaults",
+          "resetSuccess": "Reasoning override cleared"
+        }
+      },
       "models": {
         "heading": "Model list",
         "totalAvailable": "{count} models, {enabled} enabled",
@@ -3300,6 +3356,10 @@
           "missing_api_key": "Configure an API key first",
           "missing_base_url": "Fill in Base URL first",
           "remote_unreachable": "Cannot reach upstream /v1/models — check network and Base URL",
+          "network_unreachable": "Couldn't reach the provider. Check your network and Base URL — falling back to the built-in catalog.",
+          "auth_failed": "The provider rejected the API key — double-check it and try again.",
+          "not_supported": "This provider doesn't expose a /v1/models endpoint — showing the built-in catalog instead.",
+          "rate_limited": "The provider rate-limited the discover request — retry in a moment.",
           "model_build_failed": "Could not build the model — check kind/model name and SDK extras",
           "http_400": "Upstream rejected the request (400)",
           "http_401": "Upstream rejected the API key (401 Unauthorized) — check your credentials",
@@ -4078,7 +4138,7 @@
         },
         "email_transport_kind": {
           "label": "Email transport kind",
-          "description": "log (audit-only) / smtp / mailgun / ses. M0.10 only honours 'log'."
+          "description": "log (audit-only) / smtp / mailgun / ses."
         }
       },
       "plugins": {

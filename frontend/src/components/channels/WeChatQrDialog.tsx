@@ -104,6 +104,19 @@ export function WeChatQrDialog({
     }
   }, []);
 
+  // Map a raw backend error code into a stable token the rendered i18n
+  // helper can interpolate. Anything that smells like "timed out" is
+  // folded back into ``expired`` so the UI shows the friendlier
+  // "QR expired — refresh" copy.
+  const normalizeErrorCode = (raw: string | null | undefined): string => {
+    const code = (raw ?? "").trim().toLowerCase();
+    if (!code) return "unknown";
+    if (code === "expired" || code === "timeout" || code === "timed_out") {
+      return "expired";
+    }
+    return code;
+  };
+
   const requestQr = useCallback(async () => {
     cancelledRef.current = false;
     stopTimers();
@@ -117,12 +130,23 @@ export function WeChatQrDialog({
       if (cancelledRef.current) return;
       setSession(res);
       setSecondsLeft(res.expires_in || DEFAULT_EXPIRES_IN_S);
-      setPhase(res.status || "pending");
-      if (res.status === "error") setErrorMsg(res.error || "");
+      if (res.status === "error") {
+        const code = normalizeErrorCode(res.error);
+        if (code === "expired") {
+          setPhase("expired");
+        } else {
+          setPhase("error");
+          setErrorMsg(code);
+        }
+      } else {
+        setPhase(res.status || "pending");
+      }
     } catch (e) {
       if (cancelledRef.current) return;
       setPhase("error");
-      setErrorMsg(e instanceof Error ? e.message : String(e));
+      // Network / 5xx — keep a stable code so the toast/label uses an
+      // i18n key instead of leaking the raw upstream message.
+      setErrorMsg(normalizeErrorCode(e instanceof Error ? e.message : null));
     } finally {
       setStarting(false);
     }
@@ -147,10 +171,10 @@ export function WeChatQrDialog({
       .then((url) => {
         if (!cancelled) setQrDataUri(url);
       })
-      .catch((err: unknown) => {
+      .catch(() => {
         if (cancelled) return;
-        // eslint-disable-next-line no-console -- diagnostic for QR encode failures
-        console.warn("wechat qr local encode failed", err);
+        // QR encoding failed — clear the preview; the dialog falls
+        // back to the upstream-supplied image / numeric code.
         setQrDataUri("");
       });
     return () => {
@@ -174,8 +198,17 @@ export function WeChatQrDialog({
       try {
         const res = await pollRef.current(qrId);
         if (cancelled || cancelledRef.current) return;
-        setPhase(res.status);
-        if (res.status === "error") setErrorMsg(res.error || "");
+        if (res.status === "error") {
+          const code = normalizeErrorCode(res.error);
+          if (code === "expired") {
+            setPhase("expired");
+          } else {
+            setPhase("error");
+            setErrorMsg(code);
+          }
+        } else {
+          setPhase(res.status);
+        }
         if (res.status === "confirmed") {
           await qcRef.current.invalidateQueries({ queryKey: ["channels"] });
           await qcRef.current.invalidateQueries({
@@ -189,10 +222,10 @@ export function WeChatQrDialog({
           return;
         }
         if (res.status === "expired") return;
-      } catch (e) {
+      } catch {
         if (cancelled || cancelledRef.current) return;
-        // eslint-disable-next-line no-console -- diagnostic for blocked QR polls
-        console.warn("wechat qr poll failed", e);
+        // Transient poll failure (network blip, proxy hiccup) — the
+        // next tick of the timer retries; no user-visible noise.
       }
       if (!cancelled && !cancelledRef.current) {
         pollTimerRef.current = setTimeout(tick, POLL_INTERVAL_MS);
@@ -271,7 +304,15 @@ export function WeChatQrDialog({
   const qrUrl = (session?.qrcode_image_data ?? "").trim();
   const isLoading = starting || (Boolean(qrUrl) && !qrDataUri);
   const dimQr = phase === "expired" || phase === "error";
-  const errorLabel = t("statusError", { error: errorMsg ?? "" });
+  // Map the stable error code into the per-locale "Error: <copy>"
+  // string. ``errors.<code>`` falls back to the raw code only when no
+  // catalog entry exists so the UI never displays a kernel-flavoured
+  // upstream message verbatim.
+  const errorCode = errorMsg ?? "unknown";
+  const errorCopy = t.has(`errors.${errorCode}`)
+    ? t(`errors.${errorCode}`)
+    : t("errors.unknown");
+  const errorLabel = t("statusError", { error: errorCopy });
 
   const copyQrLink = async () => {
     if (!qrUrl) return;

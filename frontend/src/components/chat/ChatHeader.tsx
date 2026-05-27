@@ -40,6 +40,7 @@ import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { SimpleTooltip } from "@/components/ui/tooltip";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 import { ArtifactDebugPanel } from "@/components/chat/ArtifactDebugPanel";
 import { SessionGoalDialog } from "@/components/chat/SessionGoalDialog";
 import { ShareDialog } from "@/components/chat/ShareDialog";
@@ -158,20 +159,16 @@ export function ChatHeader({ sessionId, agentId }: ChatHeaderProps) {
         >
           <Link
             href={`/agents/${subjectAgentId}`}
-            className="inline-flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[rgb(var(--color-primary)/0.12)] text-[12px] font-semibold text-[rgb(var(--color-primary))] transition hover:bg-[rgb(var(--color-primary)/0.18)]"
+            className="inline-flex shrink-0 items-center justify-center rounded-full transition hover:opacity-90"
             aria-label={t("openAgent")}
             data-testid="chat-header-agent-avatar"
           >
-            {agentMeta?.avatar_url ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={agentMeta.avatar_url}
-                alt=""
-                className="size-full object-cover"
-              />
-            ) : (
-              (agentMeta?.name ?? "?").trim().charAt(0).toUpperCase() || "?"
-            )}
+            <AgentAvatar
+              name={agentMeta?.name}
+              avatarUrl={agentMeta?.avatar_url}
+              className="size-7"
+              fallbackClassName="text-[12px]"
+            />
           </Link>
         </SimpleTooltip>
       ) : null}

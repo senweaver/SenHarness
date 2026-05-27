@@ -1,4 +1,4 @@
-import type { locales } from "@/lib/i18n";
+import type { locales } from "@/lib/i18n-config";
 
 // Register the project's locale union with next-intl v4 so `useLocale()`,
 // router helpers, and config types all narrow to ("zh-CN" | "en-US").

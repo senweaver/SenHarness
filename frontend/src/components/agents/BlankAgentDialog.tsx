@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "@/lib/navigation";
 import { IconCheck, IconLoader2 } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -23,45 +24,66 @@ import {
   type InlinePickerOption,
 } from "@/components/agents/tabs/pickers/InlinePicker";
 import { useCreateAgent } from "@/hooks/use-agent-mutations";
+import { useCloneAgent } from "@/hooks/use-marketplace";
 import { useWorkspaceModelOptions } from "@/hooks/use-agent-models";
 import { useBackendAdapters } from "@/hooks/use-backend-adapters";
 import { useRegisteredRuntimes } from "@/hooks/use-runtimes";
 import { cn } from "@/lib/utils";
 
+export interface BlankAgentDialogInitial {
+  name?: string;
+  description?: string;
+  defaultModel?: string | null;
+  /**
+   * When set, Save calls ``POST /agents/{templateId}/clone`` with the
+   * (possibly user-edited) name instead of ``POST /agents``.
+   */
+  templateId?: string;
+}
+
 interface BlankAgentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initial?: BlankAgentDialogInitial;
 }
 
 type Visibility = "workspace" | "private";
 
-export function BlankAgentDialog({ open, onOpenChange }: BlankAgentDialogProps) {
+export function BlankAgentDialog({ open, onOpenChange, initial }: BlankAgentDialogProps) {
   const t = useTranslations("newAgent");
   const tBlank = useTranslations("newAgent.blank");
   const tCommon = useTranslations("common");
   const router = useRouter();
+  const qc = useQueryClient();
   const create = useCreateAgent();
+  const clone = useCloneAgent();
   const modelsQ = useWorkspaceModelOptions();
   const runtimesQ = useRegisteredRuntimes();
   const adaptersQ = useBackendAdapters();
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [defaultModel, setDefaultModel] = useState<string | null>(null);
+  const [name, setName] = useState(initial?.name ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [defaultModel, setDefaultModel] = useState<string | null>(
+    initial?.defaultModel ?? null,
+  );
   const [visibility, setVisibility] = useState<Visibility>("private");
   const [backendKind, setBackendKind] = useState<string>("native");
   const [backendAdapterId, setBackendAdapterId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
-      setName("");
-      setDescription("");
-      setDefaultModel(null);
+      setName(initial?.name ?? "");
+      setDescription(initial?.description ?? "");
+      setDefaultModel(initial?.defaultModel ?? null);
       setVisibility("private");
       setBackendKind("native");
       setBackendAdapterId(null);
+    } else {
+      setName(initial?.name ?? "");
+      setDescription(initial?.description ?? "");
+      setDefaultModel(initial?.defaultModel ?? null);
     }
-  }, [open]);
+  }, [open, initial?.name, initial?.description, initial?.defaultModel, initial?.templateId]);
 
   const modelOptions = useMemo<InlinePickerOption<string>[]>(() => {
     const rows = modelsQ.data ?? [];
@@ -97,19 +119,33 @@ export function BlankAgentDialog({ open, onOpenChange }: BlankAgentDialogProps) 
   }, [adaptersQ.data, backendKind]);
 
   const adapterMissing = requiresAdapter && adapterOptions.length === 0;
+  const templateMode = Boolean(initial?.templateId);
   const disableSubmit =
     create.isPending ||
+    clone.isPending ||
     !name.trim() ||
-    (requiresAdapter && !backendAdapterId);
+    (!templateMode && requiresAdapter && !backendAdapterId);
 
   const submit = async () => {
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
       toast.error(t("missingName"));
       return;
     }
     try {
+      if (templateMode && initial?.templateId) {
+        const cloned = await clone.mutateAsync({
+          agent_id: initial.templateId,
+          name: trimmedName,
+        });
+        toast.success(t("created"));
+        onOpenChange(false);
+        qc.invalidateQueries({ queryKey: ["agents"] });
+        router.push(`/agents/${cloned.id}`);
+        return;
+      }
       const created = await create.mutateAsync({
-        name: name.trim(),
+        name: trimmedName,
         description: description.trim() || null,
         default_model: requiresAdapter ? null : defaultModel,
         visibility,
@@ -159,68 +195,72 @@ export function BlankAgentDialog({ open, onOpenChange }: BlankAgentDialogProps) 
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label>{tBlank("visibility.label")}</Label>
-            <div role="radiogroup" className="grid grid-cols-2 gap-2">
-              <VisibilityCard
-                selected={visibility === "workspace"}
-                title={tBlank("visibility.workspace")}
-                hint={tBlank("visibility.workspaceHint")}
-                onSelect={() => setVisibility("workspace")}
-              />
-              <VisibilityCard
-                selected={visibility === "private"}
-                title={tBlank("visibility.private")}
-                hint={tBlank("visibility.privateHint")}
-                onSelect={() => setVisibility("private")}
-              />
-            </div>
-          </div>
+          {templateMode ? null : (
+            <>
+              <div className="space-y-1.5">
+                <Label>{tBlank("visibility.label")}</Label>
+                <div role="radiogroup" className="grid grid-cols-2 gap-2">
+                  <VisibilityCard
+                    selected={visibility === "workspace"}
+                    title={tBlank("visibility.workspace")}
+                    hint={tBlank("visibility.workspaceHint")}
+                    onSelect={() => setVisibility("workspace")}
+                  />
+                  <VisibilityCard
+                    selected={visibility === "private"}
+                    title={tBlank("visibility.private")}
+                    hint={tBlank("visibility.privateHint")}
+                    onSelect={() => setVisibility("private")}
+                  />
+                </div>
+              </div>
 
-          <div className="flex items-center justify-between gap-3">
-            <Label>{tBlank("runtimeLabel")}</Label>
-            <InlinePicker
-              label={tBlank("runtimeLabel")}
-              value={backendKind}
-              options={runtimeOptions}
-              onChange={(next) => {
-                setBackendKind(next);
-                setBackendAdapterId(null);
-              }}
-            />
-          </div>
-
-          {requiresAdapter ? (
-            <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-3">
-                <Label>{tBlank("adapterLabel")}</Label>
+                <Label>{tBlank("runtimeLabel")}</Label>
                 <InlinePicker
-                  label={tBlank("adapterLabel")}
-                  value={backendAdapterId}
-                  options={adapterOptions}
-                  onChange={(next) => setBackendAdapterId(next)}
-                  placeholder={tBlank("adapterEmpty")}
-                  disabled={adapterOptions.length === 0}
+                  label={tBlank("runtimeLabel")}
+                  value={backendKind}
+                  options={runtimeOptions}
+                  onChange={(next) => {
+                    setBackendKind(next);
+                    setBackendAdapterId(null);
+                  }}
                 />
               </div>
-              {adapterMissing ? (
-                <p className="text-[11px] sh-muted">
-                  {tBlank("adapterMissingHint")}
-                </p>
-              ) : null}
-              <p className="text-[11px] sh-muted">{tBlank("remoteModelHint")}</p>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-3">
-              <Label>{tBlank("modelLabel")}</Label>
-              <InlinePicker
-                label={tBlank("modelLabel")}
-                value={defaultModel}
-                options={modelOptions}
-                onChange={(next) => setDefaultModel(next)}
-                placeholder={tBlank("modelEmpty")}
-              />
-            </div>
+
+              {requiresAdapter ? (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label>{tBlank("adapterLabel")}</Label>
+                    <InlinePicker
+                      label={tBlank("adapterLabel")}
+                      value={backendAdapterId}
+                      options={adapterOptions}
+                      onChange={(next) => setBackendAdapterId(next)}
+                      placeholder={tBlank("adapterEmpty")}
+                      disabled={adapterOptions.length === 0}
+                    />
+                  </div>
+                  {adapterMissing ? (
+                    <p className="text-[11px] sh-muted">
+                      {tBlank("adapterMissingHint")}
+                    </p>
+                  ) : null}
+                  <p className="text-[11px] sh-muted">{tBlank("remoteModelHint")}</p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-3">
+                  <Label>{tBlank("modelLabel")}</Label>
+                  <InlinePicker
+                    label={tBlank("modelLabel")}
+                    value={defaultModel}
+                    options={modelOptions}
+                    onChange={(next) => setDefaultModel(next)}
+                    placeholder={tBlank("modelEmpty")}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
 

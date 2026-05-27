@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/ui/page-header";
-import { locales, type Locale } from "@/lib/i18n";
+import { locales, type Locale } from "@/lib/i18n-config";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/stores/sidebar-store";
 

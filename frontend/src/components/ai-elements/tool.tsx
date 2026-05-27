@@ -68,7 +68,7 @@ export function Tool({
   return (
     <div
       className={cn(
-        "rounded-lg border bg-[rgb(var(--color-card))]/40 text-xs",
+        "w-full min-w-0 rounded-lg border bg-[rgb(var(--color-card))]/40 text-xs",
         className,
       )}
       data-testid="tool-card"

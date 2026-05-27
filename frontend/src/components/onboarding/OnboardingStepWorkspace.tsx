@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { IconLoader2 } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useMe } from "@/hooks/use-me";
-import { useActiveWorkspace, useUpdateWorkspace } from "@/hooks/use-workspace";
+import {
+  useActiveWorkspace,
+  useUpdateWorkspace,
+  type WorkspaceRead,
+} from "@/hooks/use-workspace";
+import { api } from "@/lib/api";
+import { slugifyWorkspaceName, switchActiveWorkspace } from "@/lib/workspace";
+import { useWorkspaceStore } from "@/stores/workspace-store";
 import { useOnboardingStore } from "@/stores/onboarding-store";
 
 interface OnboardingStepWorkspaceProps {
@@ -24,6 +32,9 @@ export function OnboardingStepWorkspace({ onNext }: OnboardingStepWorkspaceProps
   const { data: me } = useMe();
   const { data: workspace } = useActiveWorkspace();
   const update = useUpdateWorkspace();
+  const activeId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const qc = useQueryClient();
+  const [creating, setCreating] = useState(false);
 
   const [nameInput, setNameInput] = useState<string | null>(null);
   const [descriptionInput, setDescriptionInput] = useState<string | null>(null);
@@ -34,25 +45,63 @@ export function OnboardingStepWorkspace({ onNext }: OnboardingStepWorkspaceProps
   const setName = (value: string) => setNameInput(value);
   const setDescription = (value: string) => setDescriptionInput(value);
 
+  const persistDraft = (trimmedName: string, trimmedDescription: string) => {
+    setDraft({
+      workspaceName: trimmedName,
+      workspaceDescription: trimmedDescription || undefined,
+    });
+  };
+
   const submit = async () => {
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+    const trimmedDescription = description.trim();
+    if (!trimmedName) {
       toast.error(t("nameRequired"));
       return;
     }
     try {
-      await update.mutateAsync({
-        name: name.trim(),
-        description: description.trim() || undefined,
-      });
-      setDraft({
-        workspaceName: name.trim(),
-        workspaceDescription: description.trim() || undefined,
-      });
+      if (activeId) {
+        await update.mutateAsync({
+          name: trimmedName,
+          description: trimmedDescription || undefined,
+        });
+      } else {
+        // Platform admin / first-run path: no membership exists yet, so
+        // PATCH /workspaces/null would 422. Create the workspace first,
+        // then switch the token onto it so the rest of onboarding
+        // (provider + agent steps) operates inside the new tenant.
+        setCreating(true);
+        try {
+          const slug = slugifyWorkspaceName(trimmedName) || "workspace";
+          const created = await api.post<WorkspaceRead>(
+            "/api/v1/workspaces",
+            {
+              name: trimmedName,
+              slug,
+              description: trimmedDescription || null,
+            },
+          );
+          const switched = await switchActiveWorkspace(created.id);
+          if (!switched) {
+            toast.error(t("saveFailed"));
+            return;
+          }
+          await Promise.all([
+            qc.invalidateQueries({ queryKey: ["me"] }),
+            qc.invalidateQueries({ queryKey: ["workspace"] }),
+          ]);
+        } finally {
+          setCreating(false);
+        }
+      }
+      persistDraft(trimmedName, trimmedDescription);
       onNext();
     } catch {
       toast.error(t("saveFailed"));
     }
   };
+
+  const pending = update.isPending || creating;
 
   return (
     <div className="flex flex-col gap-5 px-6 py-6">
@@ -85,8 +134,8 @@ export function OnboardingStepWorkspace({ onNext }: OnboardingStepWorkspaceProps
         </div>
       </div>
       <div className="flex justify-end">
-        <Button onClick={submit} disabled={update.isPending || !name.trim()}>
-          {update.isPending && <IconLoader2 className="size-4 animate-spin" />}
+        <Button onClick={submit} disabled={pending || !name.trim()}>
+          {pending && <IconLoader2 className="size-4 animate-spin" />}
           {t("next")}
         </Button>
       </div>

@@ -110,17 +110,7 @@
     "summarySuccess": "成功 {n}",
     "summaryPartial": "部分 {n}",
     "summaryFailure": "失败 {n}",
-    "auxiliarySectionTitle": "辅助模型",
-    "auxiliarySectionHelp": "只读视图。编辑能力将在 M0.13 移至平台管理。",
-    "auxModelDefault": "默认辅助模型",
-    "auxModelJudge": "运行质量评审",
-    "auxModelGoalAlignment": "目标对齐评分",
-    "rateBudget": "评审速率预算",
-    "rateBudgetUsage": "每分钟 {used}/{limit}",
-    "breakerHealthy": "正常",
-    "breakerDegraded": "已降级",
-    "breakerLastSeen": "最近一次降级 {when}",
-    "moveToAdminLink": "辅助模型设置将在 M0.13 移至平台管理。"
+    "breakerLastSeen": "最近一次降级 {when}"
   },
   "home": {
     "welcome": "你好，{name}。今天我们做点什么？",
@@ -1051,9 +1041,9 @@
     "title": "工作台",
     "welcomeBack": "{name}，欢迎回来。",
     "welcomeBackNoName": "欢迎回来。",
-    "welcomeBody": "你的 AI 工作站已就绪。可以部署新智能体、接入数据渠道，或继续之前的工作 — 当前 {agents} 个智能体活跃在 {channels} 个渠道上。",
+    "welcomeBody": "你的 AI 工作站已就绪。可以创建新智能体、接入数据渠道，或继续之前的工作 — 当前 {agents} 个智能体活跃在 {channels} 个渠道上。",
     "newChatCta": "发起对话",
-    "deployAgentCta": "部署智能体",
+    "newAgentCta": "新建智能体",
     "uploadKnowledgeCta": "上传知识",
     "metricsTokens": "总 token 用量",
     "metricsTokensHint": "本周",
@@ -1662,7 +1652,10 @@
       "slashClearDesc": "不发送，仅清空输入框。",
       "mentionEmpty": "未找到匹配的智能体、知识或文件",
       "suggestionsTitle": "继续追问",
-      "suggestionsRefresh": "建议下一句"
+      "suggestionsRefresh": "建议下一句",
+      "sourcesUsed": "引用了 {count} 条知识库内容",
+      "sourcesChunk": "片段 {ord}",
+      "sourcesScore": "相关度（余弦相似度）"
     },
     "workspace": {
       "title": "工作面板",
@@ -1718,7 +1711,7 @@
         "openFull": "在新页签查看完整 Trace"
       },
       "plan": {
-        "empty": "暂无计划，切到 Plan 模式后向规划子代理提问。"
+        "empty": "暂无计划。Agent 调用 read_todos 或 write_todos 后会显示在这里。"
       },
       "files": {
         "empty": "本会话还未生成或写入任何文件。",
@@ -1990,6 +1983,15 @@
       "workspace": "工作区",
       "system": "系统"
     },
+    "workspace": {
+      "guard": {
+        "title": "请先选择或创建工作区",
+        "description": "工作区设置需要先选定一个工作区。可以新建一个，或切换到已有的工作区继续。",
+        "createCta": "创建工作区",
+        "switchCta": "选择已有工作区",
+        "switchUnavailable": "切换失败，请重试或新建一个"
+      }
+    },
     "hub": {
       "title": "设置",
       "description": "选择你要去的入口。",
@@ -2218,6 +2220,17 @@
         "status": "状态",
         "allStatuses": "全部",
         "search": "搜索"
+      }
+    },
+    "account": {
+      "language": {
+        "title": "显示语言",
+        "description": "选择 SenHarness 界面使用的语言。",
+        "label": "语言",
+        "usePlatformDefault": "跟随平台默认",
+        "hint": "按账号保存，覆盖平台默认。同时写入 Cookie，登出后依然生效。",
+        "saved": "语言偏好已保存",
+        "saveFailed": "保存失败，请重试"
       }
     },
     "profile": {
@@ -2990,11 +3003,18 @@
         "copyQrLink": "复制图片链接",
         "linkCopied": "已复制图片链接",
         "copyFailed": "复制失败",
-        "qrLinkLabel": "图片地址（可分享给他人或备用打开）"
+        "qrLinkLabel": "图片地址（可分享给他人或备用打开）",
+        "errors": {
+          "unknown": "扫码登录未完成，请重试",
+          "cancelled": "已在手机端取消登录",
+          "bind_taken": "该微信号已绑定到其他渠道",
+          "network": "连接 iLink 失败，请检查网络",
+          "internal_error": "上游内部错误，请重试"
+        }
       },
       "form": {
         "name": "名称",
-        "namePlaceholder": "如：产品交流群",
+        "namePlaceholder": "例如：我的通道",
         "kind": "类型",
         "agent": "默认 Agent（收到消息时由谁回答）",
         "agentPlaceholder": "选一个智能体…",
@@ -3022,7 +3042,11 @@
         "agent_id": "Agent ID（数字）",
         "secret": "App Secret",
         "encoding_aes_key": "EncodingAESKey",
-        "verify_signatures": "校验签名"
+        "verify_signatures": "校验签名",
+        "client_id": "Client ID",
+        "client_secret": "Client Secret",
+        "bot_id": "Bot ID",
+        "bot_secret": "Bot Secret"
       },
       "fieldHint": {
         "bot_token": "用于主动回复消息（如 Slack: xoxb-… ；Discord: bot token）",
@@ -3043,7 +3067,11 @@
         "corp_id": "企业微信 Corp ID",
         "agent_id": "自建应用的 AgentId（数字）",
         "secret": "自建应用的 Secret",
-        "encoding_aes_key": "回调配置的 EncodingAESKey（43 字符）"
+        "encoding_aes_key": "回调配置的 EncodingAESKey（43 字符）",
+        "client_id": "钉钉 Stream 模式的 Client ID（开放平台应用提供）",
+        "client_secret": "钉钉 Stream 模式的 Client Secret（与 Client ID 配套）",
+        "bot_id": "企业微信 AIBot 的 Bot ID（Stream 模式）",
+        "bot_secret": "企业微信 AIBot 的 Bot Secret（与 Bot ID 配套）"
       },
       "setupHint": {
         "slack": "Slack 后台 → Event Subscriptions → Enable → Request URL 粘贴上面的 URL。Subscribe to 'message.channels' / 'app_mention'，保存后 Slack 会发 url_verification，这里会自动 ACK。",
@@ -3219,6 +3247,34 @@
         "customHeadersHint": "用于服务账号或企业网关等需要附加 header 的场景。",
         "customHeadersFallback": "或使用 API Key（兜底）"
       },
+      "modelDialog": {
+        "reasoning": {
+          "sectionTitle": "思考",
+          "supportedHint": "允许该模型先思考再回答。",
+          "effortLabel": "思考强度",
+          "effortHint": "关闭则保持轻快；越高每次回答前投入越多推理。",
+          "effort": {
+            "off": "关闭",
+            "low": "低",
+            "medium": "中",
+            "high": "高"
+          },
+          "defaultLabel": "默认状态",
+          "defaultHint": "聊天未指定时使用的思考开关。",
+          "defaultOn": "开",
+          "defaultOff": "关",
+          "advancedToggle": "高级",
+          "hybridLabel": "混合模式",
+          "hybridHint": "同一 SKU 同时支持思考与非思考；仅对未在内置目录中的自定义模型生效。",
+          "toolCallSafeLabel": "工具调用期间安全",
+          "toolCallSafeHint": "若供应商要求每次工具调用都回带 reasoning_content（如 Kimi K2.6），请关闭。",
+          "flashAlternativeLabel": "Flash 替代模型",
+          "flashAlternativePlaceholder": "如 deepseek-chat",
+          "flashAlternativeHint": "当 mode=flash 时，运行器会自动切换到该同源 SKU。",
+          "resetCta": "重置为内置默认",
+          "resetSuccess": "已清除推理覆盖配置"
+        }
+      },
       "models": {
         "heading": "模型列表",
         "totalAvailable": "共 {count} 个模型，已启用 {enabled} 个",
@@ -3300,6 +3356,10 @@
           "missing_api_key": "请先配置 API Key 再发现模型",
           "missing_base_url": "请先填写 Base URL 再发现模型",
           "remote_unreachable": "无法连接到上游 /v1/models，请检查网络与 Base URL",
+          "network_unreachable": "无法连接到供应商，请检查网络与 Base URL — 暂时显示内置目录。",
+          "auth_failed": "供应商拒绝了该 API Key，请核对后重试。",
+          "not_supported": "该供应商未提供 /v1/models 接口，已切换为内置目录。",
+          "rate_limited": "供应商对发现请求做了限流，请稍后重试。",
           "model_build_failed": "模型构造失败 — 请检查 kind / 模型名 / SDK 依赖",
           "http_400": "上游拒绝请求（400）",
           "http_401": "API Key 无效或过期（401 未授权）— 请检查密钥",
@@ -4078,7 +4138,7 @@
         },
         "email_transport_kind": {
           "label": "邮件通道类型",
-          "description": "log（仅审计）/ smtp / mailgun / ses。M0.10 仅支持 log。"
+          "description": "log（仅审计）/ smtp / mailgun / ses。"
         }
       },
       "plugins": {

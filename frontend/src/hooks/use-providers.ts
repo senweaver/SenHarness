@@ -34,6 +34,13 @@ export interface ProviderRead {
   country_code: string | null;
   metadata_json: Record<string, unknown>;
   has_key: boolean;
+  /**
+   * Last 4 characters of the stored API key (or ``null`` when no key
+   * is configured / a legacy row predates the hint column). The full
+   * plaintext key never leaves the backend — render this as
+   * ``••••••${hint}`` next to the "Configured" badge.
+   */
+  api_key_hint: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -140,6 +147,12 @@ export interface ProviderModelUpdate {
   context_window?: number | null;
   capabilities?: string[] | null;
   sort_order?: number | null;
+  /**
+   * Sparse patch on the stored ``metadata_json`` dict. The backend
+   * shallow-merges: passing ``{ profile: null }`` clears the per-row
+   * reasoning override so the builtin profile takes over again.
+   */
+  metadata_json?: Record<string, unknown> | null;
 }
 
 export interface ProviderModelReorderRequest {
@@ -176,6 +189,24 @@ export interface ProviderTestResponse {
   latency_ms: number | null;
   detail: string | null;
   error: string | null;
+}
+
+export type ReasoningEffort = "minimal" | "low" | "medium" | "high";
+
+/**
+ * Effective reasoning profile for a provider model — merge of the
+ * builtin catalog default with the row's stored ``metadata_json``
+ * override. Server-resolved so the operator dialog opens with the
+ * values the runner actually applies.
+ */
+export interface ResolvedReasoningProfile {
+  supported: boolean;
+  hybrid: boolean;
+  default: "on" | "off";
+  tool_call_safe: boolean;
+  preferred_effort: ReasoningEffort | null;
+  flash_alternative: string | null;
+  has_db_override: boolean;
 }
 
 // ─── Provider list / CRUD ──────────────────────────────────────────
@@ -338,5 +369,20 @@ export function useTestProvider(providerId: string) {
         `/api/v1/providers/${providerId}/test`,
         input,
       ),
+  });
+}
+
+export function useResolvedModelProfile(
+  providerId: string | undefined,
+  modelId: string | undefined,
+  enabled: boolean,
+) {
+  return useQuery<ResolvedReasoningProfile>({
+    queryKey: ["resolved-model-profile", providerId, modelId],
+    queryFn: () =>
+      api.get<ResolvedReasoningProfile>(
+        `/api/v1/providers/${providerId}/models/${modelId}/profile`,
+      ),
+    enabled: Boolean(enabled && providerId && modelId),
   });
 }

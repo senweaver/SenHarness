@@ -26,6 +26,11 @@ class IdentityUpdate(ORMModel):
     name: str | None = None
     avatar_url: str | None = None
     profile_json: dict | None = None
+    # Convenience field — the route folds this into
+    # ``profile_json["locale"]`` and validates the value against the
+    # supported locale set so the frontend doesn't need to know the
+    # underlying storage shape. Pass ``""`` to clear the override.
+    preferred_locale: str | None = None
 
 
 class PasswordChangeIn(ORMModel):
@@ -41,6 +46,10 @@ class MeOut(IdentityRead):
     current_role: str | None = None
     current_department_id: uuid.UUID | None = None
     permissions: list[str] = Field(default_factory=list)
+    # Surfaced from ``profile_json["locale"]`` so the i18n resolver in
+    # ``frontend/src/lib/i18n.ts`` can pick the user's preferred locale
+    # without parsing ``profile_json`` keys directly.
+    preferred_locale: str | None = None
 
 
 class MembershipBrief(ORMModel):

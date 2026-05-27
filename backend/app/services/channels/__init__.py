@@ -79,6 +79,30 @@ def get_provider(kind: str) -> ChannelProvider:
     return p
 
 
+def _safe_stream_available(provider: ChannelProvider) -> bool:
+    """Run ``provider.stream_available()`` and squash any exception.
+
+    Third-party channel SDKs are imported lazily inside that classmethod
+    so we can keep them optional. When a SDK has a broken transitive
+    dependency (e.g. an incompatible ``orjson`` wheel) the import can
+    raise *non-ImportError* exceptions like ``AttributeError`` — those
+    must not break the survey loop that backs ``GET /channels/kinds``.
+    """
+    import logging
+
+    log = logging.getLogger(__name__)
+    try:
+        return bool(type(provider).stream_available())
+    except Exception:  # pragma: no cover — degraded SDK install
+        log.warning(
+            "stream_available probe failed for channel kind %r; "
+            "reporting unavailable",
+            provider.kind,
+            exc_info=True,
+        )
+        return False
+
+
 def describe_providers() -> list[dict]:
     """JSON-ready enumeration of every registered provider.
 
@@ -113,7 +137,11 @@ def describe_providers() -> list[dict]:
                 # Realtime probe — False when the SDK is declared but the
                 # extra wasn't installed. Frontend uses this to grey the
                 # Mode toggle and surface a "pip install" hint.
-                "stream_available": type(p).stream_available(),
+                # Wrapped defensively: a third-party SDK with a broken
+                # transitive dep (e.g. wrong orjson wheel) can raise
+                # AttributeError at import time, which must not break
+                # the entire ``/channels/kinds`` endpoint.
+                "stream_available": _safe_stream_available(p),
                 # Per-mode field overrides drive the "show only what this
                 # mode needs" UX in the channel-create form. ``None``
                 # means the form should use the global required/optional

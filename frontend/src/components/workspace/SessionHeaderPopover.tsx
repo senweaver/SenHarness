@@ -28,9 +28,9 @@ import {
   IconEdit,
   IconExternalLink,
   IconMessage2,
-  IconRobot,
   IconUsersGroup,
 } from "@tabler/icons-react";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 import { useTranslations } from "next-intl";
 
 import {
@@ -118,18 +118,11 @@ export function SessionHeaderPopover({
       >
         {/* Header — agent identity + jump-to-detail link */}
         <div className="flex items-start gap-2">
-          <span className="inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
-            {agent?.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={agent.avatar_url}
-                alt=""
-                className="size-full object-cover"
-              />
-            ) : (
-              <IconRobot className="size-4 sh-muted" />
-            )}
-          </span>
+          <AgentAvatar
+            name={agent?.name ?? null}
+            avatarUrl={agent?.avatar_url ?? null}
+            className="size-8 rounded-full"
+          />
           <div className="min-w-0 flex-1">
             <span
               className="block truncate text-[13px] font-medium leading-tight"

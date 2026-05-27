@@ -46,6 +46,18 @@ _DISCOVER_HTTP_TIMEOUT_S = 8.0
 _DISCOVER_MAX_MODELS = 200
 
 
+def _key_tail(plaintext: str) -> str:
+    """Last 4 chars of an API key (or fewer when the key itself is shorter).
+
+    Stored alongside the vault reference so the frontend can render
+    ``••••1234`` without ever requesting the plaintext back. Trimmed
+    before hashing so a leading/trailing newline on a pasted key
+    doesn't drift the hint between create and rotate.
+    """
+    cleaned = (plaintext or "").strip()
+    return cleaned[-4:] if cleaned else ""
+
+
 async def list_providers(session: AsyncSession, *, workspace_id: uuid.UUID) -> list[ModelProvider]:
     repo = ModelProviderRepository(session)
     rows = await repo.list(workspace_id=workspace_id, limit=200)
@@ -152,6 +164,7 @@ async def create_provider(
             provider_id=provider.id,
             name="default",
             vault_item_id=vault_item.id,
+            metadata_json={"key_tail": _key_tail(api_key)},
         )
     return provider
 
@@ -189,9 +202,9 @@ async def update_provider(
         await prov_repo.update(provider, **updates)
 
     if api_key:
-        # Overwrite primary key or create one.
         key_repo = ModelKeyRepository(session)
         key = await key_repo.get_by(provider_id=provider.id, name="default")
+        tail = _key_tail(api_key)
         if key and key.vault_item_id:
             from app.db.models.vault import VaultItem
 
@@ -199,6 +212,10 @@ async def update_provider(
             existing_item = await vault_repo.get(key.vault_item_id)
             if existing_item is not None:
                 await vault_svc.replace_secret(session, item=existing_item, plaintext=api_key)
+            await key_repo.update(
+                key,
+                metadata_json={**(key.metadata_json or {}), "key_tail": tail},
+            )
         else:
             vault_item = await vault_svc.create_secret(
                 session,
@@ -208,7 +225,10 @@ async def update_provider(
                 plaintext=api_key,
             )
             await key_repo.create(
-                provider_id=provider.id, name="default", vault_item_id=vault_item.id
+                provider_id=provider.id,
+                name="default",
+                vault_item_id=vault_item.id,
+                metadata_json={"key_tail": tail},
             )
 
     return provider
@@ -221,6 +241,26 @@ async def delete_provider(session: AsyncSession, *, provider: ModelProvider) -> 
 async def provider_has_key(session: AsyncSession, *, provider_id: uuid.UUID) -> bool:
     repo = ModelKeyRepository(session)
     return await repo.exists(provider_id=provider_id, enabled=True)
+
+
+async def provider_key_hint(
+    session: AsyncSession, *, provider_id: uuid.UUID
+) -> str | None:
+    """Return ``last4`` of the stored default key, or ``None`` when absent.
+
+    Reads ``model_keys.metadata_json["key_tail"]`` only — never touches
+    the vault, so this stays cheap to call inside list endpoints. Rows
+    created before the hint was introduced (no ``key_tail`` key) return
+    ``None`` and continue to render as plain "Configured" in the UI
+    until the operator re-saves the key.
+    """
+    repo = ModelKeyRepository(session)
+    key = await repo.get_by(provider_id=provider_id, name="default")
+    if key is None:
+        return None
+    meta = key.metadata_json or {}
+    tail = meta.get("key_tail")
+    return tail if isinstance(tail, str) and tail else None
 
 
 # ─── ProviderModel CRUD ──────────────────────────────────────────
@@ -258,6 +298,7 @@ async def update_provider_model(
     context_window: int | None = None,
     capabilities: list[str] | None = None,
     sort_order: int | None = None,
+    metadata_json: dict | None = None,
 ) -> ProviderModel:
     repo = ProviderModelRepository(session)
     updates: dict = {}
@@ -271,13 +312,25 @@ async def update_provider_model(
         updates["context_window"] = context_window
     if sort_order is not None:
         updates["sort_order"] = sort_order
-    if capabilities is not None:
-        # Re-bind the JSONB column with a fresh dict so SQLAlchemy detects the
-        # write — mutating ``pm.metadata_json`` in place wouldn't trigger a
-        # flush.
+
+    # Merge ``capabilities`` and the sparse ``metadata_json`` patch into
+    # a single re-bound dict so SQLAlchemy detects the write — mutating
+    # ``pm.metadata_json`` in place would not trigger a flush.
+    needs_meta_write = capabilities is not None or metadata_json is not None
+    if needs_meta_write:
         meta = dict(pm.metadata_json or {})
-        cleaned = [c.strip().lower() for c in capabilities if c and c.strip()]
-        meta["capabilities"] = cleaned
+        if capabilities is not None:
+            cleaned = [c.strip().lower() for c in capabilities if c and c.strip()]
+            meta["capabilities"] = cleaned
+        if metadata_json is not None:
+            # Shallow merge by key. Explicit ``None`` clears the key so
+            # ``metadata_json: {"profile": null}`` falls back to the
+            # builtin profile in ``model_profile.resolve_profile``.
+            for key, value in metadata_json.items():
+                if value is None:
+                    meta.pop(key, None)
+                else:
+                    meta[key] = value
         updates["metadata_json"] = meta
     if updates:
         await repo.update(pm, **updates)
@@ -410,6 +463,11 @@ async def discover_models(session: AsyncSession, *, provider: ModelProvider) -> 
         when the base already ends in ``/v1``) using the vault-stored API key
         as a Bearer token. Falls back to static catalog on HTTP error.
       - everything else: serve the static `model_catalog.CATALOG` list.
+
+    The ``error`` slot is always one of a small, stable code set
+    (``network_unreachable | auth_failed | not_supported | rate_limited |
+    missing_api_key | missing_base_url | ssrf_* | unknown``) so the
+    frontend can localize it without parsing the raw upstream string.
     """
     kind = str(provider.kind)
     existing_rows = await list_provider_models(session, provider_id=provider.id)
@@ -440,9 +498,17 @@ async def discover_models(session: AsyncSession, *, provider: ModelProvider) -> 
                 # i18n keys can't contain '.' (next-intl uses '.' as nesting),
                 # so flatten ``ssrf.private_address`` → ``ssrf_private_address``.
                 error = e.code.replace(".", "_")
+            except httpx.HTTPStatusError as e:
+                log.warning("discover HTTP status provider=%s err=%s", provider.id, e)
+                error = _classify_discover_http_status(e.response.status_code)
             except httpx.HTTPError as e:
                 log.warning("discover HTTP error provider=%s err=%s", provider.id, e)
-                error = "remote_unreachable"
+                error = "network_unreachable"
+            except Exception as e:  # pragma: no cover — defensive
+                log.warning("discover unexpected error provider=%s err=%s", provider.id, e)
+                error = "unknown"
+    else:
+        error = "not_supported"
 
     if not discovered:
         discovered = _static_models_for(kind)
@@ -455,6 +521,19 @@ async def discover_models(session: AsyncSession, *, provider: ModelProvider) -> 
         "existing_ids": existing_ids,
         "error": error,
     }
+
+
+def _classify_discover_http_status(status_code: int) -> str:
+    """Map an upstream HTTP status into the stable discover error code set."""
+    if status_code in (401, 403):
+        return "auth_failed"
+    if status_code == 404:
+        return "not_supported"
+    if status_code == 429:
+        return "rate_limited"
+    if 500 <= status_code < 600:
+        return "network_unreachable"
+    return "unknown"
 
 
 async def test_connectivity(
