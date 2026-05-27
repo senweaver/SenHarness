@@ -60,7 +60,6 @@ from app.agents.kernels.model_client import (
     resolve_for_agent,
 )
 from app.agents.kernels.model_profile import (
-    ModelProfile,
     apply_reasoning_payload,
     desired_thinking_state,
     load_provider_model_metadata,

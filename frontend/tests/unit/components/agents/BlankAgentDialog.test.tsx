@@ -6,6 +6,7 @@
  *   3. Clicking Create fires the create-agent mutation with the typed
  *      payload, closes the dialog, and navigates to the new agent.
  */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
@@ -105,10 +106,15 @@ const messages = {
 } as unknown as ProviderMessages;
 
 function renderDialog(onOpenChange: (open: boolean) => void) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return render(
-    <NextIntlClientProvider locale="en-US" messages={messages}>
-      <BlankAgentDialog open onOpenChange={onOpenChange} />
-    </NextIntlClientProvider>,
+    <QueryClientProvider client={queryClient}>
+      <NextIntlClientProvider locale="en-US" messages={messages}>
+        <BlankAgentDialog open onOpenChange={onOpenChange} />
+      </NextIntlClientProvider>
+    </QueryClientProvider>,
   );
 }
 
