@@ -236,9 +236,7 @@ class SlackProvider(ChannelProvider):
             ]
         await self._post_message(channel_config, body)
 
-    async def _post_message(
-        self, channel_config: dict[str, Any], body: dict[str, Any]
-    ) -> None:
+    async def _post_message(self, channel_config: dict[str, Any], body: dict[str, Any]) -> None:
         bot_token = channel_config.get("bot_token")
         try:
             async with httpx.AsyncClient(timeout=10.0) as c:

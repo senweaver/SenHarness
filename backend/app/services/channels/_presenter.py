@@ -147,11 +147,7 @@ def render_reply(
 
     if attribution == "off":
         rendered = body
-    elif (
-        attribution == "identity"
-        and caps.per_message_identity
-        and not _force_prefix
-    ):
+    elif attribution == "identity" and caps.per_message_identity and not _force_prefix:
         identity = {"name": agent_name}
         if team_name:
             identity["team"] = team_name
@@ -184,8 +180,7 @@ def render_menu(
     if not want_buttons or not options:
         return RenderedMenu(text=text, buttons=None)
     buttons = tuple(
-        OutboundButton(label=f"{idx}. {name}", value=str(idx))
-        for idx, name, _desc in options
+        OutboundButton(label=f"{idx}. {name}", value=str(idx)) for idx, name, _desc in options
     )
     return RenderedMenu(text=text, buttons=buttons)
 

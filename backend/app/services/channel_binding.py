@@ -23,9 +23,7 @@ __all__ = [
 ]
 
 
-async def list_bindings(
-    session: AsyncSession, *, channel_id: uuid.UUID
-) -> list[ChannelBinding]:
+async def list_bindings(session: AsyncSession, *, channel_id: uuid.UUID) -> list[ChannelBinding]:
     return await ChannelBindingRepository(session).list_for_channel(channel_id=channel_id)
 
 
@@ -66,7 +64,9 @@ async def create_binding(
         bind_scope=bind_scope,
         scope_ref_id=scope_ref_id,
         target_agent_id=target_agent_id,
-        allowlist_agent_ids_json=([str(a) for a in allowlist_agent_ids] if allowlist_agent_ids else None),
+        allowlist_agent_ids_json=(
+            [str(a) for a in allowlist_agent_ids] if allowlist_agent_ids else None
+        ),
         priority=priority,
     )
 

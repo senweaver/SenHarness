@@ -173,8 +173,7 @@ class TelegramProvider(ChannelProvider):
         if message.buttons:
             payload["reply_markup"] = {
                 "inline_keyboard": [
-                    [{"text": b.label[:64], "callback_data": b.value}]
-                    for b in message.buttons
+                    [{"text": b.label[:64], "callback_data": b.value}] for b in message.buttons
                 ]
             }
         await self._send_payload(bot_token, payload)

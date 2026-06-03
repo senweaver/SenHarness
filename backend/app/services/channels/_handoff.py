@@ -52,9 +52,7 @@ def parse_handoff_rules(raw: object) -> tuple[HandoffRule, ...]:
         kw_raw = item.get("keywords")
         if not isinstance(kw_raw, (list, tuple)):
             continue
-        keywords = tuple(
-            kw for kw in (str(k).strip().lower() for k in kw_raw) if kw
-        )
+        keywords = tuple(kw for kw in (str(k).strip().lower() for k in kw_raw) if kw)
         target = str(item.get("target") or "").strip()
         if not keywords or not target:
             continue
@@ -66,10 +64,7 @@ def parse_handoff_rules(raw: object) -> tuple[HandoffRule, ...]:
 
 
 def dump_handoff_rules(rules: tuple[HandoffRule, ...]) -> list[dict]:
-    return [
-        {"keywords": list(r.keywords), "target": r.target, "mode": r.mode}
-        for r in rules
-    ]
+    return [{"keywords": list(r.keywords), "target": r.target, "mode": r.mode} for r in rules]
 
 
 def match_handoff(text: str | None, rules: tuple[HandoffRule, ...]) -> HandoffRule | None:

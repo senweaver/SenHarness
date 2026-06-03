@@ -374,9 +374,7 @@ async def _dispatch_multi_scope(
     """
     decrypted_config = decrypt_config(ch.config_json or {})
 
-    decision = await channel_routing.resolve_route(
-        db, channel=ch, inbound=inbound, routing=routing
-    )
+    decision = await channel_routing.resolve_route(db, channel=ch, inbound=inbound, routing=routing)
 
     if decision.action == "drop":
         await db.commit()
@@ -444,9 +442,7 @@ async def _dispatch_multi_scope(
             _drain_indicator_in_background(indicator_task)
     await db.commit()
 
-    raw_reply = result.final_text or (
-        f"⚠ agent run failed: {result.error}" if result.error else ""
-    )
+    raw_reply = result.final_text or (f"⚠ agent run failed: {result.error}" if result.error else "")
     if raw_reply:
         presented = _presenter.render_reply(
             kind=ch.kind,

@@ -33,10 +33,7 @@ def derive_sender_key(inbound: InboundMessage) -> str:
     """The individual external user id (for identity + allowlist)."""
     raw = inbound.raw or {}
     candidate = (
-        raw.get("from_user_id")
-        or raw.get("from_user")
-        or inbound.external_user
-        or "anonymous"
+        raw.get("from_user_id") or raw.get("from_user") or inbound.external_user or "anonymous"
     )
     return str(candidate).strip() or "anonymous"
 

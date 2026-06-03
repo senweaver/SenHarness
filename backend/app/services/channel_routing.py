@@ -275,9 +275,7 @@ async def resolve_binding(
     )
 
 
-def _apply_binding(
-    routing: RoutingConfig, override: BindingOverride | None
-) -> RoutingConfig:
+def _apply_binding(routing: RoutingConfig, override: BindingOverride | None) -> RoutingConfig:
     if override is None:
         return routing
     return replace(
@@ -386,9 +384,7 @@ async def link_identity(
     )
 
 
-async def mint_bind_code(
-    db: AsyncSession, *, channel: Channel, identity_id: uuid.UUID
-) -> dict:
+async def mint_bind_code(db: AsyncSession, *, channel: Channel, identity_id: uuid.UUID) -> dict:
     """Issue a one-time ``/bind`` code (Redis, short TTL).
 
     The code maps to ``identity_id`` so whoever enters it in chat gets
@@ -495,9 +491,7 @@ async def resolve_pool(
                 db, squad_id=routing.scope_ref_id, workspace_id=channel.workspace_id
             )
         if squad is not None:
-            pool = await squad_runtime.resolve_squad_pool(
-                db, squad=squad, identity_id=identity_id
-            )
+            pool = await squad_runtime.resolve_squad_pool(db, squad=squad, identity_id=identity_id)
     elif routing.bind_scope == "workspace":
         ws_id = routing.scope_ref_id or channel.workspace_id
         pool = await _visible_agents_in_workspace(db, workspace_id=ws_id, identity_id=identity_id)
@@ -553,7 +547,11 @@ def _order_pool(
     """
     default_first = [a for a in pool if a.id == default_agent_id]
     rest_iter = (a for a in pool if a.id != default_agent_id)
-    rest = list(rest_iter) if preserve_order else sorted(rest_iter, key=lambda a: (a.name or "").lower())
+    rest = (
+        list(rest_iter)
+        if preserve_order
+        else sorted(rest_iter, key=lambda a: (a.name or "").lower())
+    )
     return default_first + rest
 
 
@@ -664,10 +662,18 @@ async def resolve_route(
     # DM / group policy gate (always channel-level — bindings narrow the
     # pool, never the access policy).
     policy = routing.group_policy if is_group else routing.dm_policy
-    blocked_reply = _policy_block(policy, identity_id=identity_id, channel=channel, sender=sender_key)
+    blocked_reply = _policy_block(
+        policy, identity_id=identity_id, channel=channel, sender=sender_key
+    )
     if blocked_reply is not None:
-        await _audit(db, channel, "channel.route.blocked", identity_id, sender_key,
-                     extra={"policy": policy, "is_group": is_group})
+        await _audit(
+            db,
+            channel,
+            "channel.route.blocked",
+            identity_id,
+            sender_key,
+            extra={"policy": policy, "is_group": is_group},
+        )
         return _direct(base, blocked_reply(lang=lang))
 
     # ── Layered binding: most-specific-wins, empty table ⇒ P0 ──
@@ -723,9 +729,7 @@ async def resolve_route(
     # on the shared ``sender_key=""`` row (the P0 behaviour).
     per_sender = effective_routing.group_override == "per_sender" and is_group
     write_sender_key = sender_key if per_sender else ""
-    state = await _get_state(
-        db, channel=channel, peer_key=peer_key, sender_key=write_sender_key
-    )
+    state = await _get_state(db, channel=channel, peer_key=peer_key, sender_key=write_sender_key)
     group_state = (
         state
         if not per_sender
@@ -757,8 +761,14 @@ async def resolve_route(
         # ``None`` from a mention-with-text means "run the selected agent";
         # _handle_command set base accordingly.
         if base.action == "run":
-            await _audit(db, channel, "channel.route.run", identity_id, sender_key,
-                         extra={"agent_id": str(base.target_agent_id), "switched": base.switched})
+            await _audit(
+                db,
+                channel,
+                "channel.route.run",
+                identity_id,
+                sender_key,
+                extra={"agent_id": str(base.target_agent_id), "switched": base.switched},
+            )
             return base
 
     # ── Numbered selection (bare digit within the window) ──
@@ -772,14 +782,23 @@ async def resolve_route(
                 agent = next((a for a in ordered if a.id == selected), None)
                 if agent is not None:
                     await _upsert_state(
-                        db, channel=channel, peer_key=peer_key,
-                        sender_key=write_sender_key, active_agent=agent,
+                        db,
+                        channel=channel,
+                        peer_key=peer_key,
+                        sender_key=write_sender_key,
+                        active_agent=agent,
                     )
-                    await _audit(db, channel, "channel.route.switch", identity_id, sender_key,
-                                 extra={"agent_id": str(agent.id), "via": "number"})
-                    return _direct(base, _copy.switch_receipt(
-                        lang=lang, name=agent.name, team=base.team_name
-                    ))
+                    await _audit(
+                        db,
+                        channel,
+                        "channel.route.switch",
+                        identity_id,
+                        sender_key,
+                        extra={"agent_id": str(agent.id), "via": "number"},
+                    )
+                    return _direct(
+                        base, _copy.switch_receipt(lang=lang, name=agent.name, team=base.team_name)
+                    )
 
     # ── Natural-language handoff (deterministic keyword router) ──
     if cmd is None:
@@ -791,19 +810,37 @@ async def resolve_route(
                     # Proactive proposal — let the user accept via number /
                     # @alias. The main agent keeps the current turn.
                     await _upsert_state(
-                        db, channel=channel, peer_key=peer_key,
-                        sender_key=write_sender_key, menu_options=menu_options,
+                        db,
+                        channel=channel,
+                        peer_key=peer_key,
+                        sender_key=write_sender_key,
+                        menu_options=menu_options,
                     )
-                    await _audit(db, channel, "channel.route.handoff_suggested",
-                                 identity_id, sender_key, extra={"agent_id": str(agent.id)})
+                    await _audit(
+                        db,
+                        channel,
+                        "channel.route.handoff_suggested",
+                        identity_id,
+                        sender_key,
+                        extra={"agent_id": str(agent.id)},
+                    )
                     return _direct(base, _copy.handoff_offer(lang=lang, name=agent.name))
                 # mode == "switch": deterministic handoff — switch + forward.
                 await _upsert_state(
-                    db, channel=channel, peer_key=peer_key,
-                    sender_key=write_sender_key, active_agent=agent,
+                    db,
+                    channel=channel,
+                    peer_key=peer_key,
+                    sender_key=write_sender_key,
+                    active_agent=agent,
                 )
-                await _audit(db, channel, "channel.route.handoff", identity_id, sender_key,
-                             extra={"agent_id": str(agent.id), "via": "keyword"})
+                await _audit(
+                    db,
+                    channel,
+                    "channel.route.handoff",
+                    identity_id,
+                    sender_key,
+                    extra={"agent_id": str(agent.id), "via": "keyword"},
+                )
                 base.action = "run"
                 base.target_agent_id = agent.id
                 base.target_workspace_id = agent.workspace_id
@@ -835,8 +872,11 @@ async def resolve_route(
         # route is recomputed every turn so the team keeps routing freely.
         if via == "sticky":
             await _upsert_state(
-                db, channel=channel, peer_key=peer_key,
-                sender_key=write_sender_key, active_agent=target,
+                db,
+                channel=channel,
+                peer_key=peer_key,
+                sender_key=write_sender_key,
+                active_agent=target,
             )
         base.action = "run"
         base.target_agent_id = target.id
@@ -844,9 +884,19 @@ async def resolve_route(
         base.agent_name = target.name
         base.user_text = inbound.user_text
         base.switched = False
-        await _audit(db, channel, "channel.route.run", identity_id, sender_key,
-                     extra={"agent_id": str(target.id), "switched": False,
-                            "squad_id": str(squad.id), "via": via})
+        await _audit(
+            db,
+            channel,
+            "channel.route.run",
+            identity_id,
+            sender_key,
+            extra={
+                "agent_id": str(target.id),
+                "switched": False,
+                "squad_id": str(squad.id),
+                "via": via,
+            },
+        )
         return base
 
     # ── Normal message: per-sender > group stickiness > default ──
@@ -863,8 +913,14 @@ async def resolve_route(
     base.agent_name = target.name
     base.user_text = inbound.user_text
     base.switched = False
-    await _audit(db, channel, "channel.route.run", identity_id, sender_key,
-                 extra={"agent_id": str(target.id), "switched": False})
+    await _audit(
+        db,
+        channel,
+        "channel.route.run",
+        identity_id,
+        sender_key,
+        extra={"agent_id": str(target.id), "switched": False},
+    )
     return base
 
 
@@ -888,28 +944,46 @@ async def _handle_command(
 
     if cmd.code == _commands.CMD_HELP:
         await _upsert_state(
-            db, channel=channel, peer_key=peer_key, sender_key=sender_key,
+            db,
+            channel=channel,
+            peer_key=peer_key,
+            sender_key=sender_key,
             menu_options=menu_options,
         )
-        current_name = current_agent.name if current_agent else (
-            ordered[0].name if ordered else term
+        current_name = (
+            current_agent.name if current_agent else (ordered[0].name if ordered else term)
         )
         base.menu_options = options_copy
-        return _direct(base, _copy.welcome(
-            lang=lang, term=term, current_name=current_name, options=options_copy,
-            team=base.team_name,
-        ))
+        return _direct(
+            base,
+            _copy.welcome(
+                lang=lang,
+                term=term,
+                current_name=current_name,
+                options=options_copy,
+                team=base.team_name,
+            ),
+        )
 
     if cmd.code == _commands.CMD_AGENTS_LIST:
         await _upsert_state(
-            db, channel=channel, peer_key=peer_key, sender_key=sender_key,
+            db,
+            channel=channel,
+            peer_key=peer_key,
+            sender_key=sender_key,
             menu_options=menu_options,
         )
         base.menu_options = options_copy
-        return _direct(base, _copy.agents_list(
-            lang=lang, term=term, options=options_copy, total=len(ordered),
-            team=base.team_name,
-        ))
+        return _direct(
+            base,
+            _copy.agents_list(
+                lang=lang,
+                term=term,
+                options=options_copy,
+                total=len(ordered),
+                team=base.team_name,
+            ),
+        )
 
     if cmd.code == _commands.CMD_WHOAMI:
         name = current_agent.name if current_agent else (ordered[0].name if ordered else term)
@@ -922,9 +996,12 @@ async def _handle_command(
         return _direct(base, _copy.reset_done(lang=lang))
 
     if cmd.code == _commands.CMD_WS_SWITCH:
-        return _direct(base, await _handle_ws_switch(
-            db, routing=routing, identity_id=identity_id, lang=lang, arg=cmd.arg
-        ))
+        return _direct(
+            base,
+            await _handle_ws_switch(
+                db, routing=routing, identity_id=identity_id, lang=lang, arg=cmd.arg
+            ),
+        )
 
     if cmd.code in (_commands.CMD_AGENTS_USE, _commands.CMD_MENTION):
         agent = _select_agent(cmd.arg, ordered)
@@ -1072,10 +1149,7 @@ def _build_menu_options(ordered: list[Agent]) -> list[dict]:
 
 
 def _copy_options(ordered: list[Agent]) -> list[tuple[int, str, str | None]]:
-    return [
-        (i + 1, a.name, (a.description or None))
-        for i, a in enumerate(ordered[:_MENU_TOP_N])
-    ]
+    return [(i + 1, a.name, (a.description or None)) for i, a in enumerate(ordered[:_MENU_TOP_N])]
 
 
 def _match_menu_number(

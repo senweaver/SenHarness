@@ -46,9 +46,9 @@ export const useSidebarStore = create<SidebarState>()(
       migrate: (persisted, fromVersion) => {
         const state = persisted as Partial<SidebarState>;
         if (fromVersion < 2) {
-          return { ...state, workspaceSectionOpen: true };
+          return { ...state, workspaceSectionOpen: true } as SidebarState;
         }
-        return state;
+        return state as SidebarState;
       },
       partialize: (state) => ({
         collapsed: state.collapsed,

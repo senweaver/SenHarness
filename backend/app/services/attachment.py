@@ -47,8 +47,21 @@ MAX_PER_FILE_EXCERPT_CHARS = 8_000
 # ``zip``), which happens often for office docs depending on the browser/OS.
 _DOC_EXTENSIONS: frozenset[str] = frozenset(
     {
-        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
-        "csv", "json", "yaml", "yml", "xml", "md", "markdown", "txt",
+        "pdf",
+        "doc",
+        "docx",
+        "xls",
+        "xlsx",
+        "ppt",
+        "pptx",
+        "csv",
+        "json",
+        "yaml",
+        "yml",
+        "xml",
+        "md",
+        "markdown",
+        "txt",
     }
 )
 
@@ -313,9 +326,7 @@ def _build_prompt_prefix(prepared: list[PreparedAttachment]) -> str:
     Returns "" when there's nothing useful to surface (caller skips the
     prefix entirely in that case so we don't pollute simple chats).
     """
-    listed = [
-        p for p in prepared if p.scratch_relpath or p.inline_excerpt or p.extract_error_code
-    ]
+    listed = [p for p in prepared if p.scratch_relpath or p.inline_excerpt or p.extract_error_code]
     if not listed:
         return ""
 

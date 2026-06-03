@@ -142,9 +142,7 @@ class ChannelConversationState(
     # than the channel's owner; we don't want a CASCADE from the channel's
     # workspace. ``active_agent_id`` SET NULLs so a deleted agent simply
     # drops the stickiness back to the default on the next inbound.
-    active_workspace_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True
-    )
+    active_workspace_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     active_agent_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("agents.id", ondelete="SET NULL"),

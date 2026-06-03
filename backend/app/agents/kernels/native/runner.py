@@ -1718,7 +1718,7 @@ def _prepend_system_prompt(history: list, system_prompt: str) -> list:
         from pydantic_ai.messages import ModelRequest, SystemPromptPart
     except ImportError:  # pragma: no cover
         return history
-    return [ModelRequest(parts=[SystemPromptPart(content=system_prompt)])] + history
+    return [ModelRequest(parts=[SystemPromptPart(content=system_prompt)]), *history]
 
 
 def _safe_args(part: Any) -> dict:

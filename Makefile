@@ -131,6 +131,11 @@ typecheck:
 	$(COMPOSE_DEV) exec $(BACKEND_SVC) ty check app
 	$(COMPOSE_DEV) exec $(FRONTEND_SVC) pnpm typecheck
 
+.PHONY: verify
+verify: ## CI static gates on host (ruff · eslint · tsc · build; needs uv + pnpm)
+	cd backend && uv run ruff check . && uv run ruff format --check .
+	cd frontend && pnpm lint && pnpm typecheck && pnpm build
+
 .PHONY: test
 test: test-backend test-frontend ## Run all tests
 
