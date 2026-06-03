@@ -1074,14 +1074,15 @@ async def _pydantic_ai_stream(
         if isinstance(suffix_candidate, str) and suffix_candidate.strip():
             system_suffix = suffix_candidate
 
+    assembled_system_prompt = _assemble_prompt(
+        req,
+        memory_fragment=memory_fragment,
+        system_suffix=system_suffix,
+    )
     agent = await _build_agent(
         req,
         model=model,
-        system_prompt=_assemble_prompt(
-            req,
-            memory_fragment=memory_fragment,
-            system_suffix=system_suffix,
-        ),
+        system_prompt=assembled_system_prompt,
     )
 
     # Reliability state governs stuck-loop detection, tool retry budgets,
@@ -1144,6 +1145,8 @@ async def _pydantic_ai_stream(
             log.debug("could not strip reasoning_effort for tool-call-unsafe hybrid")
 
     history = _rehydrate_history(req.message_history)
+    if history:
+        history = _prepend_system_prompt(history, assembled_system_prompt)
     history = repair_orphan_tool_calls(history)
 
     # M2.5.9 — provider cache marker wiring. Resolves workspace +
@@ -1706,6 +1709,16 @@ def _rehydrate_history(history: list[dict[str, Any]]) -> list:
         elif role == "assistant":
             out.append(ModelResponse(parts=[TextPart(content=text)]))
     return out
+
+
+def _prepend_system_prompt(history: list, system_prompt: str) -> list:
+    if not system_prompt.strip():
+        return history
+    try:
+        from pydantic_ai.messages import ModelRequest, SystemPromptPart
+    except ImportError:  # pragma: no cover
+        return history
+    return [ModelRequest(parts=[SystemPromptPart(content=system_prompt)])] + history
 
 
 def _safe_args(part: Any) -> dict:

@@ -53,7 +53,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--timeout-graceful-shutdown", "10"]
     environment:
       APP_ENV: ${APP_ENV:-development}
       APP_DEBUG: "true"
@@ -159,7 +159,6 @@ services:
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
       NEXT_PUBLIC_WS_BASE_URL: ${NEXT_PUBLIC_WS_BASE_URL:-ws://localhost:8000}
       NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-SenHarness}
-      NEXT_PUBLIC_DEFAULT_LOCALE: ${NEXT_PUBLIC_DEFAULT_LOCALE:-zh-CN}
       SENHARNESS_INTERNAL_API_BASE_URL: http://backend:8000
       # Windows / Docker Desktop bind mounts don't always propagate inotify
       # events. Force the file watchers to poll so HMR fires reliably.
@@ -176,7 +175,10 @@ services:
       - ./frontend/postcss.config.mjs:/app/postcss.config.mjs
       - ./frontend/tsconfig.json:/app/tsconfig.json
       - /app/node_modules
-      - /app/.next
+      # .next stays in the container's writable layer (no volume): a corrupt
+      # dev cache clears with `docker compose down && up`, and writes stay off
+      # the Windows bind mount. For the source-file read slowness, move the
+      # whole repo into the WSL2 filesystem.
 
 volumes:
   db_data:

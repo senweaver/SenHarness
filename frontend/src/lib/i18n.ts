@@ -8,9 +8,22 @@ import { defaultLocale, isLocale, type Locale } from "@/lib/i18n-config";
 const BOOTSTRAP_CACHE_KEY = ["public-bootstrap"];
 const BOOTSTRAP_TTL_S = 300;
 
+// Server-side fetches run inside the frontend container, where the public
+// build-time URL (NEXT_PUBLIC_API_BASE_URL, e.g. localhost:8000) may be
+// unreachable. Prefer the internal service URL when configured (same
+// convention as lib/api.ts).
+function serverApiBaseUrl(): string {
+  const internal = process.env.SENHARNESS_INTERNAL_API_BASE_URL?.replace(
+    /\/$/,
+    "",
+  );
+  if (internal) return internal;
+  return (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/$/, "");
+}
+
 const fetchPlatformDefaultLocale = unstable_cache(
   async (): Promise<Locale> => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+    const baseUrl = serverApiBaseUrl();
     if (!baseUrl) return defaultLocale;
     try {
       const res = await fetch(`${baseUrl}/api/v1/public/bootstrap`, {
@@ -31,7 +44,7 @@ const fetchPlatformDefaultLocale = unstable_cache(
 async function fetchAuthedPreferredLocale(
   authToken: string,
 ): Promise<Locale | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+  const baseUrl = serverApiBaseUrl();
   if (!baseUrl) return null;
   try {
     const res = await fetch(`${baseUrl}/api/v1/me`, {
@@ -50,7 +63,16 @@ async function fetchAuthedPreferredLocale(
 export async function resolveActiveLocale(
   requestedLocale: string | undefined | null,
 ): Promise<Locale> {
-  if (requestedLocale && isLocale(requestedLocale)) {
+  // With `localePrefix: "as-needed"`, only NON-default locales get a URL
+  // prefix (e.g. /zh-CN/...). Unprefixed paths always resolve to the static
+  // `defaultLocale` via middleware, so a requested value equal to the static
+  // default is implicit — fall through to cookie/profile/platform-default.
+  // A requested non-default locale means the user explicitly chose it.
+  if (
+    requestedLocale &&
+    isLocale(requestedLocale) &&
+    requestedLocale !== defaultLocale
+  ) {
     return requestedLocale;
   }
   const cookieStore = await cookies();

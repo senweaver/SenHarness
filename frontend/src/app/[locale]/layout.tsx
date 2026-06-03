@@ -1,4 +1,4 @@
-import { getMessages, getTimeZone } from "next-intl/server";
+import { getLocale, getMessages, getTimeZone } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { ThemeProvider } from "next-themes";
 
@@ -21,9 +21,13 @@ export default async function LocaleLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
-  const { locale } = await params;
-  if (!isLocale(locale)) notFound();
+  const { locale: paramLocale } = await params;
+  if (!isLocale(paramLocale)) notFound();
 
+  // Use the locale actually resolved by getRequestConfig (which honors the
+  // platform default / cookie / profile for unprefixed paths) so the client
+  // provider, useLocale(), and <html lang> stay in sync with the messages.
+  const locale = await getLocale();
   const messages = await getMessages();
   const timeZone = await getTimeZone();
 

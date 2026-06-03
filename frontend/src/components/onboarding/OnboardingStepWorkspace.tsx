@@ -33,8 +33,18 @@ export function OnboardingStepWorkspace({ onNext }: OnboardingStepWorkspaceProps
   const { data: workspace } = useActiveWorkspace();
   const update = useUpdateWorkspace();
   const activeId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const memberWorkspaces = useWorkspaceStore((s) => s.workspaces);
   const qc = useQueryClient();
   const [creating, setCreating] = useState(false);
+
+  // A persisted ``activeWorkspaceId`` can point at a workspace the
+  // current identity does not belong to (stale local state, account
+  // swap in the same browser). Only PATCH when the active workspace is
+  // one of the caller's actual memberships; otherwise fall through to
+  // the create path so first-run never PATCHes a foreign workspace
+  // (which 403s on ensure_admin and surfaces as "saveFailed").
+  const activeIsMember =
+    Boolean(activeId) && memberWorkspaces.some((w) => w.id === activeId);
 
   const [nameInput, setNameInput] = useState<string | null>(null);
   const [descriptionInput, setDescriptionInput] = useState<string | null>(null);
@@ -60,7 +70,7 @@ export function OnboardingStepWorkspace({ onNext }: OnboardingStepWorkspaceProps
       return;
     }
     try {
-      if (activeId) {
+      if (activeIsMember) {
         await update.mutateAsync({
           name: trimmedName,
           description: trimmedDescription || undefined,

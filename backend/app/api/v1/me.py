@@ -82,9 +82,17 @@ async def read_me(
 
     out = MeOut.model_validate(identity)
     out.workspaces = memberships
-    out.current_workspace_id = workspace_id or (
-        memberships[0].workspace_id if memberships else None
-    )
+    # Only honor the requested workspace (``X-Workspace-Id`` header / JWT
+    # ``ws`` claim) when the caller is actually a member. A stale header
+    # pointing at a foreign workspace must not be echoed back as
+    # ``current_workspace_id`` — the frontend re-pins its active workspace
+    # to this value, so echoing an unmembered id traps the client in a
+    # loop of cross-workspace 403s and breaks first-run onboarding.
+    member_ids = {m.workspace_id for m in memberships}
+    if workspace_id is not None and workspace_id in member_ids:
+        out.current_workspace_id = workspace_id
+    else:
+        out.current_workspace_id = memberships[0].workspace_id if memberships else None
     raw_locale = (identity.profile_json or {}).get("locale")
     out.preferred_locale = raw_locale if isinstance(raw_locale, str) and raw_locale else None
 
