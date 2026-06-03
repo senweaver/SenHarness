@@ -23,11 +23,16 @@ import {
   type ChannelKindMeta,
   type ChannelMode,
   type ChannelRead,
+  type ChannelRoutingConfig,
   type SenderAllowlistRules,
   useChannelKinds,
   useCreateChannel,
 } from "@/hooks/use-channels";
 import { AdvancedSettings } from "@/components/channels/AdvancedSettings";
+import {
+  ChannelRoutingFields,
+  DEFAULT_ROUTING_CONFIG,
+} from "@/components/channels/ChannelRoutingFields";
 import { ChipListField } from "@/components/channels/ChipListField";
 import { SenderAllowlistPanel } from "@/components/channels/SenderAllowlistPanel";
 import { SetupGuide } from "@/components/channels/SetupGuide";
@@ -82,6 +87,9 @@ export function ChannelCreateForm({
   });
   const [discordGuilds, setDiscordGuilds] = useState<string[]>([]);
   const [discordAllowDms, setDiscordAllowDms] = useState(false);
+  const [routing, setRouting] = useState<ChannelRoutingConfig>(
+    DEFAULT_ROUTING_CONFIG,
+  );
 
   useEffect(() => {
     if (meta) setMode(defaultMode(meta));
@@ -96,7 +104,10 @@ export function ChannelCreateForm({
 
   const submit = async () => {
     if (!meta) return;
-    if (!name.trim() || !agentId) {
+    // The default/primary agent is only mandatory for the legacy
+    // ``agent`` scope; workspace/user scopes resolve a pool dynamically.
+    const agentRequired = routing.bind_scope === "agent";
+    if (!name.trim() || (agentRequired && !agentId)) {
       toast.error(t("missingFields"));
       return;
     }
@@ -122,11 +133,12 @@ export function ChannelCreateForm({
         name: name.trim(),
         kind,
         config_json: trimmed,
-        default_agent_id: agentId,
+        default_agent_id: agentId || null,
         enabled: true,
         metadata_json: { mode },
         sender_allowlist_json:
           senderRules.mode === "allow_all" ? {} : senderRules,
+        routing_config_json: routing,
       });
       toast.success(t("created"));
       onCreated?.(created);
@@ -212,7 +224,14 @@ export function ChannelCreateForm({
         </div>
         {!lockedAgentId && (
           <div className="grid gap-1.5">
-            <Label>{t("form.agent")}</Label>
+            <Label>
+              {t("form.agent")}
+              {routing.bind_scope !== "agent" && (
+                <span className="ml-1 text-[10px] sh-muted">
+                  {t("optional")}
+                </span>
+              )}
+            </Label>
             <Select value={agentId} onValueChange={setAgentId}>
               <SelectTrigger>
                 <SelectValue placeholder={t("form.agentPlaceholder")} />
@@ -245,6 +264,18 @@ export function ChannelCreateForm({
             onChange={(v) => setField(field, v)}
           />
         ))}
+
+        <div className="space-y-2 border-t pt-3 sm:col-span-2">
+          <div>
+            <h4 className="text-[12px] font-medium">{t("routing.title")}</h4>
+            <p className="text-[11px] sh-muted">{t("routing.description")}</p>
+          </div>
+          <ChannelRoutingFields
+            value={routing}
+            onChange={setRouting}
+            agents={agents}
+          />
+        </div>
 
         <div className="mt-1 flex justify-end gap-2 sm:col-span-2">
           <Button variant="ghost" onClick={onDone} disabled={create.isPending}>

@@ -85,6 +85,26 @@ class Channel(UuidPkMixin, TimestampMixin, SoftDeleteMixin, WorkspaceScopedMixin
         nullable=False,
     )
 
+    # P0 "single channel → multi-agent routing" config. Default ``{}`` means
+    # ``bind_scope="agent"`` — i.e. the legacy "this channel talks to exactly
+    # ``default_agent_id``" behaviour, fully backward compatible. Recognised
+    # keys (see ``app.services.channel_routing.parse_routing_config``):
+    #   bind_scope               agent|workspace|user        (default agent)
+    #   scope_ref_id             uuid|null  (workspace_id when scope=workspace)
+    #   allowlist_agent_ids      [uuid]|null (narrows the resolved pool)
+    #   dm_policy                open|allowlist|disabled|pairing (default open)
+    #   group_policy             same set                    (default disabled)
+    #   menu_style               auto|text|buttons           (default auto)
+    #   selection_window_seconds int                         (default 300)
+    #   reply_attribution        prefix|identity|off         (default prefix)
+    # Kept as a JSON column for P0; promote hot keys to indexed columns later.
+    routing_config_json: Mapped[dict] = mapped_column(
+        JSONB,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+        nullable=False,
+    )
+
     # M0.8: SHA-256 of the per-kind external app identity (e.g. discord
     # bot_token, slack signing_secret). Used by the partial unique index
     # ``uq_channel_external_app_per_kind`` to refuse the same bot being

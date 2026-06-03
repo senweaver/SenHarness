@@ -22,6 +22,7 @@ from app.services.channels.base import (
     ChannelProvider,
     ChannelProviderMeta,
     InboundMessage,
+    OutboundMessage,
     SignatureInvalid,
 )
 
@@ -137,7 +138,48 @@ class TelegramProvider(ChannelProvider):
         }
         if message_thread_id is not None:
             payload["message_thread_id"] = message_thread_id
+        await self._send_payload(bot_token, payload)
 
+    async def send_message(
+        self,
+        *,
+        channel_config: dict[str, Any],
+        thread_key: str,
+        message: OutboundMessage,
+    ) -> None:
+        """Rich Telegram send: agent menu as an inline keyboard.
+
+        Telegram bots can't change their display name per message, so the
+        ``identity`` hint is ignored (attribution stays text-prefixed by
+        the presenter). Buttons render as a one-per-row inline keyboard
+        whose ``callback_data`` is the menu number.
+        """
+        bot_token = str(channel_config.get("bot_token") or "").strip()
+        if not bot_token:
+            log.warning("telegram channel missing bot_token; skipping reply")
+            return
+        chat_id, message_thread_id = _parse_thread_key(thread_key)
+        if chat_id is None:
+            log.warning("malformed telegram thread_key %r", thread_key)
+            return
+
+        payload: dict[str, Any] = {
+            "chat_id": chat_id,
+            "text": message.text[:3900],
+            "disable_web_page_preview": True,
+        }
+        if message_thread_id is not None:
+            payload["message_thread_id"] = message_thread_id
+        if message.buttons:
+            payload["reply_markup"] = {
+                "inline_keyboard": [
+                    [{"text": b.label[:64], "callback_data": b.value}]
+                    for b in message.buttons
+                ]
+            }
+        await self._send_payload(bot_token, payload)
+
+    async def _send_payload(self, bot_token: str, payload: dict[str, Any]) -> None:
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         try:
             async with httpx.AsyncClient(timeout=10.0) as cli:
@@ -149,7 +191,7 @@ class TelegramProvider(ChannelProvider):
                     resp.text[:200],
                 )
         except httpx.HTTPError as e:  # pragma: no cover - network path
-            log.exception("telegram post_reply failed: %s", e)
+            log.exception("telegram sendMessage failed: %s", e)
 
 
 def _parse_thread_key(thread_key: str) -> tuple[int | None, int | None]:

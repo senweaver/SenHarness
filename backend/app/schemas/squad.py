@@ -3,11 +3,38 @@
 from __future__ import annotations
 
 import uuid
+from typing import Literal
 
 from pydantic import Field
 
 from app.db.models.squad import SquadStrategy
 from app.schemas._base import ORMModel, Timestamped
+
+
+class SquadRouterRule(ORMModel):
+    """One keyword → member rule for the squad ROUTER (P2).
+
+    Pure substring match (case-insensitive); the first rule whose keyword
+    hits and whose ``agent_id`` is still a squad member wins.
+    """
+
+    keywords: list[str] = Field(min_length=1)
+    agent_id: uuid.UUID
+
+
+class SquadRouterConfig(ORMModel):
+    """Wire shape of ``squads.config_json.router`` (P2 ROUTER runtime).
+
+    ``mode=rule`` (default) uses only the keyword ``rules``; ``mode=llm``
+    adds a model fallback (a member classifies the message via the
+    ``AgentBackend`` protocol) when no rule hits. ``default_member_agent_id``
+    is the team's "main" member used when nothing else decides.
+    """
+
+    mode: Literal["rule", "llm"] = "rule"
+    default_member_agent_id: uuid.UUID | None = None
+    router_agent_id: uuid.UUID | None = None
+    rules: list[SquadRouterRule] = Field(default_factory=list)
 
 
 class SquadMemberIn(ORMModel):

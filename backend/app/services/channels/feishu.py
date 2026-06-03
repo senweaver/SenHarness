@@ -23,6 +23,7 @@ from app.services.channels.base import (
     ChannelProvider,
     InboundDispatch,
     InboundMessage,
+    OutboundMessage,
     SignatureInvalid,
 )
 
@@ -197,6 +198,9 @@ class FeishuProvider(ChannelProvider):
             external_user=sender_id,
             raw={
                 "chat_id": chat_id,
+                # "p2p" | "group" — drives the routing layer's DM/group
+                # policy gate (see ``app.services.channels._peer_key``).
+                "chat_type": msg.get("chat_type"),
                 "message_id": msg.get("message_id"),
                 "root_id": root_id,
                 "event_id": header.get("event_id"),
@@ -210,6 +214,58 @@ class FeishuProvider(ChannelProvider):
 
     async def post_reply(
         self, *, channel_config: dict[str, Any], thread_key: str, text: str
+    ) -> None:
+        body = {
+            "msg_type": "text",
+            "content": json.dumps({"text": text[:4000]}),
+        }
+        await self._send_body(channel_config, thread_key, body)
+
+    async def send_message(
+        self,
+        *,
+        channel_config: dict[str, Any],
+        thread_key: str,
+        message: OutboundMessage,
+    ) -> None:
+        """Rich Feishu send: an interactive card with action buttons.
+
+        Feishu can't swap the bot's name per message, so ``identity`` is
+        ignored (the presenter keeps a text prefix). When the message
+        carries buttons we render an interactive card whose buttons post
+        the menu number back; otherwise we fall back to a plain text
+        message.
+        """
+        if not message.buttons:
+            body = {
+                "msg_type": "text",
+                "content": json.dumps({"text": message.text[:4000]}),
+            }
+            await self._send_body(channel_config, thread_key, body)
+            return
+        card = {
+            "config": {"wide_screen_mode": True},
+            "elements": [
+                {"tag": "div", "text": {"tag": "lark_md", "content": message.text[:4000]}},
+                {
+                    "tag": "action",
+                    "actions": [
+                        {
+                            "tag": "button",
+                            "text": {"tag": "plain_text", "content": b.label[:120]},
+                            "type": "default",
+                            "value": {"agent_select": b.value},
+                        }
+                        for b in message.buttons
+                    ],
+                },
+            ],
+        }
+        body = {"msg_type": "interactive", "content": json.dumps(card)}
+        await self._send_body(channel_config, thread_key, body)
+
+    async def _send_body(
+        self, channel_config: dict[str, Any], thread_key: str, body: dict[str, Any]
     ) -> None:
         app_id = channel_config.get("app_id")
         app_secret = channel_config.get("app_secret")
@@ -232,14 +288,9 @@ class FeishuProvider(ChannelProvider):
                 if not token:
                     return
 
-                body = {
-                    "receive_id": chat_id,
-                    "msg_type": "text",
-                    "content": json.dumps({"text": text[:4000]}),
-                }
                 r = await c.post(
                     f"{_FEISHU_BASE}/open-apis/im/v1/messages?receive_id_type=chat_id",
-                    json=body,
+                    json={"receive_id": chat_id, **body},
                     headers={"Authorization": f"Bearer {token}"},
                 )
                 data = r.json() if r.content else {}

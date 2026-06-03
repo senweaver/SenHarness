@@ -39,6 +39,8 @@ async def create_squad(
                 code="squad.agent_not_in_workspace",
             )
 
+    from app.services import squad_runtime
+
     squad_repo = SquadRepository(session)
     squad = await squad_repo.create(
         workspace_id=workspace_id,
@@ -46,7 +48,7 @@ async def create_squad(
         name=name,
         description=description,
         strategy=strategy,
-        config_json=config_json,
+        config_json=squad_runtime.normalize_router_config(config_json),
     )
 
     if members:
@@ -75,6 +77,12 @@ async def list_squads(
 
 
 async def update_squad(session: AsyncSession, *, squad: Squad, **patch) -> Squad:
+    # Canonicalize the ROUTER block (P2) when config_json is touched so the
+    # stored shape stays tidy (mode casing, stringified ids, dropped strays).
+    if "config_json" in patch and patch["config_json"] is not None:
+        from app.services import squad_runtime
+
+        patch["config_json"] = squad_runtime.normalize_router_config(patch["config_json"])
     return await SquadRepository(session).update(squad, **patch)
 
 

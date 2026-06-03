@@ -2827,6 +2827,134 @@
       "pickKind": "选择 IM 平台",
       "optional": "（可选）",
       "docs": "文档",
+      "routing": {
+        "title": "路由",
+        "description": "设置该渠道可触达哪些智能体，以及发送者如何在它们之间选择。",
+        "dialogTitle": "渠道路由",
+        "primaryAgent": "默认 / 主智能体",
+        "primaryRequired": "单智能体范围下需指定一个主智能体。",
+        "noPrimary": "不设主智能体",
+        "saved": "路由已保存",
+        "scope": {
+          "label": "绑定范围",
+          "agent": "单个{term}",
+          "workspace": "整个工作区",
+          "user": "按用户",
+          "squad": "团队（Squad）"
+        },
+        "scopeHint": {
+          "agent": "所有入站消息都发给主{term}（旧版行为）。",
+          "workspace": "发送者从某个工作区的智能体中选择。",
+          "user": "每位已绑定用户可跨工作区触达自己的智能体。",
+          "squad": "在某个团队的成员中路由，由团队 ROUTER 决定谁来应答。"
+        },
+        "scopeRef": {
+          "label": "工作区",
+          "own": "本渠道所在工作区",
+          "hint": "保持本渠道工作区，或将智能体池指向你所属的其他工作区。"
+        },
+        "squadRef": {
+          "label": "团队",
+          "placeholder": "选择团队",
+          "empty": "当前工作区暂无团队",
+          "hint": "该团队的成员即为候选池。团队 ROUTER 策略请在团队页面配置。"
+        },
+        "allowlist": {
+          "label": "限定智能体",
+          "hint": "可选。留空则允许池中的所有智能体。",
+          "empty": "暂无可选智能体"
+        },
+        "advanced": {
+          "toggle": "高级路由"
+        },
+        "dmPolicy": {
+          "label": "私聊策略",
+          "hint": "谁可以与该渠道发起一对一聊天。"
+        },
+        "groupPolicy": {
+          "label": "群聊策略",
+          "hint": "渠道是否在群聊中应答。"
+        },
+        "policy": {
+          "open": "对所有人开放",
+          "allowlist": "仅白名单发送者",
+          "disabled": "禁用",
+          "pairing": "需先完成配对"
+        },
+        "menuStyle": {
+          "label": "智能体选择样式",
+          "option": {
+            "auto": "自动",
+            "text": "文本列表",
+            "buttons": "按钮"
+          }
+        },
+        "attribution": {
+          "label": "回复署名",
+          "option": {
+            "prefix": "名称前缀",
+            "identity": "发送者身份",
+            "off": "关闭"
+          }
+        },
+        "selectionWindow": {
+          "label": "选择有效期（秒）",
+          "hint": "发送者选定的智能体在多久后失效并需重新选择。0 表示不超时。"
+        },
+        "groupOverride": {
+          "label": "群会话粘性",
+          "option": {
+            "shared": "整群共享",
+            "per_sender": "按成员独立"
+          },
+          "hint": {
+            "shared": "一个群只有一条当前路由——最后一次切换对所有人生效。",
+            "per_sender": "群内每位成员可固定自己的当前{term}，其他人仍沿用共享路由。"
+          }
+        },
+        "handoff": {
+          "label": "自然语言转接",
+          "hint": "当消息命中关键词时自动转接到对应的专家{term}，无需输入命令。",
+          "keywordsPlaceholder": "报销, 退款, expense",
+          "targetPlaceholder": "目标{term}",
+          "mode": {
+            "switch": "直接切换",
+            "suggest": "提示转接"
+          },
+          "add": "新增规则",
+          "remove": "删除规则"
+        }
+      },
+      "bindings": {
+        "title": "分层绑定规则",
+        "description": "最具体的匹配优先——成员规则优先于群规则，群规则优先于渠道默认。没有规则时由默认智能体应答。",
+        "empty": "暂无绑定规则——全部由默认智能体处理。",
+        "scope": {
+          "peer": "成员",
+          "group": "群组",
+          "channel_default": "渠道默认"
+        },
+        "matchValuePlaceholder": "成员 / 群 id",
+        "matchValueRequired": "请填写要匹配的成员或群 id。",
+        "targetPlaceholder": "目标智能体",
+        "targetRequired": "请选择目标智能体。",
+        "add": "添加",
+        "remove": "删除",
+        "added": "已添加绑定",
+        "addFailed": "添加绑定失败",
+        "removed": "已删除绑定",
+        "removeFailed": "删除绑定失败"
+      },
+      "bindCode": {
+        "title": "身份绑定",
+        "description": "生成一次性绑定码，让用户在聊天中回复该码以关联其账号。",
+        "generate": "生成绑定码",
+        "copy": "复制绑定码",
+        "copied": "已复制绑定码",
+        "failed": "无法生成绑定码",
+        "ttl": "{seconds} 秒后过期",
+        "instruction": "请用户在聊天中回复 /bind {code}。"
+      },
       "kind": {
         "feishu": "飞书 / Lark",
         "webhook": "通用 Webhook"

@@ -71,6 +71,25 @@ def _reset_settings_cache():
     config.get_settings.cache_clear()
 
 
+def _refresh_settings_from_env() -> None:
+    """Rebind the live ``settings`` singleton to the current process env.
+
+    ``app.core.config`` instantiates ``settings = get_settings()`` at import,
+    and modules like ``app.db.session`` / alembic ``env.py`` capture that object
+    by reference (``from app.core.config import settings``). The DB/Redis
+    testcontainer fixtures only mutate ``os.environ`` *after* that import has
+    frozen the singleton, so connections would otherwise target the import-time
+    defaults (e.g. ``localhost:5432``) instead of the container's mapped port.
+    Mutating the existing object in place propagates the new coordinates to
+    every reference. Test-run only — production never re-reads env mid-process.
+    """
+    from app.core import config
+
+    config.get_settings.cache_clear()
+    fresh = config.Settings()
+    config.settings.__dict__.update(fresh.__dict__)
+
+
 # ─── Testcontainers (optional) ───────────────────────────────
 @pytest.fixture(scope="session")
 def _pg_container() -> Iterator[str | None]:
@@ -93,6 +112,7 @@ def _pg_container() -> Iterator[str | None]:
         os.environ["DB_USER"] = pg.username
         os.environ["DB_PASSWORD"] = pg.password
         os.environ["DB_NAME"] = pg.dbname
+        _refresh_settings_from_env()
         yield dsn
 
 
@@ -119,6 +139,7 @@ def _redis_url() -> str | None:
     port = container.get_exposed_port(6379)
     os.environ["REDIS_HOST"] = host
     os.environ["REDIS_PORT"] = str(port)
+    _refresh_settings_from_env()
     # Redis in testcontainers has no password by default; that matches
     # the dev-mode REDIS_PASSWORD="".
     return f"redis://{host}:{port}/0"

@@ -9,9 +9,18 @@ from fastapi import APIRouter, Request, status
 from app.api.deps import CurrentIdentityId, CurrentWorkspaceId, DBSession
 from app.core.errors import Unauthorized
 from app.repositories.channel import ChannelRepository
-from app.schemas.channel import ChannelCreate, ChannelRead, ChannelUpdate
+from app.schemas.channel import (
+    ChannelBindCodeRead,
+    ChannelBindingCreate,
+    ChannelBindingRead,
+    ChannelCreate,
+    ChannelRead,
+    ChannelUpdate,
+)
 from app.services import audit as audit_svc
 from app.services import channel as svc
+from app.services import channel_binding as binding_svc
+from app.services import channel_routing
 from app.services import workspace as ws_svc
 from app.services.channel import mask_config, seal_config_for_storage
 from app.services.channels import describe_providers
@@ -86,6 +95,11 @@ async def create_channel(
         enabled=body.enabled,
         metadata_json=body.metadata_json,
         sender_allowlist_json=body.sender_allowlist_json,
+        routing_config_json=(
+            body.routing_config_json.model_dump(mode="json")
+            if body.routing_config_json is not None
+            else None
+        ),
     )
     await audit_svc.record(
         db,
@@ -131,7 +145,13 @@ async def update_channel(
 
     # Merge config_json instead of replacing so editing one key from the UI
     # doesn't wipe out bot_token etc.
-    patch = body.model_dump(exclude_none=True)
+    patch = body.model_dump(exclude_none=True, mode="json")
+    if "routing_config_json" in patch:
+        # Canonicalize the routing blob (stable casing, stringified ids,
+        # dropped stray keys) before it lands in the JSONB column.
+        patch["routing_config_json"] = channel_routing.normalize_routing_config(
+            patch["routing_config_json"]
+        )
     if "config_json" in patch:
         merged = dict(ch.config_json or {})
         for k, v in (patch["config_json"] or {}).items():
@@ -328,9 +348,138 @@ async def poll_wechat_qr_login(
                 channel=ch,
                 patch={"config_json": svc.seal_config_for_storage(merged)},
             )
+            # P0 identity binding: the scan binds *this WeChat connector* to
+            # the operator who is scanning (the authenticated identity).
+            # Routing later resolves inbound senders to this identity so the
+            # ``user`` scope can reach their agents across workspaces. We key
+            # the link on the bound WeChat account id (``ilink_user_id``).
+            external_user_id = str(result.get("ilink_user_id") or "").strip()
+            if external_user_id:
+                await channel_routing.link_identity(
+                    db,
+                    channel=ch,
+                    external_user_id=external_user_id,
+                    identity_id=identity_id,
+                    verified_via="qr_scan",
+                    created_by=identity_id,
+                )
             await db.commit()
             await svc.notify_runtime_restart(ch)
     return result
+
+
+@router.post(
+    "/{channel_id}/bind-codes",
+    response_model=ChannelBindCodeRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_bind_code(
+    channel_id: uuid.UUID,
+    db: DBSession,
+    identity_id: CurrentIdentityId,
+    workspace_id: CurrentWorkspaceId,
+) -> ChannelBindCodeRead:
+    """Mint a one-time ``/bind`` code for the current identity.
+
+    The user types ``/bind <code>`` in the channel chat to link their
+    platform account ``(channel, external_user_id)`` to this identity —
+    the supplementary path for senders who can't bind via QR scan.
+    """
+    ws_id = _require_workspace(workspace_id)
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
+    ch = await svc.get_or_404(db, channel_id, workspace_id=ws_id)
+    minted = await channel_routing.mint_bind_code(db, channel=ch, identity_id=identity_id)
+    await db.commit()
+    return ChannelBindCodeRead(code=minted["code"], ttl_seconds=minted["ttl_seconds"])
+
+
+@router.get("/{channel_id}/bindings", response_model=list[ChannelBindingRead])
+async def list_channel_bindings(
+    channel_id: uuid.UUID,
+    db: DBSession,
+    identity_id: CurrentIdentityId,
+    workspace_id: CurrentWorkspaceId,
+) -> list[ChannelBindingRead]:
+    """List the layered routing bindings for a channel (P1)."""
+    ws_id = _require_workspace(workspace_id)
+    await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
+    ch = await svc.get_or_404(db, channel_id, workspace_id=ws_id)
+    rows = await binding_svc.list_bindings(db, channel_id=ch.id)
+    return [ChannelBindingRead.model_validate(r) for r in rows]
+
+
+@router.post(
+    "/{channel_id}/bindings",
+    response_model=ChannelBindingRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_channel_binding(
+    channel_id: uuid.UUID,
+    body: ChannelBindingCreate,
+    db: DBSession,
+    identity_id: CurrentIdentityId,
+    workspace_id: CurrentWorkspaceId,
+    request: Request,
+) -> ChannelBindingRead:
+    """Add one layered routing binding (most-specific-wins) to a channel."""
+    ws_id = _require_workspace(workspace_id)
+    await ws_svc.ensure_admin(db, workspace_id=ws_id, identity_id=identity_id)
+    ch = await svc.get_or_404(db, channel_id, workspace_id=ws_id)
+    binding = await binding_svc.create_binding(
+        db,
+        workspace_id=ws_id,
+        channel_id=ch.id,
+        match_scope=body.match_scope,
+        match_value=body.match_value,
+        bind_scope=body.bind_scope,
+        scope_ref_id=body.scope_ref_id,
+        target_agent_id=body.target_agent_id,
+        allowlist_agent_ids=body.allowlist_agent_ids,
+        priority=body.priority,
+    )
+    await audit_svc.record(
+        db,
+        action="channel.binding.create",
+        actor_identity_id=identity_id,
+        workspace_id=ws_id,
+        resource_type="channel",
+        resource_id=ch.id,
+        summary=f"added {body.match_scope} binding to {ch.name!r}",
+        metadata={"match_scope": body.match_scope},
+        request=request,
+    )
+    await db.commit()
+    return ChannelBindingRead.model_validate(binding)
+
+
+@router.delete(
+    "/{channel_id}/bindings/{binding_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_channel_binding(
+    channel_id: uuid.UUID,
+    binding_id: uuid.UUID,
+    db: DBSession,
+    identity_id: CurrentIdentityId,
+    workspace_id: CurrentWorkspaceId,
+    request: Request,
+) -> None:
+    """Remove a layered routing binding from a channel."""
+    ws_id = _require_workspace(workspace_id)
+    await ws_svc.ensure_admin(db, workspace_id=ws_id, identity_id=identity_id)
+    ch = await svc.get_or_404(db, channel_id, workspace_id=ws_id)
+    await binding_svc.delete_binding(db, channel_id=ch.id, binding_id=binding_id)
+    await audit_svc.record(
+        db,
+        action="channel.binding.delete",
+        actor_identity_id=identity_id,
+        workspace_id=ws_id,
+        resource_type="channel",
+        resource_id=ch.id,
+        summary=f"removed binding from {ch.name!r}",
+        request=request,
+    )
+    await db.commit()
 
 
 @router.delete("/{channel_id}/wechat/session", status_code=status.HTTP_204_NO_CONTENT)

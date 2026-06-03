@@ -7,6 +7,7 @@ import {
   IconPlugConnected,
   IconQrcode,
   IconRefresh,
+  IconSettings,
   IconTrash,
 } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
@@ -35,6 +36,7 @@ import {
 import { API_BASE_URL } from "@/lib/api";
 import { getChannelProvider } from "@/lib/channel-providers";
 import { cn, relativeTime } from "@/lib/utils";
+import { ChannelSettingsDialog } from "@/components/channels/ChannelSettingsDialog";
 import { ChannelStatusBadge } from "@/components/channels/ChannelStatusBadge";
 import { WeChatQrDialog } from "@/components/channels/WeChatQrDialog";
 
@@ -55,6 +57,7 @@ export function ChannelCard({ ch }: ChannelCardProps) {
   const Icon = brand.icon;
 
   const [qrOpen, setQrOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const bound = (agents ?? []).find((a) => a.id === ch.default_agent_id);
   const webhookUrl = `${API_BASE_URL}/api/v1/hooks/ingress/${ch.id}?token=${ch.inbound_token}`;
@@ -123,6 +126,11 @@ export function ChannelCard({ ch }: ChannelCardProps) {
 
   return (
     <Card>
+      <ChannelSettingsDialog
+        channel={ch}
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+      />
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
           <span
@@ -140,6 +148,15 @@ export function ChannelCard({ ch }: ChannelCardProps) {
           <Badge variant="outline">
             <IconPlugConnected className="size-3" /> {ch.kind}
           </Badge>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-8"
+            onClick={() => setSettingsOpen(true)}
+            title={t("routing.dialogTitle")}
+          >
+            <IconSettings className="size-3.5" />
+          </Button>
           <Switch checked={ch.enabled} onCheckedChange={onToggle} />
         </div>
         <CardDescription className="text-[11px]">

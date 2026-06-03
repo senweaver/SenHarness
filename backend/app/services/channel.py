@@ -131,13 +131,22 @@ async def create_channel(
     enabled: bool,
     metadata_json: dict,
     sender_allowlist_json: dict | None = None,
+    routing_config_json: dict | None = None,
 ) -> Channel:
-    if default_agent_id is None and default_squad_id is None:
+    from app.services.channel_routing import normalize_routing_config, parse_routing_config
+
+    routing_blob = normalize_routing_config(routing_config_json or {})
+    bind_scope = parse_routing_config(routing_blob).bind_scope
+    # A default target is only mandatory for the legacy ``agent`` scope.
+    # ``workspace`` / ``user`` scopes resolve their pool dynamically, so a
+    # channel can route without ever pinning a single default agent.
+    if bind_scope == "agent" and default_agent_id is None and default_squad_id is None:
         raise Conflict(
             "no_default_target",
             code="channel.no_default_target",
             extras={"hint": "Set either default_agent_id or default_squad_id."},
         )
+    await _validate_routing_target(session, workspace_id=workspace_id, routing_blob=routing_blob)
     sealed = seal_config_for_storage(config_json)
     external_hash = compute_hash_for_channel(kind=kind, sealed_config=sealed)
     try:
@@ -153,6 +162,7 @@ async def create_channel(
             enabled=enabled,
             metadata_json=metadata_json,
             sender_allowlist_json=sender_allowlist_json or {},
+            routing_config_json=routing_blob,
             external_app_id_hash=external_hash,
         )
         await session.flush()
@@ -186,6 +196,12 @@ async def update_channel_with_hash(
     is in the patch and translates a partial-unique-index hit into a
     typed :class:`ChannelConfigConflict`.
     """
+    if "routing_config_json" in patch:
+        await _validate_routing_target(
+            session,
+            workspace_id=channel.workspace_id,
+            routing_blob=patch["routing_config_json"],
+        )
     if "config_json" in patch or "kind" in patch:
         target_kind = patch.get("kind", channel.kind)
         target_cfg = patch.get("config_json", channel.config_json or {})
@@ -211,6 +227,32 @@ async def update_channel_with_hash(
             ) from e
         raise
     return row
+
+
+async def _validate_routing_target(
+    session: AsyncSession, *, workspace_id: uuid.UUID, routing_blob: dict | None
+) -> None:
+    """Validate scope-ref targets that point at another domain object.
+
+    For ``bind_scope=squad`` the ``scope_ref_id`` must reference a squad in
+    the channel's own workspace — otherwise the channel could route into a
+    foreign team. Rejected with a stable code the frontend can localize.
+    """
+    from app.services import squad_runtime
+    from app.services.channel_routing import parse_routing_config
+
+    cfg = parse_routing_config(routing_blob or {})
+    if cfg.bind_scope != "squad":
+        return
+    squad = await squad_runtime.resolve_squad(
+        session, squad_id=cfg.scope_ref_id, workspace_id=workspace_id
+    )
+    if squad is None:
+        raise Conflict(
+            "squad_not_in_workspace",
+            code="channel.squad_not_in_workspace",
+            extras={"hint": "Set scope_ref_id to a squad in this workspace."},
+        )
 
 
 async def get_or_404(

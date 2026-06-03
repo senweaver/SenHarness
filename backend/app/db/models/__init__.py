@@ -31,6 +31,13 @@ from app.db.models.board_card import (
     BoardCardPriority,
 )
 from app.db.models.channel import Channel, ChannelKind
+from app.db.models.channel_link import (
+    BINDING_MATCH_SCOPES,
+    VERIFIED_VIA_VALUES,
+    ChannelBinding,
+    ChannelConversationState,
+    ChannelUserLink,
+)
 from app.db.models.checkpoint import SessionCheckpoint
 from app.db.models.department import Department
 from app.db.models.email_verification import EmailVerificationToken
@@ -185,6 +192,7 @@ from app.db.models.workspace_creation_log import CreationKind, WorkspaceCreation
 from app.db.models.workspace_hub_subscription import WorkspaceHubSubscription
 
 __all__ = [
+    "BINDING_MATCH_SCOPES",
     "BOARD_CARD_COLUMN_VALUES",
     "BOARD_CARD_PRIORITY_VALUES",
     "COMPACTION_STRATEGIES",
@@ -206,6 +214,7 @@ __all__ = [
     "USER_PROFILE_AUTO_INJECT_CONFIDENCE_THRESHOLD",
     "USER_PROFILE_DIMENSIONS",
     "USER_PROFILE_MAX_FACT_CHARS",
+    "VERIFIED_VIA_VALUES",
     "Agent",
     "AgentProfile",
     "AgentReport",
@@ -237,7 +246,10 @@ __all__ = [
     "BudgetPeriod",
     "BuiltinRole",
     "Channel",
+    "ChannelBinding",
+    "ChannelConversationState",
     "ChannelKind",
+    "ChannelUserLink",
     "CreationKind",
     "CredentialType",
     "Department",

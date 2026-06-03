@@ -95,6 +95,101 @@ export interface SenderAllowlistRules {
   deny?: string[];
 }
 
+/** Where a channel resolves its agent pool from (P0 + P2 multi-agent routing). */
+export type BindScope = "agent" | "workspace" | "user" | "squad";
+/** Per-surface access policy for inbound senders. */
+export type ChannelPolicy = "open" | "allowlist" | "disabled" | "pairing";
+/** How the agent picker is rendered back to the chat user. */
+export type MenuStyle = "auto" | "text" | "buttons";
+/** How replies are attributed to the answering agent. */
+export type ReplyAttribution = "prefix" | "identity" | "off";
+/** Group stickiness sharing model (P1). */
+export type GroupOverride = "shared" | "per_sender";
+/** Natural-language handoff behaviour (P1). */
+export type HandoffMode = "switch" | "suggest";
+
+/**
+ * One deterministic natural-language handoff rule (P1). When an inbound
+ * message contains any keyword the route either switches to ``target``
+ * outright (``switch``) or the main agent proactively proposes the
+ * handoff (``suggest``). Mirrors ``ChannelHandoffRule`` on the backend.
+ */
+export interface ChannelHandoffRule {
+  keywords: string[];
+  /** Target agent: alias, ``#index`` against the menu, or an agent id. */
+  target: string;
+  mode: HandoffMode;
+}
+
+/**
+ * Wire shape of ``channels.routing_config_json``. Mirrors
+ * ``ChannelRoutingConfig`` in backend/app/schemas/channel.py. An absent
+ * blob (or ``bind_scope=agent``) is the legacy one-channel↔one-agent
+ * behaviour anchored on ``default_agent_id``.
+ */
+export interface ChannelRoutingConfig {
+  bind_scope: BindScope;
+  /** workspace_id when bind_scope=workspace (null → the channel's own workspace). */
+  scope_ref_id?: string | null;
+  /** Narrows the resolved pool to these agent ids when set. */
+  allowlist_agent_ids?: string[] | null;
+  dm_policy: ChannelPolicy;
+  group_policy: ChannelPolicy;
+  menu_style: MenuStyle;
+  selection_window_seconds: number;
+  reply_attribution: ReplyAttribution;
+  /** P1 — ``shared`` (one route per group) or ``per_sender`` override. */
+  group_override: GroupOverride;
+  /** P1 — deterministic keyword handoff rules. */
+  handoff_rules: ChannelHandoffRule[];
+}
+
+/**
+ * Match scope of a layered binding rule (P1 "most-specific-wins").
+ * ``peer`` / ``group`` / ``channel_default`` are matched today; the rest
+ * are reserved rungs of the specificity ladder.
+ */
+export type BindingMatchScope =
+  | "peer"
+  | "thread"
+  | "role"
+  | "guild"
+  | "team"
+  | "account"
+  | "group"
+  | "channel_default";
+
+/** A single layered routing binding row (P1). */
+export interface ChannelBinding {
+  id: string;
+  channel_id: string;
+  match_scope: BindingMatchScope;
+  match_value: string | null;
+  bind_scope: BindScope | null;
+  scope_ref_id: string | null;
+  target_agent_id: string | null;
+  allowlist_agent_ids: string[] | null;
+  priority: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChannelBindingCreateInput {
+  match_scope: BindingMatchScope;
+  match_value?: string | null;
+  bind_scope?: BindScope | null;
+  scope_ref_id?: string | null;
+  target_agent_id?: string | null;
+  allowlist_agent_ids?: string[] | null;
+  priority?: number;
+}
+
+/** Response of ``POST /channels/{id}/bind-codes``. */
+export interface ChannelBindCode {
+  code: string;
+  ttl_seconds: number;
+}
+
 export interface ChannelRead {
   id: string;
   workspace_id: string;
@@ -107,6 +202,7 @@ export interface ChannelRead {
   enabled: boolean;
   metadata_json: Record<string, unknown>;
   sender_allowlist_json: SenderAllowlistRules;
+  routing_config_json: Partial<ChannelRoutingConfig>;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -121,6 +217,7 @@ export interface ChannelCreateInput {
   enabled?: boolean;
   metadata_json?: Record<string, unknown>;
   sender_allowlist_json?: SenderAllowlistRules;
+  routing_config_json?: ChannelRoutingConfig | null;
 }
 
 export type ChannelUpdateInput = Partial<ChannelCreateInput>;
@@ -201,6 +298,18 @@ export function useRotateChannelToken(id: string) {
 }
 
 /**
+ * Mint a one-time ``/bind`` code for the current identity on a channel.
+ * The operator hands the code to a chat user who replies ``/bind <code>``
+ * to link their platform account. Not cached — every press mints fresh.
+ */
+export function useCreateBindCode(id: string) {
+  return useMutation<ChannelBindCode, unknown, void>({
+    mutationFn: () =>
+      api.post<ChannelBindCode>(`/api/v1/channels/${id}/bind-codes`, {}),
+  });
+}
+
+/**
  * Poll the streaming runtime status for a channel. Lightweight (5s
  * interval) so the UI can paint the connection LED without bloating
  * the API tier with constant traffic.
@@ -246,4 +355,37 @@ export function useWeChatQrLogin(id: string) {
     },
   });
   return { start, poll, logout };
+}
+
+/**
+ * Layered binding rules for a channel (P1 "most-specific-wins"). Resolved
+ * at dispatch time by ``channel_routing.resolve_binding`` — an empty list
+ * degrades to the channel-level default (the P0 behaviour).
+ */
+export function useChannelBindings(id: string | null | undefined) {
+  return useQuery<ChannelBinding[]>({
+    queryKey: ["channel-bindings", id],
+    queryFn: () => api.get<ChannelBinding[]>(`/api/v1/channels/${id}/bindings`),
+    enabled: Boolean(id),
+  });
+}
+
+export function useCreateChannelBinding(id: string) {
+  const qc = useQueryClient();
+  return useMutation<ChannelBinding, unknown, ChannelBindingCreateInput>({
+    mutationFn: (input) =>
+      api.post<ChannelBinding>(`/api/v1/channels/${id}/bindings`, input),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["channel-bindings", id] }),
+  });
+}
+
+export function useDeleteChannelBinding(id: string) {
+  const qc = useQueryClient();
+  return useMutation<void, unknown, string>({
+    mutationFn: (bindingId) =>
+      api.delete(`/api/v1/channels/${id}/bindings/${bindingId}`),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["channel-bindings", id] }),
+  });
 }

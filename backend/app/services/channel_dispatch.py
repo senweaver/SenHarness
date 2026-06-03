@@ -35,11 +35,12 @@ from app.db.session import get_session_factory
 from app.repositories.channel import ChannelRepository
 from app.services import agent_runner as runner
 from app.services import audit as audit_svc
+from app.services import channel_routing
 from app.services import logical_thread as logical_thread_svc
-from app.services.channels import get_provider
+from app.services.channels import _presenter, get_provider
 from app.services.channels._secret_box import decrypt_config
 from app.services.channels._sender_filter import is_known_mode, is_sender_allowed
-from app.services.channels.base import ChannelProvider, InboundMessage
+from app.services.channels.base import ChannelProvider, InboundMessage, OutboundMessage
 
 log = logging.getLogger(__name__)
 
@@ -189,6 +190,18 @@ async def dispatch_inbound(
             if not ch.enabled:
                 log.info("dispatch_inbound: channel %s disabled; dropping", channel_id)
                 return
+
+            # P0 multi-agent routing. ``bind_scope=agent`` (the default for
+            # every pre-existing row, ``routing_config_json={}``) short-
+            # circuits to the EXACT legacy path below — zero behaviour
+            # change. Other scopes (workspace / user) go through the
+            # routing core, which owns command handling, the candidate
+            # pool, policy gates and reply attribution.
+            routing = channel_routing.parse_routing_config(ch.routing_config_json or {})
+            if routing.bind_scope != "agent":
+                await _dispatch_multi_scope(db, ch=ch, inbound=inbound, routing=routing)
+                return
+
             if ch.default_agent_id is None:
                 log.warning(
                     "dispatch_inbound: channel %s has no default_agent; dropping",
@@ -333,3 +346,153 @@ async def dispatch_inbound(
                 )
         except Exception:  # pragma: no cover
             log.exception("channel_dispatch failure (channel=%s)", channel_id)
+
+
+async def _dispatch_multi_scope(
+    db: Any,
+    *,
+    ch: Any,
+    inbound: InboundMessage,
+    routing: channel_routing.RoutingConfig,
+) -> None:
+    """Dispatch for ``bind_scope in {workspace, user}``.
+
+    Delegates the routing decision to :func:`channel_routing.resolve_route`
+    and handles the three outcomes:
+
+    * ``drop`` — sender blocked; routing already wrote the audit row.
+    * ``direct`` — command / welcome / switch / policy reply; answered by
+      the presenter, never enters an agent.
+    * ``run`` — execute the resolved ``(workspace, agent)`` **as the
+      resolved identity**, scoped to the target workspace, then present the
+      reply (attribution + occasional footer) back through the provider.
+
+    The outbound ``thread_key`` is always the provider's original inbound
+    key (WeChat packs ``to_user``/``context_token`` into it); the Session
+    is keyed separately per ``(peer, agent)`` in the target workspace so
+    each routed agent keeps its own conversation memory.
+    """
+    decrypted_config = decrypt_config(ch.config_json or {})
+
+    decision = await channel_routing.resolve_route(
+        db, channel=ch, inbound=inbound, routing=routing
+    )
+
+    if decision.action == "drop":
+        await db.commit()
+        return
+
+    if decision.action == "direct":
+        await db.commit()
+        if decision.reply_text:
+            provider = get_provider(ch.kind)
+            # A menu (welcome / agents list) renders quick-reply buttons on
+            # capable channels; everything else is plain text.
+            if decision.menu_options:
+                menu = _presenter.render_menu(
+                    kind=ch.kind,
+                    menu_style=decision.menu_style,
+                    text=decision.reply_text,
+                    options=decision.menu_options,
+                )
+                message = OutboundMessage(text=menu.text, buttons=menu.buttons)
+            else:
+                message = OutboundMessage(text=decision.reply_text)
+            await _send_out(
+                provider,
+                channel_config=decrypted_config,
+                thread_key=inbound.thread_key,
+                message=message,
+            )
+        return
+
+    # action == "run"
+    target_ws = decision.target_workspace_id
+    agent_id = decision.target_agent_id
+    if target_ws is None or agent_id is None:  # pragma: no cover - defensive
+        await db.commit()
+        return
+
+    session_key = f"route:{decision.peer_key}:{agent_id}"
+    session_obj = await runner.ensure_channel_session(
+        db,
+        workspace_id=target_ws,
+        channel_id=ch.id,
+        thread_key=session_key,
+        subject_id=agent_id,
+        title_hint=f"[{ch.kind}] {decision.peer_key}",
+    )
+    await db.commit()
+
+    indicator_task = schedule_processing_indicator(
+        channel_kind=ch.kind,
+        channel_metadata=ch.metadata_json,
+        channel_config=decrypted_config,
+        thread_key=inbound.thread_key,
+    )
+    try:
+        result = await runner.run_agent_one_shot(
+            db,
+            workspace_id=target_ws,
+            agent_id=agent_id,
+            session_id=session_obj.id,
+            identity_id=decision.identity_id,
+            user_text=decision.user_text or inbound.user_text,
+        )
+    finally:
+        if indicator_task is not None:
+            _drain_indicator_in_background(indicator_task)
+    await db.commit()
+
+    raw_reply = result.final_text or (
+        f"⚠ agent run failed: {result.error}" if result.error else ""
+    )
+    if raw_reply:
+        presented = _presenter.render_reply(
+            kind=ch.kind,
+            text=raw_reply,
+            agent_name=decision.agent_name or "",
+            team_name=decision.team_name,
+            attribution=decision.attribution,
+            lang=decision.lang,
+            # Footer is the "occasional" nudge — shown right after a switch
+            # rather than on every reply, so we don't spam the chat.
+            show_footer=decision.switched,
+        )
+        provider = get_provider(ch.kind)
+        await _send_out(
+            provider,
+            channel_config=decrypted_config,
+            thread_key=inbound.thread_key,
+            message=OutboundMessage(text=presented.text, identity=presented.identity),
+        )
+
+
+async def _send_out(
+    provider: Any,
+    *,
+    channel_config: dict[str, Any],
+    thread_key: str,
+    message: OutboundMessage,
+) -> None:
+    """Send a presenter-rendered message, preferring the rich path.
+
+    A plain message (no buttons / identity) always goes out via
+    ``send_text`` — back-compat for every provider and the lightweight
+    test stubs. Rich messages use ``send_message`` only when the provider
+    actually implements it; the base ``ChannelProvider.send_message``
+    falls back to ``send_text`` so real providers degrade gracefully too.
+    """
+    is_rich = bool(message.buttons or message.identity)
+    if is_rich and hasattr(provider, "send_message"):
+        await provider.send_message(
+            channel_config=channel_config,
+            thread_key=thread_key,
+            message=message,
+        )
+    else:
+        await provider.send_text(
+            channel_config=channel_config,
+            thread_key=thread_key,
+            text=message.text,
+        )

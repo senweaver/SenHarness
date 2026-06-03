@@ -54,6 +54,34 @@ class InboundMessage:
     raw: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass(frozen=True, slots=True)
+class OutboundButton:
+    """One quick-reply button. ``value`` is what the user "says" on tap —
+    a menu number, so a click is equivalent to replying that number.
+    """
+
+    label: str
+    value: str
+
+
+@dataclass(frozen=True, slots=True)
+class OutboundMessage:
+    """A presenter-rendered outbound reply (P1 rich channels).
+
+    The presenter (``app.services.channels._presenter``) owns all the
+    rendering logic; providers just send. ``text`` is the always-present
+    plain-text rendering (the universal fallback). ``buttons`` is an
+    optional agent-menu quick-reply set for ``supports_buttons`` channels.
+    ``identity`` is an optional per-message bot identity
+    (``{"name": ..., "team": ...}``) for ``per_message_identity`` channels
+    when ``reply_attribution=identity``.
+    """
+
+    text: str
+    buttons: tuple[OutboundButton, ...] | None = None
+    identity: dict[str, str] | None = None
+
+
 # Async callable that the runtime hands to ``run_stream``: when a streaming
 # provider receives a real message it ``await dispatch(inbound)`` to push it
 # into the same session/agent path the webhook ingress uses.
@@ -233,6 +261,26 @@ class ChannelProvider:
         client/connection (Discord client, lark-oapi WebSocket, etc.).
         """
         await self.post_reply(channel_config=channel_config, thread_key=thread_key, text=text)
+
+    async def send_message(
+        self,
+        *,
+        channel_config: dict[str, Any],
+        thread_key: str,
+        message: OutboundMessage,
+    ) -> None:
+        """Send a presenter-rendered :class:`OutboundMessage`.
+
+        The default ignores ``buttons`` / ``identity`` and ships the plain
+        ``text`` via :meth:`send_text`, so every provider (and webhook-only
+        ones) degrades gracefully. Rich providers (Slack / Telegram /
+        Feishu) override this to render quick-reply buttons and per-message
+        bot identity. Keep provider send code thin — the *what to render*
+        decision lives in the presenter.
+        """
+        await self.send_text(
+            channel_config=channel_config, thread_key=thread_key, text=message.text
+        )
 
     async def send_processing_indicator(
         self,

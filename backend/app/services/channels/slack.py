@@ -27,6 +27,7 @@ from app.services.channels.base import (
     ChannelProvider,
     ChannelProviderMeta,
     InboundMessage,
+    OutboundMessage,
     SignatureInvalid,
 )
 
@@ -185,7 +186,60 @@ class SlackProvider(ChannelProvider):
         body: dict[str, Any] = {"channel": channel_id, "text": text[:39000]}
         if thread_ts:
             body["thread_ts"] = thread_ts
+        await self._post_message(channel_config, body)
 
+    async def send_message(
+        self,
+        *,
+        channel_config: dict[str, Any],
+        thread_key: str,
+        message: OutboundMessage,
+    ) -> None:
+        """Rich Slack send: per-message bot identity + quick-reply buttons.
+
+        Slack ``chat.postMessage`` lets us override the bot's display name
+        per message (``username``) for ``reply_attribution=identity``, and
+        render the agent menu as a Block Kit ``actions`` row of buttons
+        (a tap posts the menu number back, same as typing it). Falls back
+        to plain text when neither is present.
+        """
+        bot_token = channel_config.get("bot_token")
+        if not bot_token:
+            log.warning("slack channel has no bot_token; skipping reply")
+            return
+        try:
+            _, channel_id, thread_ts = thread_key.split(":", 2)
+        except ValueError:
+            log.warning("malformed slack thread_key %r", thread_key)
+            return
+
+        body: dict[str, Any] = {"channel": channel_id, "text": message.text[:39000]}
+        if thread_ts:
+            body["thread_ts"] = thread_ts
+        if message.identity and message.identity.get("name"):
+            body["username"] = str(message.identity["name"])[:80]
+        if message.buttons:
+            body["blocks"] = [
+                {"type": "section", "text": {"type": "mrkdwn", "text": message.text[:3000]}},
+                {
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "text": {"type": "plain_text", "text": b.label[:75]},
+                            "value": b.value,
+                            "action_id": f"agent_select_{b.value}",
+                        }
+                        for b in message.buttons[:5]
+                    ],
+                },
+            ]
+        await self._post_message(channel_config, body)
+
+    async def _post_message(
+        self, channel_config: dict[str, Any], body: dict[str, Any]
+    ) -> None:
+        bot_token = channel_config.get("bot_token")
         try:
             async with httpx.AsyncClient(timeout=10.0) as c:
                 r = await c.post(

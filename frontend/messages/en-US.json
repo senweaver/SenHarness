@@ -2827,6 +2827,134 @@
       "pickKind": "Pick a platform",
       "optional": "(optional)",
       "docs": "Docs",
+      "routing": {
+        "title": "Routing",
+        "description": "Decide which agents this channel can reach and how senders pick between them.",
+        "dialogTitle": "Channel routing",
+        "primaryAgent": "Default / primary agent",
+        "primaryRequired": "Pick a primary agent for single-agent scope.",
+        "noPrimary": "No primary agent",
+        "saved": "Routing saved",
+        "scope": {
+          "label": "Bind scope",
+          "agent": "Single {term}",
+          "workspace": "Whole workspace",
+          "user": "Per user",
+          "squad": "Squad (team)"
+        },
+        "scopeHint": {
+          "agent": "Every inbound message goes to the primary {term} (legacy behaviour).",
+          "workspace": "Senders choose from the agents in a workspace.",
+          "user": "Each bound user reaches their own agents across workspaces.",
+          "squad": "Route inside a squad's members; the squad ROUTER picks who answers."
+        },
+        "scopeRef": {
+          "label": "Workspace",
+          "own": "This channel's workspace",
+          "hint": "Leave on the channel's own workspace, or point the pool at another workspace you belong to."
+        },
+        "squadRef": {
+          "label": "Squad",
+          "placeholder": "Pick a squad",
+          "empty": "No squads in this workspace yet",
+          "hint": "The squad's members are the candidate pool. Configure the squad's ROUTER strategy on the squad page."
+        },
+        "allowlist": {
+          "label": "Restrict to agents",
+          "hint": "Optional. Leave empty to allow every agent in the resolved pool.",
+          "empty": "No agents available"
+        },
+        "advanced": {
+          "toggle": "Advanced routing"
+        },
+        "dmPolicy": {
+          "label": "Direct message policy",
+          "hint": "Who can start a 1:1 chat with this channel."
+        },
+        "groupPolicy": {
+          "label": "Group chat policy",
+          "hint": "Whether the channel answers in group chats."
+        },
+        "policy": {
+          "open": "Open to everyone",
+          "allowlist": "Allowlisted senders only",
+          "disabled": "Disabled",
+          "pairing": "Require pairing first"
+        },
+        "menuStyle": {
+          "label": "Agent picker style",
+          "option": {
+            "auto": "Auto",
+            "text": "Text list",
+            "buttons": "Buttons"
+          }
+        },
+        "attribution": {
+          "label": "Reply attribution",
+          "option": {
+            "prefix": "Name prefix",
+            "identity": "Sender identity",
+            "off": "Off"
+          }
+        },
+        "selectionWindow": {
+          "label": "Selection window (seconds)",
+          "hint": "How long a sender's agent choice stays active before they're asked again. 0 disables the timeout."
+        },
+        "groupOverride": {
+          "label": "Group stickiness",
+          "option": {
+            "shared": "Shared by group",
+            "per_sender": "Per-sender override"
+          },
+          "hint": {
+            "shared": "One active route per group chat — last switch wins for everyone.",
+            "per_sender": "Each sender can pin their own active {term} inside a group; others still inherit the shared route."
+          }
+        },
+        "handoff": {
+          "label": "Natural-language handoff",
+          "hint": "Route to a specialist {term} when an incoming message matches keywords — no command needed.",
+          "keywordsPlaceholder": "expense, refund, 报销",
+          "targetPlaceholder": "Target {term}",
+          "mode": {
+            "switch": "Switch",
+            "suggest": "Suggest"
+          },
+          "add": "Add rule",
+          "remove": "Remove rule"
+        }
+      },
+      "bindings": {
+        "title": "Layered binding rules",
+        "description": "Most-specific match wins — a peer rule beats a group rule beats the channel default. No rules ⇒ the default agent answers.",
+        "empty": "No binding rules — the default agent handles everything.",
+        "scope": {
+          "peer": "Peer",
+          "group": "Group",
+          "channel_default": "Channel default"
+        },
+        "matchValuePlaceholder": "peer / chat id",
+        "matchValueRequired": "Enter the peer or group id to match.",
+        "targetPlaceholder": "Target agent",
+        "targetRequired": "Pick a target agent.",
+        "add": "Add",
+        "remove": "Remove",
+        "added": "Binding added",
+        "addFailed": "Could not add binding",
+        "removed": "Binding removed",
+        "removeFailed": "Could not remove binding"
+      },
+      "bindCode": {
+        "title": "Identity binding",
+        "description": "Generate a one-time code, then have the user reply with it in chat to link their account.",
+        "generate": "Generate bind code",
+        "copy": "Copy code",
+        "copied": "Code copied",
+        "failed": "Could not generate a bind code",
+        "ttl": "Expires in {seconds}s",
+        "instruction": "Have the user reply /bind {code} in chat."
+      },
       "kind": {
         "feishu": "Feishu / Lark",
         "webhook": "Generic webhook"
