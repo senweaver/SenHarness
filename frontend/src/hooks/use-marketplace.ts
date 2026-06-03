@@ -43,12 +43,17 @@ export function useDiscoverAgents(filters: DiscoverFilters = {}) {
   });
 }
 
-export function useDiscoverCategories() {
+export function useDiscoverCategories(
+  options: { templateOnly?: boolean } = {},
+) {
   const token = useAuthStore((s) => s.accessToken);
   const ws = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const templateOnly = options.templateOnly ?? false;
+  const query = templateOnly ? "?template_only=true" : "";
   return useQuery<AgentCategory[]>({
-    queryKey: ["marketplace", "categories", ws],
-    queryFn: () => api.get<AgentCategory[]>(`/api/v1/agents/discover/categories`),
+    queryKey: ["marketplace", "categories", ws, templateOnly],
+    queryFn: () =>
+      api.get<AgentCategory[]>(`/api/v1/agents/discover/categories${query}`),
     enabled: Boolean(token && ws),
     staleTime: 5 * 60 * 1000,
   });

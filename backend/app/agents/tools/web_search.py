@@ -47,6 +47,21 @@ async def run_web_search(args: WebSearchArgs) -> dict:
 
     candidates = await _ordered_candidates()
 
+    # No search backend configured at all: skip the implicit DuckDuckGo probe
+    # (frequently blocked / slow in some regions, which only adds latency) and
+    # steer the model to `web_fetch` for reading a known URL directly.
+    if not candidates:
+        return {
+            "query": args.query,
+            "provider": "none",
+            "results": [],
+            "note": (
+                "No web search backend is configured, so web_search is "
+                "unavailable. Configure one in Settings → Search providers, or "
+                "use the web_fetch tool to read a specific URL directly."
+            ),
+        }
+
     for kind, api_key, base_url in candidates:
         fn = _PROVIDER_FNS.get(kind)
         if fn is None:

@@ -226,6 +226,7 @@
       "test": "Test connection",
       "testOk": "Connection works.",
       "testFailed": "Connection failed.",
+      "testFailedWithReason": "Connection failed: {reason}",
       "skip": "Skip — I'll add a service later"
     },
     "agent": {
@@ -822,7 +823,7 @@
       "error": {
         "unsupported_kind": "Audio / video / image can't be text-indexed yet",
         "unsupported_mime": "That file type can't be ingested",
-        "file_too_large": "File > 2MB; split it or compress first",
+        "file_too_large": "File > 15MB; split it or compress first",
         "pdf_lib_missing": "Server missing pypdf; ask an admin to install it",
         "pdf_parse_failed": "PDF parsing failed",
         "pdf_empty": "PDF produced no extractable text (scanned image?)",
@@ -832,6 +833,9 @@
         "xlsx_lib_missing": "Server missing openpyxl; ask an admin to install it",
         "xlsx_parse_failed": "XLSX parse failed (corrupted or encrypted workbook?)",
         "xlsx_empty": "XLSX produced no extractable text (empty workbook?)",
+        "pptx_lib_missing": "Server missing python-pptx; ask an admin to install it",
+        "pptx_parse_failed": "PPTX parse failed; legacy .ppt binaries aren't supported — re-save as .pptx",
+        "pptx_empty": "PPTX produced no extractable text (image-only deck?)",
         "blob_missing": "Original file no longer exists",
         "generic": "Import failed"
       }
@@ -933,6 +937,7 @@
     "uploadKnowledge": "Upload knowledge",
     "squads": "Squads",
     "board": "Board",
+    "channels": "Channels",
     "groupCore": "Core",
     "groupConnections": "Connections",
     "groupSystem": "System",
@@ -3489,6 +3494,7 @@
           "not_supported": "This provider doesn't expose a /v1/models endpoint — showing the built-in catalog instead.",
           "rate_limited": "The provider rate-limited the discover request — retry in a moment.",
           "model_build_failed": "Could not build the model — check kind/model name and SDK extras",
+          "internal_error": "Internal error while testing — try again",
           "http_400": "Upstream rejected the request (400)",
           "http_401": "Upstream rejected the API key (401 Unauthorized) — check your credentials",
           "http_403": "Upstream forbade the request (403) — key valid but no permission for this resource",

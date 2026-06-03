@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from collections.abc import Iterable
 
@@ -453,6 +454,23 @@ async def add_manual_model(
 # ─── Discover ────────────────────────────────────────────────────
 
 
+def _models_endpoint_url(base_url: str) -> str:
+    """Build the ``/models`` listing URL for an OpenAI-compatible base URL.
+
+    The base URL already carries the API version segment for most providers
+    (``.../v1``, ``.../compatible-mode/v1``, ``.../paas/v4`` for Zhipu, etc.),
+    so blindly appending ``/v1/models`` produces bad paths like
+    ``.../paas/v4/v1/models`` that upstreams reject with 401/404 regardless of
+    the key. Treat a trailing ``vN`` segment (or ``/openai``) as already
+    versioned and only append ``/models``; otherwise append ``/v1/models``.
+    """
+    base = base_url.rstrip("/")
+    last_segment = base.rsplit("/", 1)[-1].lower()
+    if re.fullmatch(r"v\d+", last_segment) or last_segment == "openai":
+        return f"{base}/models"
+    return f"{base}/v1/models"
+
+
 async def discover_models(session: AsyncSession, *, provider: ModelProvider) -> dict:
     """Return what models the upstream advertises plus what's already in DB.
 
@@ -484,11 +502,7 @@ async def discover_models(session: AsyncSession, *, provider: ModelProvider) -> 
             error = "missing_api_key"
         else:
             try:
-                models_url = (
-                    f"{base_url}/models"
-                    if base_url.endswith("/v1") or base_url.endswith("/openai")
-                    else f"{base_url}/v1/models"
-                )
+                models_url = _models_endpoint_url(base_url)
                 assert_safe_url(models_url, allow_private=True)
                 discovered = await _fetch_remote_models(models_url, api_key=api_key)
                 source = "remote"
@@ -566,11 +580,7 @@ async def test_connectivity(
         if supports_discover(kind):
             if not base_url:
                 return {"ok": False, "error": "missing_base_url"}
-            url = (
-                f"{base_url}/models"
-                if base_url.endswith("/v1") or base_url.endswith("/openai")
-                else f"{base_url}/v1/models"
-            )
+            url = _models_endpoint_url(base_url)
             assert_safe_url(url, allow_private=True)
             async with httpx.AsyncClient(timeout=_DISCOVER_HTTP_TIMEOUT_S) as client:
                 resp = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})

@@ -538,7 +538,7 @@ function IngestTab({ collection }: { collection: KnowledgeCollectionCard }) {
             <Input
               id="kb-file"
               type="file"
-              accept=".pdf,.txt,.md,.csv,.json,.yaml,.yml,.xml,.html,.htm,.py,.js,.ts,.tsx,.css,.docx,.xlsx,.toml,.sql,.sh"
+              accept=".pdf,.txt,.md,.csv,.json,.yaml,.yml,.xml,.html,.htm,.py,.js,.ts,.tsx,.css,.docx,.xlsx,.pptx,.toml,.sql,.sh"
               onChange={(e) => onFilePick(e.target.files?.[0] ?? null)}
               data-testid="kb-file-input"
             />

@@ -72,6 +72,7 @@ dependencies = [
   "pypdf>=5.0.0",                 # PDF text extraction (B1)
   "python-docx>=1.1.0",           # DOCX (Word) text extraction
   "openpyxl>=3.1.0",              # XLSX (Excel) text extraction
+  "python-pptx>=1.0.0",           # PPTX (PowerPoint) text extraction
   "sqladmin>=0.20.0",             # internal-ops DB browser (B3)
   "itsdangerous>=2.2.0",          # starlette SessionMiddleware for SQLAdmin + OAuth state
   "pyotp>=2.9.0",                 # TOTP 2FA (fu-oauth-mfa)

@@ -61,10 +61,11 @@ export function NewAgentDialog({
 
   const { data: rawTemplates } = useDiscoverAgents({
     q: debouncedQ,
+    category: selectedCategory,
     templateOnly: true,
-    limit: 60,
+    limit: 200,
   });
-  const { data: categories } = useDiscoverCategories();
+  const { data: categories } = useDiscoverCategories({ templateOnly: true });
 
   const templates = useMemo(() => rawTemplates ?? [], [rawTemplates]);
 
@@ -73,6 +74,8 @@ export function NewAgentDialog({
     [categories],
   );
 
+  // The server already applies the category filter; this keeps the grouped
+  // sections in sync if a stale fetch briefly contains other categories.
   const filteredTemplates = useMemo(() => {
     if (!selectedCategory) return templates;
     return templates.filter((card) => card.category === selectedCategory);

@@ -68,7 +68,7 @@ export default function MarketplacePage() {
     tag,
     templateOnly,
   });
-  const { data: categories } = useDiscoverCategories();
+  const { data: categories } = useDiscoverCategories({ templateOnly });
   const clone = useCloneAgent();
 
   const sorted = useMemo(() => data ?? [], [data]);

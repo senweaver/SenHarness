@@ -226,6 +226,7 @@
       "test": "测试连接",
       "testOk": "连接成功。",
       "testFailed": "连接失败。",
+      "testFailedWithReason": "连接失败：{reason}",
       "skip": "稍后再添加"
     },
     "agent": {
@@ -822,7 +823,7 @@
       "error": {
         "unsupported_kind": "音频 / 视频 / 图片暂不支持文本摄取",
         "unsupported_mime": "该文件类型暂不支持摄取",
-        "file_too_large": "文件太大（> 2MB），请拆分后再试",
+        "file_too_large": "文件太大（> 15MB），请拆分后再试",
         "pdf_lib_missing": "服务端未安装 pypdf，请联系管理员",
         "pdf_parse_failed": "PDF 解析失败",
         "pdf_empty": "PDF 没有可提取文本（可能是扫描件）",
@@ -832,6 +833,9 @@
         "xlsx_lib_missing": "服务端未安装 openpyxl，请联系管理员",
         "xlsx_parse_failed": "XLSX 解析失败（损坏或加密的工作簿？）",
         "xlsx_empty": "XLSX 没有抽到文本（空工作簿？）",
+        "pptx_lib_missing": "服务器未安装 python-pptx，请联系管理员安装",
+        "pptx_parse_failed": "PPTX 解析失败；不支持旧版 .ppt 二进制格式 — 请另存为 .pptx",
+        "pptx_empty": "PPTX 没有抽到文本（纯图片演示文稿？）",
         "blob_missing": "原始文件已不存在",
         "generic": "导入失败"
       }
@@ -933,6 +937,7 @@
     "uploadKnowledge": "上传知识",
     "squads": "小组",
     "board": "看板",
+    "channels": "渠道",
     "groupCore": "核心",
     "groupConnections": "连接",
     "groupSystem": "系统",
@@ -3489,6 +3494,7 @@
           "not_supported": "该供应商未提供 /v1/models 接口，已切换为内置目录。",
           "rate_limited": "供应商对发现请求做了限流，请稍后重试。",
           "model_build_failed": "模型构造失败 — 请检查 kind / 模型名 / SDK 依赖",
+          "internal_error": "测试时发生内部错误 — 请重试",
           "http_400": "上游拒绝请求（400）",
           "http_401": "API Key 无效或过期（401 未授权）— 请检查密钥",
           "http_403": "API Key 有效但无权访问该资源（403 禁止）",

@@ -42,7 +42,18 @@ MAX_INLINE_EXTRACT_CHARS = 24_000
 MAX_PER_FILE_EXCERPT_CHARS = 8_000
 
 
-def _classify(mime: str) -> AttachmentKind:
+# Filename extensions that should be treated as extractable documents even
+# when the upload arrives with a missing / generic mime (``octet-stream`` /
+# ``zip``), which happens often for office docs depending on the browser/OS.
+_DOC_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+        "csv", "json", "yaml", "yml", "xml", "md", "markdown", "txt",
+    }
+)
+
+
+def _classify(mime: str, filename: str = "") -> AttachmentKind:
     m = (mime or "").lower()
     if m.startswith("image/"):
         return AttachmentKind.IMAGE
@@ -56,12 +67,18 @@ def _classify(mime: str) -> AttachmentKind:
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "application/vnd.ms-excel",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         "application/json",
         "application/yaml",
         "application/xml",
         "text/markdown",
     }:
         return AttachmentKind.DOCUMENT
+    if m in ("", "application/octet-stream", "application/zip"):
+        dot = filename.rfind(".")
+        if 0 <= dot < len(filename) - 1 and filename[dot + 1 :].lower() in _DOC_EXTENSIONS:
+            return AttachmentKind.DOCUMENT
     return AttachmentKind.OTHER
 
 
@@ -103,7 +120,7 @@ async def store_bytes(
     safe_name = re.sub(r"[\x00-\x1f\x7f/\\]", "_", filename or "unnamed")[:255]
     mime = mime_type or mimetypes.guess_type(safe_name)[0] or "application/octet-stream"
     ext = _safe_ext(safe_name, mime)
-    kind = _classify(mime)
+    kind = _classify(mime, safe_name)
 
     blob_id = uuid.uuid4()
     yyyymm = datetime.now(UTC).strftime("%Y%m")
@@ -186,6 +203,9 @@ class PreparedAttachment:
     ``inline_excerpt`` is a short plaintext excerpt prepended to the user
     prompt for small documents — ``None`` when the file is unsupported or
     too large to extract.
+    ``extract_error_code`` is set when text extraction was attempted but
+    failed (e.g. a legacy binary ``.ppt``); the prompt prefix surfaces a
+    friendly reason instead of telling the agent to read the raw bytes.
     """
 
     ref: dict
@@ -194,6 +214,7 @@ class PreparedAttachment:
     text_relpath: str | None = None
     inline_excerpt: str | None = None
     inline_truncated: bool = False
+    extract_error_code: str | None = None
 
 
 @dataclass
@@ -249,13 +270,52 @@ def _allocate_scratch_path(scratch_dir: Path, filename: str) -> Path:
     return scratch_dir / f"{uuid.uuid4().hex[:8]}-{base}"
 
 
+def _friendly_extract_error(code: str) -> str:
+    """Map an extraction error code to a short, actionable sentence.
+
+    Model-facing prompt copy (English, like all log/agent strings); the
+    user-facing localization layer is separate.
+    """
+    mapping = {
+        "pptx_parse_failed": (
+            "couldn't read this PowerPoint — if it's a legacy .ppt, "
+            "re-save it as .pptx and re-upload."
+        ),
+        "docx_parse_failed": (
+            "couldn't read this Word file — if it's a legacy .doc, "
+            "re-save it as .docx and re-upload."
+        ),
+        "xlsx_parse_failed": (
+            "couldn't read this Excel file — if it's a legacy .xls, "
+            "re-save it as .xlsx and re-upload."
+        ),
+        "pdf_parse_failed": "couldn't parse this PDF (it may be corrupt or password-protected).",
+        "pptx_empty": "no extractable text found (the deck may be image-only).",
+        "docx_empty": "no extractable text found (the document may be image-only).",
+        "xlsx_empty": "the workbook is empty.",
+        "pdf_empty": "no extractable text found (the PDF may be a scanned image).",
+        "file_too_large": "the file is too large to extract text from.",
+        "decode_failed": "couldn't decode this file as text.",
+        "unsupported_mime": "this file type can't be read as text.",
+        "unsupported_kind": "this file type can't be read as text.",
+        "pdf_lib_missing": "the server can't process this file type right now.",
+        "pptx_lib_missing": "the server can't process this file type right now.",
+        "docx_lib_missing": "the server can't process this file type right now.",
+        "xlsx_lib_missing": "the server can't process this file type right now.",
+        "extract_crashed": "the server hit an error reading this file.",
+    }
+    return mapping.get(code, "couldn't extract text from this file.")
+
+
 def _build_prompt_prefix(prepared: list[PreparedAttachment]) -> str:
     """Assemble the ``[Attached files] / [Excerpt]`` block prepended to the prompt.
 
     Returns "" when there's nothing useful to surface (caller skips the
     prefix entirely in that case so we don't pollute simple chats).
     """
-    listed = [p for p in prepared if p.scratch_relpath or p.inline_excerpt]
+    listed = [
+        p for p in prepared if p.scratch_relpath or p.inline_excerpt or p.extract_error_code
+    ]
     if not listed:
         return ""
 
@@ -263,6 +323,13 @@ def _build_prompt_prefix(prepared: list[PreparedAttachment]) -> str:
     for p in listed:
         size = p.ref.get("size_bytes")
         size_str = f" ({size} bytes)" if isinstance(size, int) else ""
+        if p.extract_error_code:
+            name = p.scratch_relpath or p.ref.get("filename", "?")
+            lines.append(
+                f"- {name}{size_str} — {_friendly_extract_error(p.extract_error_code)} "
+                "Don't read the raw file; let the user know."
+            )
+            continue
         primary = p.text_relpath or p.scratch_relpath
         if primary and p.text_relpath and p.text_relpath != p.scratch_relpath:
             # Binary doc with a side-by-side extracted .txt. Point the agent
@@ -378,6 +445,7 @@ async def prepare_for_chat_turn(
         # useful content for binary formats like PDF/DOCX/XLSX), and an
         # inline excerpt that goes into the prompt prefix.
         extracted_text: str | None = None
+        extract_error_code: str | None = None
         if att.kind == AttachmentKind.DOCUMENT:
             try:
                 from app.services.knowledge import (
@@ -387,6 +455,7 @@ async def prepare_for_chat_turn(
 
                 extracted_text = extract_text_from_attachment(att, data)
             except AttachmentExtractError as e:
+                extract_error_code = e.code
                 log.info(
                     "skip extract for %s (%s): %s",
                     att.filename,
@@ -394,6 +463,7 @@ async def prepare_for_chat_turn(
                     e.code,
                 )
             except Exception:  # pragma: no cover - belt-and-brace
+                extract_error_code = "extract_crashed"
                 log.exception("excerpt extraction crashed for att=%s", att.id)
 
         text_rel: str | None = None
@@ -460,6 +530,7 @@ async def prepare_for_chat_turn(
                 text_relpath=text_rel,
                 inline_excerpt=excerpt,
                 inline_truncated=truncated,
+                extract_error_code=extract_error_code,
             )
         )
 

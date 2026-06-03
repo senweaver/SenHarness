@@ -172,28 +172,34 @@ class AgentRepository(AsyncRepository[Agent]):
         rows = (await self.session.execute(stmt)).all()
         return [(row[0], int(row[1] or 0)) for row in rows]
 
-    async def count_by_category(self) -> dict[str, int]:
+    async def count_by_category(self, *, template_only: bool = False) -> dict[str, int]:
         """Count public agents per ``metadata_json.category``.
 
         Used by ``GET /agents/discover/categories`` to render the
         sidebar with live counts. NULL categories are dropped.
+
+        When ``template_only`` is set, only vendored templates
+        (``metadata_json.template = true``) are counted, so the count
+        matches a template-only listing (e.g. the create-agent dialog).
 
         Implementation note: a subquery is used so the JSONB extraction
         renders exactly once. Without this, SQLAlchemy emits two
         parameterized ``->> $n`` calls and Postgres complains the
         ``GROUP BY`` expression doesn't match the ``SELECT`` one.
         """
-        sub = (
-            select(
-                Agent.metadata_json["category"].astext.label("cat"),
-                Agent.id.label("id"),
-            )
-            .where(
-                Agent.visibility == AgentVisibility.PUBLIC.value,
-                Agent.deleted_at.is_(None),
-            )
-            .subquery("public_cat_sq")
+        from sqlalchemy import type_coerce
+        from sqlalchemy.dialects.postgresql import JSONB
+
+        base = select(
+            Agent.metadata_json["category"].astext.label("cat"),
+            Agent.id.label("id"),
+        ).where(
+            Agent.visibility == AgentVisibility.PUBLIC.value,
+            Agent.deleted_at.is_(None),
         )
+        if template_only:
+            base = base.where(Agent.metadata_json["template"] == type_coerce(True, JSONB))
+        sub = base.subquery("public_cat_sq")
         stmt = (
             select(sub.c.cat, func.count(sub.c.id))
             .where(sub.c.cat.is_not(None))

@@ -17,11 +17,11 @@ import {
   useCreateProvider,
   useProviderCatalog,
   useProviders,
-  useTestProvider,
   type DiscoverResponse,
   type ProviderCatalogEntry,
   type ProviderModelRead,
   type ProviderRead,
+  type ProviderTestResponse,
 } from "@/hooks/use-providers";
 import { ProviderAvatar } from "@/components/providers/ProviderAvatar";
 import { labelOf, descOf } from "@/components/providers/_localize";
@@ -35,6 +35,7 @@ interface OnboardingStepProviderProps {
 
 export function OnboardingStepProvider({ onNext }: OnboardingStepProviderProps) {
   const t = useTranslations("onboarding.provider");
+  const tErr = useTranslations("settings.providers.models");
   const locale = useLocale();
   const setDraft = useOnboardingStore((s) => s.setDraft);
 
@@ -46,7 +47,12 @@ export function OnboardingStepProvider({ onNext }: OnboardingStepProviderProps) 
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [testProviderId, setTestProviderId] = useState<string | null>(null);
-  const test = useTestProvider(testProviderId ?? "");
+  // Snapshot of the credentials that are currently persisted on the provider
+  // row. Used to detect edits so the test/save flow re-persists the new key
+  // instead of silently validating the stale stored one.
+  const [persistedKey, setPersistedKey] = useState("");
+  const [persistedBaseUrl, setPersistedBaseUrl] = useState("");
+  const [testing, setTesting] = useState(false);
 
   const recommendedEntries = useMemo<ProviderCatalogEntry[]>(() => {
     if (!catalog) return [];
@@ -68,6 +74,43 @@ export function OnboardingStepProvider({ onNext }: OnboardingStepProviderProps) 
     }
     setApiKey("");
     setTestProviderId(null);
+    setPersistedKey("");
+    setPersistedBaseUrl("");
+  };
+
+  // Resolve a provider id whose stored credentials match the current form
+  // values. Creates the provider on first use, and PATCHes it whenever the
+  // key/base URL has been edited since it was last persisted. Returns null
+  // (after surfacing a toast) when required fields are missing.
+  const ensureProvider = async (): Promise<string | null> => {
+    const key = apiKey.trim();
+    const url = baseUrl.trim();
+    if (!pickedKind || !selectedEntry || !key) {
+      toast.error(t("apiKeyRequired"));
+      return null;
+    }
+    if (!testProviderId) {
+      const created = await create.mutateAsync({
+        kind: pickedKind,
+        name: labelOf(selectedEntry, locale),
+        api_key: key,
+        base_url: url || null,
+      });
+      setTestProviderId(created.id);
+      setPersistedKey(key);
+      setPersistedBaseUrl(url);
+      setDraft({ providerId: created.id });
+      return created.id;
+    }
+    if (key !== persistedKey || url !== persistedBaseUrl) {
+      await api.patch<ProviderRead>(`/api/v1/providers/${testProviderId}`, {
+        api_key: key,
+        base_url: url || null,
+      });
+      setPersistedKey(key);
+      setPersistedBaseUrl(url);
+    }
+    return testProviderId;
   };
 
   const autoDiscoverAndApply = async (providerId: string) => {
@@ -108,22 +151,15 @@ export function OnboardingStepProvider({ onNext }: OnboardingStepProviderProps) 
       toast.error(t("pickRequired"));
       return;
     }
-    if (!apiKey.trim()) {
-      toast.error(t("apiKeyRequired"));
+    let providerId: string | null;
+    try {
+      providerId = await ensureProvider();
+    } catch {
+      toast.error(t("saveFailed"));
       return;
     }
+    if (!providerId) return;
     try {
-      let providerId = testProviderId;
-      if (!providerId) {
-        const created = await create.mutateAsync({
-          kind: pickedKind,
-          name: labelOf(selectedEntry, locale),
-          api_key: apiKey.trim(),
-          base_url: baseUrl.trim() || null,
-        });
-        providerId = created.id;
-      }
-      setDraft({ providerId });
       await autoDiscoverAndApply(providerId);
       onNext();
     } catch {
@@ -132,36 +168,43 @@ export function OnboardingStepProvider({ onNext }: OnboardingStepProviderProps) 
   };
 
   const runTest = async () => {
-    let providerId = testProviderId;
+    let providerId: string | null;
+    setTesting(true);
+    try {
+      providerId = await ensureProvider();
+    } catch {
+      setTesting(false);
+      toast.error(t("saveFailed"));
+      return;
+    }
     if (!providerId) {
-      if (!pickedKind || !selectedEntry || !apiKey.trim()) {
-        toast.error(t("apiKeyRequired"));
-        return;
-      }
-      try {
-        const created = await create.mutateAsync({
-          kind: pickedKind,
-          name: labelOf(selectedEntry, locale),
-          api_key: apiKey.trim(),
-          base_url: baseUrl.trim() || null,
-        });
-        providerId = created.id;
-        setTestProviderId(created.id);
-        setDraft({ providerId: created.id });
-      } catch {
-        toast.error(t("saveFailed"));
-        return;
-      }
+      setTesting(false);
+      return;
     }
     try {
-      const result = await test.mutateAsync({});
+      // Call the endpoint with the freshly resolved id rather than relying on
+      // a hook bound to (possibly stale) state, so the just-created/updated
+      // provider — and its current key — is the one actually probed.
+      const result = await api.post<ProviderTestResponse>(
+        `/api/v1/providers/${providerId}/test`,
+        {},
+      );
       if (result.ok) {
         toast.success(t("testOk"));
       } else {
-        toast.error(result.error ?? t("testFailed"));
+        const code = result.error ?? "unknown";
+        const mapped = tErr.has(`errors.${code}`)
+          ? tErr(`errors.${code}`)
+          : code;
+        const reason = result.detail
+          ? `${mapped} — ${result.detail.slice(0, 160)}`
+          : mapped;
+        toast.error(t("testFailedWithReason", { reason }));
       }
     } catch {
       toast.error(t("testFailed"));
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -262,9 +305,9 @@ export function OnboardingStepProvider({ onNext }: OnboardingStepProviderProps) 
             <Button
               variant="outline"
               onClick={runTest}
-              disabled={create.isPending || test.isPending || !apiKey.trim()}
+              disabled={create.isPending || testing || !apiKey.trim()}
             >
-              {test.isPending && <IconLoader2 className="size-4 animate-spin" />}
+              {testing && <IconLoader2 className="size-4 animate-spin" />}
               <IconPlugConnected className="size-4" />
               {t("test")}
             </Button>

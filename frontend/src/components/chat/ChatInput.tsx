@@ -73,7 +73,7 @@ import { AttachmentView, type AttachmentRef } from "./AttachmentView";
 
 const DEFAULT_MAX_MB = 25;
 const ALL_ACCEPT =
-  "image/jpeg,image/png,image/gif,image/webp,audio/*,.pdf,.txt,.md,.csv,.json,.py,.js,.ts,.tsx,.html,.css,.yaml,.yml,.toml,.xml,.sql,.sh,.docx,.xlsx";
+  "image/jpeg,image/png,image/gif,image/webp,audio/*,.pdf,.txt,.md,.csv,.json,.py,.js,.ts,.tsx,.html,.css,.yaml,.yml,.toml,.xml,.sql,.sh,.docx,.xlsx,.pptx";
 
 const MODES: { id: ChatMode; labelKey: string; descKey: string }[] = [
   { id: "flash", labelKey: "modeFlash", descKey: "modeFlashDesc" },

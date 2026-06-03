@@ -184,9 +184,10 @@ _TEXTUAL_MIME_EXACT: frozenset[str] = frozenset(
     ]
 )
 
-# Max bytes we're willing to shove into the chunker in one go. 2 MB covers
-# almost every real doc while keeping a single ingest cheap.
-MAX_EXTRACT_BYTES = 2 * 1024 * 1024
+# Max bytes we're willing to shove into the chunker in one go. 15 MB covers
+# the vast majority of real-world office docs (decks with embedded images,
+# multi-sheet spreadsheets) while staying under the 25 MB upload cap.
+MAX_EXTRACT_BYTES = 15 * 1024 * 1024
 
 
 class AttachmentExtractError(ValueError):
@@ -202,6 +203,48 @@ def _is_textual_mime(mime: str) -> bool:
     if any(lower.startswith(p) for p in _TEXTUAL_MIME_PREFIXES):
         return True
     return lower in _TEXTUAL_MIME_EXACT
+
+
+# Filename-extension → mime fallback. Browsers / OSes frequently upload office
+# documents as ``application/octet-stream`` (or omit the type entirely), and
+# Linux's ``mimetypes`` table often lacks the OOXML types. Without this
+# fallback those files never reach the right extractor.
+_EXT_TO_MIME: dict[str, str] = {
+    "pdf": "application/pdf",
+    "doc": "application/msword",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "xls": "application/vnd.ms-excel",
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "ppt": "application/vnd.ms-powerpoint",
+    "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "csv": "text/csv",
+    "json": "application/json",
+    "yaml": "application/yaml",
+    "yml": "application/yaml",
+    "xml": "application/xml",
+    "md": "text/markdown",
+    "markdown": "text/markdown",
+    "txt": "text/plain",
+}
+
+
+def _effective_mime(att: Attachment) -> str:
+    """Resolve the mime to dispatch on, falling back to the filename extension.
+
+    A trustworthy mime wins; a missing / generic one (``octet-stream`` / ``zip``,
+    the latter because OOXML files are zip containers) is overridden by the
+    extension when we recognize it.
+    """
+    mime = (att.mime_type or "").lower()
+    if mime and mime not in ("application/octet-stream", "application/zip"):
+        return mime
+    name = (att.filename or "").lower()
+    dot = name.rfind(".")
+    if 0 <= dot < len(name) - 1:
+        ext = name[dot + 1 :]
+        if ext in _EXT_TO_MIME:
+            return _EXT_TO_MIME[ext]
+    return mime
 
 
 def extract_text_from_attachment(att: Attachment, data: bytes) -> str:
@@ -229,7 +272,7 @@ def extract_text_from_attachment(att: Attachment, data: bytes) -> str:
             f"file > {MAX_EXTRACT_BYTES // (1024 * 1024)}MB; split or compress first",
         )
 
-    mime = (att.mime_type or "").lower()
+    mime = _effective_mime(att)
 
     if _is_textual_mime(mime):
         try:
@@ -276,6 +319,12 @@ def extract_text_from_attachment(att: Attachment, data: bytes) -> str:
     }:
         return _extract_xlsx(att, data)
 
+    if mime in {
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "application/vnd.ms-powerpoint",
+    }:
+        return _extract_pptx(att, data)
+
     raise AttachmentExtractError(
         "unsupported_mime",
         f"mime type {mime!r} can't be ingested as text",
@@ -320,6 +369,52 @@ def _extract_docx(att: Attachment, data: bytes) -> str:
         raise AttachmentExtractError(
             "docx_empty",
             "docx produced no extractable text (image-only document?)",
+        )
+    return out
+
+
+def _extract_pptx(att: Attachment, data: bytes) -> str:
+    """Extract slide text (shapes + tables) from a .pptx deck via python-pptx.
+
+    Legacy binary ``.ppt`` files aren't supported by python-pptx and surface
+    ``pptx_parse_failed`` with a hint to re-save as .pptx.
+    """
+    try:
+        from pptx import Presentation
+    except ImportError as e:
+        raise AttachmentExtractError(
+            "pptx_lib_missing",
+            "python-pptx not installed; add it to backend deps to ingest PPTX",
+        ) from e
+    try:
+        prs = Presentation(io.BytesIO(data))
+    except Exception as e:
+        raise AttachmentExtractError(
+            "pptx_parse_failed",
+            f"pptx parse failed (legacy .ppt binaries aren't supported — re-save as .pptx): {e}",
+        ) from e
+
+    parts: list[str] = []
+    for idx, slide in enumerate(prs.slides, start=1):
+        slide_parts: list[str] = []
+        for shape in slide.shapes:
+            if shape.has_text_frame:
+                text = (shape.text_frame.text or "").strip()
+                if text:
+                    slide_parts.append(text)
+            if shape.has_table:
+                for row in shape.table.rows:
+                    cells = [(c.text or "").strip() for c in row.cells]
+                    row_text = " | ".join(c for c in cells if c)
+                    if row_text:
+                        slide_parts.append(row_text)
+        if slide_parts:
+            parts.append(f"# Slide {idx}\n" + "\n".join(slide_parts))
+    out = "\n\n".join(parts)
+    if not out.strip():
+        raise AttachmentExtractError(
+            "pptx_empty",
+            "pptx produced no extractable text (image-only deck?)",
         )
     return out
 

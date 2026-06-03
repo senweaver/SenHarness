@@ -11,9 +11,11 @@ import {
   IconFilter,
   IconHierarchy,
   IconLayoutKanban,
+  IconPlugConnected,
   IconPlus,
   IconRobot,
   IconSearch,
+  IconShieldCheck,
   IconSparkles,
   IconStack2,
   IconUsersGroup,
@@ -72,7 +74,9 @@ type WorkspaceToolLabelKey =
   | "squads"
   | "batch"
   | "board"
-  | "marketplace";
+  | "marketplace"
+  | "channels"
+  | "approvals";
 
 interface WorkspaceToolDef {
   href: string;
@@ -90,6 +94,8 @@ const WORKSPACE_TOOLS: WorkspaceToolDef[] = [
   { href: "/batch", labelKey: "batch", icon: <IconStack2 className="size-4 shrink-0" /> },
   { href: "/workspace/board", labelKey: "board", icon: <IconLayoutKanban className="size-4 shrink-0" /> },
   { href: "/marketplace", labelKey: "marketplace", icon: <IconBuildingStore className="size-4 shrink-0" /> },
+  { href: "/channels", labelKey: "channels", icon: <IconPlugConnected className="size-4 shrink-0" /> },
+  { href: "/approvals", labelKey: "approvals", icon: <IconShieldCheck className="size-4 shrink-0" /> },
 ];
 
 interface MySectionProps {

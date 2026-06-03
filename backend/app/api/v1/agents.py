@@ -189,6 +189,7 @@ async def discover_categories(
     db: DBSession,
     identity_id: CurrentIdentityId,
     workspace_id: CurrentWorkspaceId,
+    template_only: bool = Query(False),
 ) -> list[AgentCategory]:
     """Sidebar source: 17 built-in categories + live public-agent counts.
 
@@ -196,12 +197,15 @@ async def discover_categories(
     :data:`app.agents.templates.catalog.CATEGORIES` (even at zero) so the
     UI can render the full list before templates are seeded. Ordering
     matches the catalog declaration.
+
+    ``template_only`` restricts the counts to vendored templates so the
+    sidebar matches a template-only listing (the create-agent dialog).
     """
     from app.agents.templates import catalog
 
     ws_id = _require_workspace(workspace_id)
     await ws_svc.ensure_member_access(db, workspace_id=ws_id, identity_id=identity_id)
-    counts = await AgentRepository(db).count_by_category()
+    counts = await AgentRepository(db).count_by_category(template_only=template_only)
     return [
         AgentCategory(
             slug=c["slug"],

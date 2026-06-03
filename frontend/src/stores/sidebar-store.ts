@@ -23,7 +23,7 @@ export const useSidebarStore = create<SidebarState>()(
     (set) => ({
       collapsed: false,
       mySectionOpen: true,
-      workspaceSectionOpen: false,
+      workspaceSectionOpen: true,
       chatSessionListCollapsed: false,
       preChatCollapsed: null,
       toggleCollapsed: () => set((s) => ({ collapsed: !s.collapsed })),
@@ -42,6 +42,14 @@ export const useSidebarStore = create<SidebarState>()(
     }),
     {
       name: "senharness.sidebar",
+      version: 2,
+      migrate: (persisted, fromVersion) => {
+        const state = persisted as Partial<SidebarState>;
+        if (fromVersion < 2) {
+          return { ...state, workspaceSectionOpen: true };
+        }
+        return state;
+      },
       partialize: (state) => ({
         collapsed: state.collapsed,
         mySectionOpen: state.mySectionOpen,
