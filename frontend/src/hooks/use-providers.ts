@@ -204,6 +204,8 @@ export interface ResolvedReasoningProfile {
   hybrid: boolean;
   default: "on" | "off";
   tool_call_safe: boolean;
+  supports_effort: boolean;
+  source: "builtin" | "override" | "default";
   preferred_effort: ReasoningEffort | null;
   flash_alternative: string | null;
   has_db_override: boolean;

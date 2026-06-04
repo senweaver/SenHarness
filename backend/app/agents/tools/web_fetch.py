@@ -79,9 +79,15 @@ async def run_web_fetch(args: WebFetchArgs) -> dict:
         log.info("web_fetch blocked redirect to unsafe URL: %s", e.code)
         return {"url": args.url, "ok": False, "error": e.code, "message": str(e)}
     except httpx.HTTPError as e:
+        fallback = await _jina_reader_fetch(args.url, args.max_chars)
+        if fallback is not None:
+            return fallback
         return {"url": args.url, "ok": False, "error": f"http_error: {e!s}"}
 
     if resp.status_code >= 400:
+        fallback = await _jina_reader_fetch(args.url, args.max_chars)
+        if fallback is not None:
+            return fallback
         return {
             "url": args.url,
             "ok": False,
@@ -116,6 +122,13 @@ async def run_web_fetch(args: WebFetchArgs) -> dict:
     # trafilatura does clean HTML→markdown extraction.
     markdown, title = await asyncio.to_thread(_extract_markdown, decoded, args.format)
     output = (markdown or "").strip()
+    # Empty extraction on a 200 page usually means an anti-bot / JS-only
+    # shell. The Jina reader renders such pages server-side, so try it
+    # before returning a blank body.
+    if not output:
+        fallback = await _jina_reader_fetch(args.url, args.max_chars)
+        if fallback is not None:
+            return fallback
     if len(output) > args.max_chars:
         output = output[: args.max_chars]
         truncated_body = True
@@ -129,6 +142,43 @@ async def run_web_fetch(args: WebFetchArgs) -> dict:
         "title": title,
         "body": output,
         "truncated_body": truncated_body,
+    }
+
+
+async def _jina_reader_fetch(url: str, max_chars: int) -> dict | None:
+    """Fallback reader proxy via ``r.jina.ai`` (no API key, free tier).
+
+    Reaches pages the direct fetch can't — slow / blocked origins (common
+    from mainland China) and anti-bot or JS-only shells — by letting Jina
+    render and clean them server-side into markdown. ``url`` has already
+    passed ``assert_safe_url`` in the caller, so there is no SSRF window:
+    we only ever hand a public URL to the public proxy. Returns ``None`` on
+    any failure so the caller falls through to its normal error path.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, follow_redirects=True) as cli:
+            resp = await cli.get(
+                f"https://r.jina.ai/{url}",
+                headers={"X-Return-Format": "markdown", "Accept": "text/plain"},
+            )
+    except httpx.HTTPError as e:
+        log.debug("jina reader fallback failed for %s: %s", url, e)
+        return None
+    if resp.status_code >= 400:
+        return None
+    body = (resp.text or "").strip()
+    if not body:
+        return None
+    return {
+        "url": url,
+        "ok": True,
+        "status": 200,
+        "content_type": "text/markdown",
+        "format": "markdown",
+        "title": None,
+        "body": body[:max_chars],
+        "truncated_body": len(body) > max_chars,
+        "via": "jina_reader",
     }
 
 

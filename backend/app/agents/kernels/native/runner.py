@@ -60,7 +60,7 @@ from app.agents.kernels.model_client import (
     resolve_for_agent,
 )
 from app.agents.kernels.model_profile import (
-    apply_reasoning_payload,
+    apply_reasoning_settings,
     desired_thinking_state,
     load_provider_model_metadata,
     resolve_profile,
@@ -1064,10 +1064,17 @@ async def _pydantic_ai_stream(
         db_metadata=profile_db_meta,
     )
     thinking_state = desired_thinking_state(profile=profile, policy=req.policy)
-    show_thinking = thinking_state == "on"
-    reasoning_payload = (
-        profile.reasoning.enable if thinking_state == "on" else profile.reasoning.disable
-    )
+    reasoning_supported = profile.reasoning.supported
+    show_thinking = reasoning_supported and thinking_state == "on"
+    # Models without a thinking phase (``supported=false``) get no
+    # enable/disable wire payload at all — the runner must not flip a
+    # non-reasoning model into thinking just because a stale policy asked
+    # for it.
+    reasoning_payload: dict[str, Any] = {}
+    if reasoning_supported:
+        reasoning_payload = (
+            profile.reasoning.enable if thinking_state == "on" else profile.reasoning.disable
+        )
     system_suffix: str | None = None
     if isinstance(reasoning_payload, dict):
         suffix_candidate = reasoning_payload.get("system_suffix")
@@ -1099,50 +1106,22 @@ async def _pydantic_ai_stream(
         reflection_config=reflection_config,
     )
 
-    if reasoning_payload:
-        try:
-            apply_reasoning_payload(
-                model_settings=_ensure_model_settings(agent),
-                payload=reasoning_payload,
-            )
-        except Exception:  # pragma: no cover
-            log.debug("could not apply reasoning payload=%s", reasoning_payload)
-
-    # Operator-set "preferred effort" from the per-model dialog takes
-    # priority over the builtin enable payload but loses to a per-run
-    # policy override so a single message can still escalate.
-    if profile.reasoning.preferred_effort:
-        try:
-            _ensure_model_settings(agent)["reasoning_effort"] = profile.reasoning.preferred_effort
-        except Exception:  # pragma: no cover
-            log.debug(
-                "could not apply preferred_effort=%s",
-                profile.reasoning.preferred_effort,
-            )
-
-    effort = resolve_reasoning_effort_for_run(policy=req.policy, user_text=req.user_text)
-    if effort is not None:
-        try:
-            _ensure_model_settings(agent)["reasoning_effort"] = effort
-        except Exception:  # pragma: no cover
-            log.debug("could not apply reasoning_effort=%s", effort)
-
-    # Hybrid models that need ``reasoning_content`` round-trip on every
-    # assistant tool-call message (Kimi K2.6, Qwen3, GLM-5, DeepSeek-V4)
-    # treat the presence of ``reasoning_effort`` as a thinking-enabled
-    # signal — even when ``extra_body.thinking={"type": "disabled"}``
-    # is also set. Strip ``reasoning_effort`` whenever thinking should
-    # stay off so the wire request matches the harness intent and the
-    # server doesn't 400 on the next tool call.
-    if (
-        thinking_state == "off"
-        and profile.reasoning.hybrid
-        and not profile.reasoning.tool_call_safe
-    ):
-        try:
-            _ensure_model_settings(agent).pop("reasoning_effort", None)
-        except Exception:  # pragma: no cover
-            log.debug("could not strip reasoning_effort for tool-call-unsafe hybrid")
+    # Operator-preferred effort loses to a per-run policy override so a
+    # single message can still escalate. The strength knob, the
+    # ``supported`` gate and the tool-call-unsafe hybrid strip are all
+    # enforced inside ``apply_reasoning_settings`` so the runtime matches
+    # the resolved profile verbatim.
+    run_effort = resolve_reasoning_effort_for_run(policy=req.policy, user_text=req.user_text)
+    try:
+        apply_reasoning_settings(
+            profile=profile,
+            model_settings=_ensure_model_settings(agent),
+            reasoning_payload=reasoning_payload,
+            thinking_state=thinking_state,
+            run_effort=run_effort,
+        )
+    except Exception:  # pragma: no cover
+        log.debug("could not apply reasoning settings for model=%s", resolved.model_name)
 
     history = _rehydrate_history(req.message_history)
     if history:

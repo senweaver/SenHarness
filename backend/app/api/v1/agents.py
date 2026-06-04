@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from app.agents.harness.skills import BUNDLED_SKILLS_DIR
 from app.agents.kernels.model_catalog import CatalogModel, list_models_for_provider
+from app.agents.kernels.model_profile import resolve_profile
 
 if TYPE_CHECKING:
     from app.db.models.model_provider import ProviderModel
@@ -508,6 +509,10 @@ class AgentModelOption(BaseModel):
     recommended: bool = False
     description: str = ""
     is_default: bool = False
+    # Catalog-resolved reasoning support so the composer can disable the
+    # thinking mode for models that have no thinking phase. Mirrors the
+    # runtime gating in ``model_profile.resolve_profile``.
+    reasoning_supported: bool = False
 
 
 class AgentModelsResponse(BaseModel):
@@ -534,6 +539,18 @@ def _is_resolved_default(
         and resolved.provider_kind == provider_kind
         and resolved.model_name == model_name
     )
+
+
+def _reasoning_supported(
+    provider_kind: str,
+    model_name: str,
+    db_metadata: dict | None = None,
+) -> bool:
+    return resolve_profile(
+        provider_kind=provider_kind,
+        model_name=model_name,
+        db_metadata=db_metadata,
+    ).reasoning.supported
 
 
 def _composer_entries_for_provider(
@@ -615,7 +632,7 @@ async def list_agent_models(
     out: list[AgentModelOption] = []
     seen_ids: set[str] = set()
     for prov in providers:
-        kind = prov.kind.value if hasattr(prov.kind, "value") else str(prov.kind)
+        kind = str(prov.kind.value if hasattr(prov.kind, "value") else prov.kind)
         display = _display_for(kind, prov.name or kind)
         catalog_index = {e.model: e for e in list_models_for_provider(kind)}
         persisted = list(
@@ -645,6 +662,7 @@ async def list_agent_models(
                     recommended=entry.recommended or (meta.recommended if meta else False),
                     description=meta.description if meta else "",
                     is_default=_is_resolved_default(resolved, kind, model_id),
+                    reasoning_supported=_reasoning_supported(kind, model_id, entry.metadata_json),
                 )
             else:
                 option = AgentModelOption(
@@ -657,6 +675,7 @@ async def list_agent_models(
                     recommended=entry.recommended,
                     description=entry.description,
                     is_default=_is_resolved_default(resolved, kind, entry.model),
+                    reasoning_supported=_reasoning_supported(kind, entry.model),
                 )
             if option.id in seen_ids:
                 continue
@@ -680,6 +699,7 @@ async def list_agent_models(
                         recommended=False,
                         description="",
                         is_default=_is_resolved_default(resolved, kind, prov.default_model),
+                        reasoning_supported=_reasoning_supported(kind, prov.default_model),
                     )
                 )
 
@@ -703,6 +723,9 @@ async def list_agent_models(
                     recommended=False,
                     description="Workspace default — configured outside the static catalog.",
                     is_default=True,
+                    reasoning_supported=_reasoning_supported(
+                        resolved.provider_kind, resolved.model_name
+                    ),
                 ),
             )
 

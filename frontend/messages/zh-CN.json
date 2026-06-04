@@ -3383,7 +3383,15 @@
       "modelDialog": {
         "reasoning": {
           "sectionTitle": "思考",
-          "supportedHint": "允许该模型先思考再回答。",
+          "archetypeLabel": "思考类型",
+          "archetypeHint": "该模型的思考方式。已识别的模型由内置目录自动设定。",
+          "archetype": {
+            "none": "不支持",
+            "always": "始终思考",
+            "hybrid": "可切换"
+          },
+          "lockedBadge": "由内置目录识别",
+          "overrideCta": "覆盖",
           "effortLabel": "思考强度",
           "effortHint": "关闭则保持轻快；越高每次回答前投入越多推理。",
           "effort": {
@@ -3397,8 +3405,6 @@
           "defaultOn": "开",
           "defaultOff": "关",
           "advancedToggle": "高级",
-          "hybridLabel": "混合模式",
-          "hybridHint": "同一 SKU 同时支持思考与非思考；仅对未在内置目录中的自定义模型生效。",
           "toolCallSafeLabel": "工具调用期间安全",
           "toolCallSafeHint": "若供应商要求每次工具调用都回带 reasoning_content（如 Kimi K2.6），请关闭。",
           "flashAlternativeLabel": "Flash 替代模型",
@@ -3538,7 +3544,7 @@
       "new": "添加搜索服务",
       "save": "保存",
       "cancel": "取消",
-      "empty": "还没配置搜索服务。聊天工具可走 DuckDuckGo 兜底，但建议至少配一个高质量后端。",
+      "empty": "还没配置搜索服务。聊天工具会走免费兜底，但建议至少配一个高质量后端。",
       "badges": {
         "keySaved": "已配 Key",
         "noKey": "未配 Key"
@@ -3550,7 +3556,7 @@
         "apiKey": "API Key",
         "apiKeyPlaceholder": "粘贴 API Key…",
         "apiKeyPlaceholderSaved": "••• 已保存（留空保留旧值）",
-        "noKeyNeeded": "此后端无需 Key（DuckDuckGo 兜底）。",
+        "noKeyNeeded": "此后端无需 Key。",
         "priority": "优先级",
         "priorityHint": "数字越小越优先。多个 enabled 后端按优先级依次尝试。",
         "enabled": "启用"

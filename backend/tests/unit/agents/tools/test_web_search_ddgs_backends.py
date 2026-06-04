@@ -1,12 +1,11 @@
 """Guard the ``ddgs`` no-key fallback against silently regressing to
-``backend="auto"`` or the upstream default 5 s per-engine timeout.
+``backend="auto"`` or the upstream default per-engine timeout.
 
-The agent runs from mainland China where the upstream ``auto`` engine list
-fans out to Brave / Yahoo / Wikipedia / Mojeek — all of which either time
-out or 403 — and only ``yandex`` / ``bing`` consistently return rows. The
-production fallback now pins both ``backend`` and ``timeout`` so a single
-``web_search`` call costs ~2 s instead of 5-7 s. If a future contributor
-drops those overrides, this test fails before the regression ships."""
+The fallback pins ``backend="bing"`` because Bing is the one engine that
+stays reachable and clean both globally and from mainland China, plus a
+bounded ``timeout`` so a stalled request can't drag out the call. If a future
+contributor drops those overrides, this test fails before the regression
+ships."""
 
 from __future__ import annotations
 
@@ -55,29 +54,27 @@ def stub_ddgs(monkeypatch: pytest.MonkeyPatch) -> type[_StubDDGS]:
     return _StubDDGS
 
 
-def test_ddgs_fallback_pins_backend_to_cn_reachable_engines(
+def test_ddgs_fallback_pins_backend_to_bing(
     stub_ddgs: type[_StubDDGS],
 ) -> None:
-    """``web_search``'s no-key fallback must restrict ``backend`` to engines
-    that have been observed to actually return rows from mainland China.
-    The current allowlist is ``yandex,bing``; widening it back to ``auto``
-    re-introduces the multi-second tax that triggered this fix."""
+    """``web_search``'s no-key fallback must pin ``backend`` to Bing — the
+    engine that stays reachable globally and from mainland China — and never
+    widen back to ``auto``, which re-introduces slow / blocked engines."""
     result = asyncio.run(web_search_mod._ddgs("BYD stock", 5, None, None, None))
 
     assert result is not None
-    assert stub_ddgs.last_text_kwargs.get("backend") == "yandex,bing"
+    assert stub_ddgs.last_text_kwargs.get("backend") == "bing"
     assert stub_ddgs.last_text_kwargs.get("max_results") == 5
 
 
 def test_ddgs_fallback_pins_per_engine_timeout(stub_ddgs: type[_StubDDGS]) -> None:
-    """The DDGS constructor must carry a tighter ``timeout`` than the upstream
-    5 s default; otherwise a single stalled engine still drags the entire
-    ``web_search`` call to ~5 s."""
+    """The DDGS constructor must carry an explicit, bounded ``timeout`` so a
+    stalled request can't hang the whole ``web_search`` call."""
     asyncio.run(web_search_mod._ddgs("BYD stock", 5, None, None, None))
 
     timeout = stub_ddgs.last_ctor_kwargs.get("timeout")
     assert isinstance(timeout, int)
-    assert 1 <= timeout <= 4, f"expected a tight per-engine timeout (<=4s), got {timeout}s"
+    assert 2 <= timeout <= 8, f"expected a bounded timeout, got {timeout}s"
 
 
 def test_ddgs_fallback_propagates_time_range(stub_ddgs: type[_StubDDGS]) -> None:
@@ -86,4 +83,4 @@ def test_ddgs_fallback_propagates_time_range(stub_ddgs: type[_StubDDGS]) -> None
     asyncio.run(web_search_mod._ddgs("BYD stock", 5, "week", None, None))
 
     assert stub_ddgs.last_text_kwargs.get("timelimit") == "w"
-    assert stub_ddgs.last_text_kwargs.get("backend") == "yandex,bing"
+    assert stub_ddgs.last_text_kwargs.get("backend") == "bing"

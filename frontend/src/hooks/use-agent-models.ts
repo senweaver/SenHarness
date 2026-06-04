@@ -24,6 +24,9 @@ export interface AgentModelOption {
   recommended: boolean;
   description: string;
   is_default: boolean;
+  /** Catalog-resolved reasoning support — drives the composer's thinking
+   *  mode guardrail. ``false`` when the model exposes no thinking phase. */
+  reasoning_supported: boolean;
 }
 
 export interface AgentModelsResponse {

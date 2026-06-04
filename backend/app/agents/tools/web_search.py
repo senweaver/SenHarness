@@ -47,18 +47,25 @@ async def run_web_search(args: WebSearchArgs) -> dict:
 
     candidates = await _ordered_candidates()
 
-    # No search backend configured at all: skip the implicit DuckDuckGo probe
-    # (frequently blocked / slow in some regions, which only adds latency) and
-    # steer the model to `web_fetch` for reading a known URL directly.
+    # No configured provider: fall back to the no-key DuckDuckGo path so
+    # web_search stays useful out of the box. Keyed providers still win below.
     if not candidates:
+        try:
+            ddg = await _ddgs(q, args.max_results, args.time_range, None, None)
+        except Exception as e:  # pragma: no cover — degraded network path
+            log.debug("no-key duckduckgo fallback failed: %s", e)
+            ddg = None
+        if ddg is not None and ddg.get("results"):
+            return ddg
         return {
             "query": args.query,
             "provider": "none",
             "results": [],
             "note": (
-                "No web search backend is configured, so web_search is "
-                "unavailable. Configure one in Settings → Search providers, or "
-                "use the web_fetch tool to read a specific URL directly."
+                "No web search backend is configured and the no-key DuckDuckGo "
+                "fallback returned nothing. Configure a provider in Settings → "
+                "Search providers, or use the web_fetch tool to read a specific "
+                "URL directly."
             ),
         }
 
@@ -352,19 +359,10 @@ async def _exa(
 
 
 # ─── DuckDuckGo (fallback, no key) ─────────────────────────
-# ``ddgs``'s default ``backend="auto"`` fans out to bing/brave/grokipedia/
-# mojeek/wikipedia/yandex/yahoo concurrently and waits up to ``timeout=5s``
-# for each. From mainland China the slow path dominates: Brave/Yahoo/
-# Wikipedia/Mojeek consistently time out or return 403, leaving Yandex/Bing
-# as the only sources that ever produce a row. Constraining the backend
-# list to the engines that actually reach us — and tightening the per-engine
-# wait — keeps the no-key fallback usable instead of imposing a 5-7 s tax
-# on every ``web_search`` call. Operators who need different reachability
-# should configure a keyed provider (Tavily / Brave API / Jina / Exa /
-# SerpAPI) in ``Settings → Search providers``; this fallback is only meant
-# to keep the agent functional when none of those are set.
-_DDGS_BACKENDS = "yandex,bing"
-_DDGS_TIMEOUT_SEC = 3  # see web_search.py docstring
+# Pin to the Bing backend: ddgs's default fan-out is unreliable from mainland
+# China, where Bing stays reachable while the other engines time out or drift.
+_DDGS_BACKENDS = "bing"
+_DDGS_TIMEOUT_SEC = 6
 
 
 async def _ddgs(

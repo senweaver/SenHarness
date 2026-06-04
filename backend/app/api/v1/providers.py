@@ -6,7 +6,7 @@ import uuid
 
 from fastapi import APIRouter, status
 
-from app.agents.kernels.model_profile import resolve_profile
+from app.agents.kernels.model_profile import _match_builtin, resolve_profile
 from app.api.deps import CurrentIdentityId, CurrentWorkspaceId, DBSession
 from app.core.errors import Unauthorized
 from app.schemas.provider import (
@@ -242,14 +242,23 @@ async def get_resolved_model_profile(
         model_name=pm.model,
         db_metadata=pm.metadata_json,
     )
+    has_db_override = bool((pm.metadata_json or {}).get("profile"))
+    if has_db_override:
+        source = "override"
+    elif _match_builtin(str(provider.kind), pm.model) is not None:
+        source = "builtin"
+    else:
+        source = "default"
     return ResolvedReasoningProfile(
         supported=profile.reasoning.supported,
         hybrid=profile.reasoning.hybrid,
         default=profile.reasoning.default,
         tool_call_safe=profile.reasoning.tool_call_safe,
+        supports_effort=profile.reasoning.supports_effort,
+        source=source,
         preferred_effort=profile.reasoning.preferred_effort,
         flash_alternative=profile.flash_alternative,
-        has_db_override=bool((pm.metadata_json or {}).get("profile")),
+        has_db_override=has_db_override,
     )
 
 

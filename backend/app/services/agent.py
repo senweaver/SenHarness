@@ -166,10 +166,12 @@ async def clone_public_agent(
     if src.visibility != AgentVisibility.PUBLIC and src.workspace_id != target_workspace_id:
         raise PermissionDenied("not_public", code="agent.not_public")
 
+    from app.services import stars as stars_svc
+
     src_meta = dict(src.metadata_json or {})
     cloned_meta = {k: v for k, v in src_meta.items() if k not in _TEMPLATE_OWNED_KEYS}
 
-    return await AgentRepository(session).create(
+    agent = await AgentRepository(session).create(
         workspace_id=target_workspace_id,
         created_by=created_by,
         name=name_override or f"{src.name} (copy)",
@@ -186,3 +188,8 @@ async def clone_public_agent(
         default_model=src.default_model,
         default_search_provider_kind=src.default_search_provider_kind,
     )
+    await session.flush()
+    await stars_svc.fan_out_agent_to_workspace_members(
+        session, workspace_id=target_workspace_id, agent_id=agent.id
+    )
+    return agent

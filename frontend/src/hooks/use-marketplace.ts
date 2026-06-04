@@ -72,6 +72,7 @@ export function useCloneAgent() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["agents"] });
+      qc.invalidateQueries({ queryKey: ["sidebar", "my-items"] });
     },
   });
 }

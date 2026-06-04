@@ -34,6 +34,7 @@ export function useCreateAgent() {
     mutationFn: (input) => api.post<AgentRead>("/api/v1/agents", input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["agents"] });
+      qc.invalidateQueries({ queryKey: ["sidebar", "my-items"] });
     },
   });
 }

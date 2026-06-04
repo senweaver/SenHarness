@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Literal
 
 from pydantic import Field, field_validator
 
@@ -214,6 +215,15 @@ class ResolvedReasoningProfile(ORMModel):
     hybrid: bool
     default: str
     tool_call_safe: bool
+    # Whether the upstream accepts a ``reasoning_effort`` strength knob.
+    # The dialog only renders the strength control when this is ``True``.
+    supports_effort: bool = False
+    # Where the resolved profile came from, so the dialog can lock a
+    # catalog-recognized model until the operator explicitly overrides:
+    #   * ``builtin``  — matched a ``BUILTIN_PROFILES`` entry, no DB override.
+    #   * ``override`` — workspace stored ``metadata_json["profile"]``.
+    #   * ``default``  — no builtin match and no override (all-false).
+    source: Literal["builtin", "override", "default"] = "default"
     # Operator-configured effort knob. ``None`` means "no preference —
     # keep whatever the builtin enable payload already sets". Values
     # follow the OpenAI o-series vocabulary (``minimal`` / ``low`` /

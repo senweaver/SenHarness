@@ -69,6 +69,7 @@ import { useUploadAttachment } from "@/hooks/use-attachments";
 import { useCollections } from "@/hooks/use-knowledge";
 import type { ChatMode } from "@/lib/ws";
 import { cn } from "@/lib/utils";
+import { useComposerPrefsStore } from "@/stores/composer-prefs-store";
 import { AttachmentView, type AttachmentRef } from "./AttachmentView";
 
 const DEFAULT_MAX_MB = 25;
@@ -120,8 +121,6 @@ interface ChatInputProps {
    *  the new-chat draft surface where there is no turn to regenerate. */
   onRegenerate?: () => void;
   className?: string;
-  /** Initial mode; defaults to ``flash``. */
-  initialMode?: ChatMode;
 }
 
 export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
@@ -135,7 +134,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       onCancel,
       onRegenerate,
       className,
-      initialMode = "flash",
     },
     ref,
   ) {
@@ -149,7 +147,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const [message, setMessage] = useState("");
     const [pending, setPending] = useState<AttachmentRef[]>([]);
     const [isListening, setIsListening] = useState(false);
-    const [mode, setMode] = useState<ChatMode>(initialMode);
+    // Composer mode is persisted (see composer-prefs-store) so it
+    // survives the /chat/new → /chat/[id] remount instead of resetting
+    // to flash on every fresh mount.
+    const mode = useComposerPrefsStore((s) => s.mode);
+    const setMode = useComposerPrefsStore((s) => s.setMode);
     // Mirrored from the textarea so the inline highlight overlay
     // (``ComposerOverlay``) stays glyph-aligned during long edits that
     // cause internal scrolling.
@@ -227,6 +229,17 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const skillsQuery = useAgentSkills(agentId ?? null);
     const agentsQuery = useAgents();
     const collectionsQuery = useCollections();
+
+    // When the catalog flags the selected model as non-reasoning, the
+    // thinking mode has nothing to drive — disable it in the picker.
+    // The backend (runtime gating) strips thinking for these models too,
+    // so this is purely a UX guardrail, not the safety boundary.
+    const thinkingDisabled = useMemo(() => {
+      const options = modelsQuery.data?.options;
+      if (!options || model == null) return false;
+      const selected = options.find((o) => o.id === model);
+      return selected != null && selected.reasoning_supported === false;
+    }, [modelsQuery.data?.options, model]);
 
     const isStreaming = status === "streaming" || status === "submitted";
     const maxMb =
@@ -798,7 +811,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             </div>
             <PromptInputToolbar>
               <PromptInputTools>
-                <ModeSelect value={mode} onChange={setMode} t={tCompose} />
+                <ModeSelect
+                  value={mode}
+                  onChange={setMode}
+                  thinkingDisabled={thinkingDisabled}
+                  t={tCompose}
+                />
                 <ModelSelector
                   agentId={agentId}
                   value={model}
@@ -928,10 +946,13 @@ function SlashTriggerButton({
 interface ModeSelectProps {
   value: ChatMode;
   onChange: (m: ChatMode) => void;
+  /** When true, the "thinking" entry is non-selectable — the active
+   *  model's catalog profile reports no reasoning phase. */
+  thinkingDisabled?: boolean;
   t: ReturnType<typeof useTranslations>;
 }
 
-function ModeSelect({ value, onChange, t }: ModeSelectProps) {
+function ModeSelect({ value, onChange, thinkingDisabled, t }: ModeSelectProps) {
   const active = MODES.find((m) => m.id === value) ?? MODES[0]!;
   return (
     <DropdownMenu>
@@ -952,17 +973,21 @@ function ModeSelect({ value, onChange, t }: ModeSelectProps) {
       <DropdownMenuContent align="start" className="w-56">
         <DropdownMenuLabel>{t("modeFlash")}</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {MODES.map((m) => (
-          <DropdownMenuItem
-            key={m.id}
-            onSelect={() => onChange(m.id)}
-            data-active={value === m.id}
-            className="flex flex-col items-start"
-          >
-            <span className="text-xs font-medium">{t(m.labelKey)}</span>
-            <span className="text-[10px] sh-muted">{t(m.descKey)}</span>
-          </DropdownMenuItem>
-        ))}
+        {MODES.map((m) => {
+          const disabled = m.id === "thinking" && Boolean(thinkingDisabled);
+          return (
+            <DropdownMenuItem
+              key={m.id}
+              disabled={disabled}
+              onSelect={() => onChange(m.id)}
+              data-active={value === m.id}
+              className="flex flex-col items-start"
+            >
+              <span className="text-xs font-medium">{t(m.labelKey)}</span>
+              <span className="text-[10px] sh-muted">{t(m.descKey)}</span>
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );

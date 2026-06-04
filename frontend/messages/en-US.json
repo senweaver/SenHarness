@@ -3383,7 +3383,15 @@
       "modelDialog": {
         "reasoning": {
           "sectionTitle": "Thinking",
-          "supportedHint": "Let this model think before answering.",
+          "archetypeLabel": "Thinking type",
+          "archetypeHint": "How this model reasons. Recognized models are set from the builtin catalog.",
+          "archetype": {
+            "none": "None",
+            "always": "Always",
+            "hybrid": "Switchable"
+          },
+          "lockedBadge": "From builtin catalog",
+          "overrideCta": "Override",
           "effortLabel": "Effort",
           "effortHint": "Off keeps the model quick. Higher levels spend more on reasoning before each reply.",
           "effort": {
@@ -3397,8 +3405,6 @@
           "defaultOn": "On",
           "defaultOff": "Off",
           "advancedToggle": "Advanced",
-          "hybridLabel": "Hybrid mode",
-          "hybridHint": "Same SKU exposes thinking and non-thinking. Only override for non-catalog models.",
           "toolCallSafeLabel": "Safe across tool calls",
           "toolCallSafeHint": "Off when the provider requires round-tripping reasoning content with each tool call (e.g. Kimi K2.6).",
           "flashAlternativeLabel": "Flash alternative model",
@@ -3538,7 +3544,7 @@
       "new": "Add provider",
       "save": "Save",
       "cancel": "Cancel",
-      "empty": "No search backends yet. Chat tools fall back to DuckDuckGo, but a configured backend gives much better results.",
+      "empty": "No search backends yet. Chat tools use a free fallback, but a configured backend gives much better results.",
       "badges": {
         "keySaved": "Key saved",
         "noKey": "No key"
@@ -3550,7 +3556,7 @@
         "apiKey": "API key",
         "apiKeyPlaceholder": "paste API key…",
         "apiKeyPlaceholderSaved": "••• stored (leave empty to keep)",
-        "noKeyNeeded": "No key required (DuckDuckGo fallback).",
+        "noKeyNeeded": "No key required.",
         "priority": "Priority",
         "priorityHint": "Lower number = higher priority. Multiple enabled backends are tried in order.",
         "enabled": "Enabled"

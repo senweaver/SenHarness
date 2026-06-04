@@ -57,6 +57,11 @@ class ReasoningProfile:
     hybrid: bool = False
     default: str = "off"
     tool_call_safe: bool = True
+    # Whether the upstream accepts a ``reasoning_effort`` strength knob.
+    # Defaults ``False`` because several reasoning models (qwen3, kimi,
+    # deepseek-reasoner) reject the parameter — the runner only emits
+    # ``reasoning_effort`` when this is ``True``.
+    supports_effort: bool = False
     enable: dict[str, Any] = field(default_factory=dict)
     disable: dict[str, Any] = field(default_factory=dict)
     # Operator-set effort knob from the per-row dialog. Distinct from
@@ -120,6 +125,7 @@ _HYBRID_GLM5 = ModelProfile(
         hybrid=True,
         default="off",
         tool_call_safe=False,
+        supports_effort=True,
         enable={"model_settings": {"reasoning_effort": "high"}},
         disable={"model_settings": {"thinking": False}},
     ),
@@ -136,8 +142,15 @@ _DEEPSEEK_V4 = ModelProfile(
     ),
 )
 
+# Pure reasoners that reject ``reasoning_effort`` (kimi-k2-thinking,
+# deepseek-reasoner): thinking is always on, no strength knob.
 _PURE_REASONER = ModelProfile(
     reasoning=ReasoningProfile(supported=True, hybrid=False, default="on"),
+)
+
+# OpenAI o-series reasoners accept ``reasoning_effort``.
+_PURE_REASONER_EFFORT = ModelProfile(
+    reasoning=ReasoningProfile(supported=True, hybrid=False, default="on", supports_effort=True),
 )
 
 BUILTIN_PROFILES: list[tuple[str, str, ModelProfile]] = [
@@ -163,8 +176,8 @@ BUILTIN_PROFILES: list[tuple[str, str, ModelProfile]] = [
     # ─── Zhipu GLM-5 family ───────────────────────────────
     ("zhipu", "glm-5*", _HYBRID_GLM5),
     # ─── OpenAI / Anthropic reasoners (dedicated SKUs) ────
-    ("openai", "o3*", _PURE_REASONER),
-    ("openai", "o4-*", _PURE_REASONER),
+    ("openai", "o3*", _PURE_REASONER_EFFORT),
+    ("openai", "o4-*", _PURE_REASONER_EFFORT),
 ]
 
 
@@ -193,6 +206,7 @@ def _merge_reasoning(base: ReasoningProfile, override: Any) -> ReasoningProfile:
         hybrid=bool(override.get("hybrid", base.hybrid)),
         default=str(override.get("default", base.default)),
         tool_call_safe=bool(override.get("tool_call_safe", base.tool_call_safe)),
+        supports_effort=bool(override.get("supports_effort", base.supports_effort)),
         enable=dict(override.get("enable") or base.enable),
         disable=dict(override.get("disable") or base.disable),
         preferred_effort=cleaned_effort,
@@ -225,9 +239,9 @@ def desired_thinking_state(*, profile: ModelProfile, policy: dict[str, Any] | No
     """Return ``"on"`` or ``"off"`` — the wire-level thinking phase to request.
 
     Mode rules:
-      * ``mode=thinking`` → ``"on"`` when the profile says it's safe; otherwise
-        ``"off"`` to avoid 400s on hybrid models that need ``reasoning_content``
-        round-trip the harness doesn't ship yet.
+      * ``mode=thinking`` → ``"on"`` whenever the model exposes a reasoning
+        phase. This is an explicit user opt-in, so ``tool_call_safe`` does not
+        veto it; that flag only governs the silent-default path below.
       * ``mode=flash`` → always ``"off"`` (the flash branch may also have routed
         to ``flash_alternative`` earlier in the runner).
       * Otherwise → fall back to the profile's ``default``.
@@ -235,7 +249,7 @@ def desired_thinking_state(*, profile: ModelProfile, policy: dict[str, Any] | No
     mode = str((policy or {}).get("mode") or "").strip().lower()
     reasoning = profile.reasoning
     if mode == "thinking":
-        return "on" if reasoning.tool_call_safe else "off"
+        return "on" if reasoning.supported else "off"
     if mode == "flash":
         return "off"
     return reasoning.default if reasoning.default in ("on", "off") else "off"
@@ -260,6 +274,45 @@ def apply_reasoning_payload(
         model_settings["extra_body"] = {**existing, **eb_override}
     suffix = payload.get("system_suffix")
     return suffix if isinstance(suffix, str) and suffix else None
+
+
+def apply_reasoning_settings(
+    *,
+    profile: ModelProfile,
+    model_settings: dict[str, Any],
+    reasoning_payload: dict[str, Any],
+    thinking_state: str,
+    run_effort: str | None,
+) -> None:
+    """Fold a resolved reasoning profile into ``model_settings`` in place.
+
+    This is the runtime-enforcement counterpart to ``resolve_profile``:
+
+      * ``supported=false`` models pass an empty ``reasoning_payload`` and
+        never receive a ``reasoning_effort`` knob.
+      * ``reasoning_effort`` (operator-preferred or per-run ``run_effort``)
+        is applied only when the model both supports a thinking phase and
+        accepts the strength knob (``supports_effort``); otherwise any
+        effort the payload introduced is stripped.
+      * Tool-call-unsafe hybrids drop ``reasoning_effort`` whenever
+        thinking is off so the wire request stays valid across tool calls.
+
+    ``reasoning_payload`` is the already-selected ``enable`` / ``disable``
+    dict (empty when the model has no thinking phase); ``run_effort`` is
+    the per-run effort the caller resolved from policy + user intent.
+    """
+    reasoning = profile.reasoning
+    if reasoning_payload:
+        apply_reasoning_payload(model_settings=model_settings, payload=reasoning_payload)
+    if reasoning.supported and reasoning.supports_effort:
+        if reasoning.preferred_effort:
+            model_settings["reasoning_effort"] = reasoning.preferred_effort
+        if run_effort is not None:
+            model_settings["reasoning_effort"] = run_effort
+    else:
+        model_settings.pop("reasoning_effort", None)
+    if thinking_state == "off" and reasoning.hybrid and not reasoning.tool_call_safe:
+        model_settings.pop("reasoning_effort", None)
 
 
 async def load_provider_model_metadata(

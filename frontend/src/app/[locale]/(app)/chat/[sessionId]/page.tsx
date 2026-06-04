@@ -51,6 +51,7 @@ import {
 } from "@/lib/chat-transport";
 import { switchActiveWorkspace } from "@/lib/workspace";
 import { useAuthStore } from "@/stores/auth-store";
+import { useComposerPrefsStore } from "@/stores/composer-prefs-store";
 import { usePendingPromptStore } from "@/stores/pending-prompt-store";
 import { useRenderedMessages } from "@/hooks/use-rendered-messages";
 import { useSessionControl } from "@/hooks/use-session-control";
@@ -314,7 +315,10 @@ export default function ChatSessionPage({
     transportSessionRef.current = sessionId;
     transportRef.current = new SenHarnessWsTransport({
       sessionId,
-      mode: "flash",
+      // Seed from the persisted composer mode so the first frame after a
+      // /chat/new redirect matches the user's pick instead of flash. The
+      // pending-prompt bridge and per-send setMode still override below.
+      mode: useComposerPrefsStore.getState().mode,
       onControlEvent: (ev: ControlEvent) => onControlEventRef.current(ev),
       onRunIdAssigned: (id) => onRunIdAssignedRef.current(id),
       onSocketOpening: () => setWsPhaseRef.current("connecting"),

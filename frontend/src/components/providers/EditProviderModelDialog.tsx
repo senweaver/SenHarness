@@ -7,6 +7,7 @@ import {
   IconChevronDown,
   IconChevronRight,
   IconLoader2,
+  IconLock,
 } from "@tabler/icons-react";
 import {
   Dialog,
@@ -16,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,9 +32,15 @@ import { Switch } from "@/components/ui/switch";
 import {
   useResolvedModelProfile,
   useUpdateProviderModel,
+  type ProviderModelUpdate,
   type ReasoningEffort,
 } from "@/hooks/use-providers";
 import { CAPABILITY_META, CAP_DISPLAY_ORDER } from "./_modelMeta";
+import {
+  archetypeOf,
+  reasoningFromArchetype,
+  type Archetype,
+} from "./reasoning-archetype";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -49,23 +57,24 @@ interface Props {
 type EffortSelection = "off" | ReasoningEffort;
 
 interface ReasoningFormState {
-  supported: boolean;
+  archetype: Archetype;
   effort: EffortSelection;
   default: "on" | "off";
-  hybrid: boolean;
+  supportsEffort: boolean;
   toolCallSafe: boolean;
   flashAlternative: string;
 }
 
 const DEFAULT_STATE: ReasoningFormState = {
-  supported: false,
+  archetype: "none",
   effort: "medium",
   default: "off",
-  hybrid: false,
+  supportsEffort: false,
   toolCallSafe: true,
   flashAlternative: "",
 };
 
+const ARCHETYPE_ORDER: Archetype[] = ["none", "always", "hybrid"];
 const EFFORT_ORDER: EffortSelection[] = ["off", "low", "medium", "high"];
 
 export function EditProviderModelDialog({
@@ -94,6 +103,7 @@ export function EditProviderModelDialog({
   );
   const [form, setForm] = useState<ReasoningFormState>(DEFAULT_STATE);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [overridden, setOverridden] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -101,6 +111,7 @@ export function EditProviderModelDialog({
     setCtx(initialContextWindow != null ? String(initialContextWindow) : "");
     setCaps(new Set(initialCapabilities.map((c) => c.toLowerCase())));
     setAdvancedOpen(false);
+    setOverridden(false);
   }, [open, initialLabel, initialContextWindow, initialCapabilities]);
 
   useEffect(() => {
@@ -112,14 +123,19 @@ export function EditProviderModelDialog({
         ? resolved.data.preferred_effort
         : "off";
     setForm({
-      supported: resolved.data.supported,
+      archetype: archetypeOf(resolved.data.supported, resolved.data.hybrid),
       effort,
       default: resolved.data.default === "on" ? "on" : "off",
-      hybrid: resolved.data.hybrid,
+      supportsEffort: resolved.data.supports_effort,
       toolCallSafe: resolved.data.tool_call_safe,
       flashAlternative: resolved.data.flash_alternative ?? "",
     });
   }, [resolved.data]);
+
+  // Builtin-recognized models open read-only so operators don't
+  // accidentally break a curated catalog entry — the "Override" button
+  // unlocks editing for the rare custom case.
+  const isBuiltinLocked = resolved.data?.source === "builtin" && !overridden;
 
   function toggleCap(cap: string) {
     setCaps((prev) => {
@@ -136,13 +152,17 @@ export function EditProviderModelDialog({
     // ``enable`` / ``disable`` wire payloads from this UI. Backend
     // ``_merge_reasoning`` falls back to the builtin enable/disable
     // when the override doesn't provide them.
+    const { supported, hybrid } = reasoningFromArchetype(form.archetype);
     const reasoning: Record<string, unknown> = {
-      supported: form.supported,
-      hybrid: form.hybrid,
-      default: form.default,
+      supported,
+      hybrid,
+      default: hybrid ? form.default : supported ? "on" : "off",
       tool_call_safe: form.toolCallSafe,
+      supports_effort: form.supportsEffort,
       preferred_effort:
-        form.supported && form.effort !== "off" ? form.effort : null,
+        supported && form.supportsEffort && form.effort !== "off"
+          ? form.effort
+          : null,
     };
     const profile: Record<string, unknown> = { reasoning };
     const trimmedFlash = form.flashAlternative.trim();
@@ -156,16 +176,25 @@ export function EditProviderModelDialog({
       toast.error(t("errors.invalidContext"));
       return;
     }
+    // Keep the ``reasoning`` capability badge in lockstep with the
+    // chosen archetype so the model list reflects the same single
+    // source of truth the runner reads.
+    const nextCaps = new Set(caps);
+    if (form.archetype === "none") nextCaps.delete("reasoning");
+    else nextCaps.add("reasoning");
+    const patch: ProviderModelUpdate = {
+      label: label.trim() || null,
+      context_window: ctxNum,
+      capabilities: Array.from(nextCaps),
+    };
+    // A builtin-recognized row stays catalog-managed: only persist a
+    // reasoning override once the operator explicitly unlocked it, so
+    // editing the label alone doesn't freeze a stale profile snapshot.
+    if (!isBuiltinLocked) {
+      patch.metadata_json = { profile: buildProfilePatch() };
+    }
     try {
-      await update.mutateAsync({
-        modelId,
-        patch: {
-          label: label.trim() || null,
-          context_window: ctxNum,
-          capabilities: Array.from(caps),
-          metadata_json: { profile: buildProfilePatch() },
-        },
-      });
+      await update.mutateAsync({ modelId, patch });
       toast.success(t("editSuccess"));
       onOpenChange(false);
     } catch {
@@ -277,57 +306,101 @@ export function EditProviderModelDialog({
                   {tReasoning("sectionTitle")}
                 </Label>
                 <p className="text-[11px] text-muted-foreground">
-                  {tReasoning("supportedHint")}
+                  {tReasoning("archetypeHint")}
                 </p>
               </div>
-              <Switch
-                checked={form.supported}
-                disabled={reasoningLoading}
-                onCheckedChange={(v) =>
-                  setForm((prev) => ({ ...prev, supported: v }))
-                }
-              />
+              {isBuiltinLocked ? (
+                <Badge variant="outline" className="shrink-0 gap-1 text-[10px]">
+                  <IconLock className="size-3" />
+                  {tReasoning("lockedBadge")}
+                </Badge>
+              ) : null}
             </div>
 
-            {form.supported ? (
-              <div className="space-y-3 border-t pt-3">
-                <div className="space-y-1.5">
-                  <Label className="text-[12px]">
-                    {tReasoning("effortLabel")}
-                  </Label>
-                  <div
-                    className="inline-flex w-full overflow-hidden rounded-md border bg-card"
-                    role="radiogroup"
+            <div
+              className="inline-flex w-full overflow-hidden rounded-md border bg-card"
+              role="radiogroup"
+              aria-label={tReasoning("archetypeLabel")}
+            >
+              {ARCHETYPE_ORDER.map((value) => {
+                const isOn = form.archetype === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={isOn}
+                    disabled={reasoningLoading || isBuiltinLocked}
+                    onClick={() =>
+                      setForm((prev) => ({ ...prev, archetype: value }))
+                    }
+                    className={cn(
+                      "flex-1 px-2 py-1.5 text-[12px] font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
+                      isOn
+                        ? "bg-primary/15 text-foreground"
+                        : "text-muted-foreground hover:bg-muted/50",
+                    )}
                   >
-                    {EFFORT_ORDER.map((value) => {
-                      const isOn = form.effort === value;
-                      return (
-                        <button
-                          key={value}
-                          type="button"
-                          role="radio"
-                          aria-checked={isOn}
-                          onClick={() =>
-                            setForm((prev) => ({ ...prev, effort: value }))
-                          }
-                          className={cn(
-                            "flex-1 px-2 py-1 text-[12px] font-medium transition",
-                            isOn
-                              ? "bg-primary/15 text-foreground"
-                              : "text-muted-foreground hover:bg-muted/50",
-                          )}
-                        >
-                          {tReasoning(`effort.${value}`)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    {tReasoning("effortHint")}
-                  </p>
-                </div>
+                    {tReasoning(`archetype.${value}`)}
+                  </button>
+                );
+              })}
+            </div>
 
-                {form.hybrid ? (
+            {isBuiltinLocked ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setOverridden(true)}
+              >
+                {tReasoning("overrideCta")}
+              </Button>
+            ) : null}
+
+            {form.archetype !== "none" ? (
+              <div className="space-y-3 border-t pt-3">
+                {form.supportsEffort ? (
+                  <div className="space-y-1.5">
+                    <Label className="text-[12px]">
+                      {tReasoning("effortLabel")}
+                    </Label>
+                    <div
+                      className="inline-flex w-full overflow-hidden rounded-md border bg-card"
+                      role="radiogroup"
+                    >
+                      {EFFORT_ORDER.map((value) => {
+                        const isOn = form.effort === value;
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            role="radio"
+                            aria-checked={isOn}
+                            disabled={isBuiltinLocked}
+                            onClick={() =>
+                              setForm((prev) => ({ ...prev, effort: value }))
+                            }
+                            className={cn(
+                              "flex-1 px-2 py-1 text-[12px] font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
+                              isOn
+                                ? "bg-primary/15 text-foreground"
+                                : "text-muted-foreground hover:bg-muted/50",
+                            )}
+                          >
+                            {tReasoning(`effort.${value}`)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      {tReasoning("effortHint")}
+                    </p>
+                  </div>
+                ) : null}
+
+                {form.archetype === "hybrid" ? (
                   <div className="flex items-center justify-between gap-3">
                     <div className="space-y-0.5">
                       <Label className="text-[12px]">
@@ -339,6 +412,7 @@ export function EditProviderModelDialog({
                     </div>
                     <Select
                       value={form.default}
+                      disabled={isBuiltinLocked}
                       onValueChange={(value) =>
                         setForm((prev) => ({
                           ...prev,
@@ -381,23 +455,6 @@ export function EditProviderModelDialog({
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-0.5">
                     <Label className="text-[12px]">
-                      {tReasoning("hybridLabel")}
-                    </Label>
-                    <p className="text-[11px] text-muted-foreground">
-                      {tReasoning("hybridHint")}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={form.hybrid}
-                    disabled={!form.supported}
-                    onCheckedChange={(v) =>
-                      setForm((prev) => ({ ...prev, hybrid: v }))
-                    }
-                  />
-                </div>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-0.5">
-                    <Label className="text-[12px]">
                       {tReasoning("toolCallSafeLabel")}
                     </Label>
                     <p className="text-[11px] text-muted-foreground">
@@ -406,7 +463,7 @@ export function EditProviderModelDialog({
                   </div>
                   <Switch
                     checked={form.toolCallSafe}
-                    disabled={!form.supported}
+                    disabled={form.archetype === "none" || isBuiltinLocked}
                     onCheckedChange={(v) =>
                       setForm((prev) => ({ ...prev, toolCallSafe: v }))
                     }
