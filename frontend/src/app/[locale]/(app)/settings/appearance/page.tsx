@@ -43,12 +43,11 @@ export default function AppearanceSettingsPage() {
   const setCollapsed = useSidebarStore((s) => s.setCollapsed);
 
   const switchLocale = (target: Locale) => {
-    const parts = pathname.split("/").filter(Boolean);
-    if (parts[0] && (locales as readonly string[]).includes(parts[0])) {
-      parts.shift();
-    }
-    const rest = parts.join("/");
-    router.push(`/${target}${rest ? "/" + rest : ""}`);
+    // ``usePathname`` from next-intl is already locale-stripped and
+    // ``router.push`` re-applies the prefix per ``localePrefix``. Passing
+    // the ``locale`` option lets next-intl swap the prefix correctly;
+    // hand-building ``/${target}/...`` double-prefixed the path.
+    router.push(pathname, { locale: target });
   };
 
   return (

@@ -53,10 +53,12 @@ export function useNotifications(opts: NotificationListFilters = {}) {
       opts.urgency ?? null,
       trimmedQ ?? null,
     ],
-    queryFn: () =>
-      api.get<NotificationRead[]>(
+    queryFn: async () => {
+      const rows = await api.get<NotificationRead[]>(
         `/api/v1/notifications?${params.toString()}`,
-      ),
+      );
+      return rows;
+    },
     enabled: Boolean(tok && ws) && (opts.enabled ?? true),
     refetchInterval: opts.refetchIntervalMs ?? 60_000,
   });
@@ -82,8 +84,12 @@ export function useUnreadNotificationCount(opts?: { enabled?: boolean }) {
   const ws = useWorkspaceStore((s) => s.activeWorkspaceId);
   return useQuery<UnreadNotificationCount>({
     queryKey: ["notifications", "unread-count", ws],
-    queryFn: () =>
-      api.get<UnreadNotificationCount>("/api/v1/notifications/unread-count"),
+    queryFn: async () => {
+      const res = await api.get<UnreadNotificationCount>(
+        "/api/v1/notifications/unread-count",
+      );
+      return res;
+    },
     enabled: Boolean(tok && ws) && (opts?.enabled ?? true),
     refetchInterval: 30_000,
   });
@@ -113,13 +119,46 @@ export function useMarkNotificationUnread() {
 
 export function useMarkAllNotificationsRead() {
   const qc = useQueryClient();
-  return useMutation<{ marked: number }>({
+  const ws = useWorkspaceStore((s) => s.activeWorkspaceId);
+  return useMutation<
+    { marked: number },
+    unknown,
+    void,
+    { prev: Array<[readonly unknown[], unknown]> }
+  >({
     mutationFn: () =>
       api.post<{ marked: number }>(
         "/api/v1/notifications/mark-all-read",
         {},
       ),
-    onSuccess: () => {
+    // Optimistically flip every cached row to read + zero the badge so the
+    // bell/inbox update on click instead of after the mutation resolves and
+    // two refetch round-trips land. The list query is array-shaped; the
+    // unread-count + detail queries are objects, so the array guard leaves
+    // them untouched and we set the count explicitly.
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ["notifications"] });
+      const prev = qc.getQueriesData({ queryKey: ["notifications"] });
+      const now = new Date().toISOString();
+      qc.setQueriesData<NotificationRead[]>(
+        { queryKey: ["notifications"] },
+        (old) =>
+          Array.isArray(old)
+            ? old.map((n) => (n.read_at ? n : { ...n, read_at: now }))
+            : old,
+      );
+      qc.setQueryData<UnreadNotificationCount>(
+        ["notifications", "unread-count", ws],
+        { unread: 0 },
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      for (const [key, data] of ctx?.prev ?? []) {
+        qc.setQueryData(key, data);
+      }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ["notifications"] });
     },
   });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   IconChevronDown,
   IconChevronUp,
@@ -37,6 +37,7 @@ export function SessionGoalBanner({
   className,
 }: SessionGoalBannerProps) {
   const t = useTranslations("sessionGoal");
+  const locale = useLocale();
   const goalQ = useActiveSessionGoal(sessionId);
   const unlock = useUnlockGoal();
   const [collapsed, setCollapsed] = useState(false);
@@ -77,7 +78,7 @@ export function SessionGoalBanner({
                   value: goal.alignment_threshold.toFixed(2),
                 })}
               </span>
-              <span>{t("lockedAt", { when: relativeTime(goal.locked_at) })}</span>
+              <span>{t("lockedAt", { when: relativeTime(goal.locked_at, locale) })}</span>
               {goal.success_criteria.length > 0 ? (
                 <ul className="ml-2 list-disc pl-4 text-xs leading-tight">
                   {goal.success_criteria.map((c, i) => (

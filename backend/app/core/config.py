@@ -209,6 +209,13 @@ class Settings(BaseSettings):
     # seconds past lifespan exit we call ``os._exit(0)`` to release the
     # port unconditionally. Set to ``0`` to disable.
     WORKER_FORCE_EXIT_GRACE_S: float = 5.0
+    # Hard cap on uvicorn's own "Waiting for background tasks to complete"
+    # phase, which runs *before* lifespan shutdown (so the os._exit timer
+    # above can't help there). A single connection task that never
+    # observes the peer closing — e.g. a send-only websocket blocked on a
+    # queue — would otherwise pin the worker forever and stall ``--reload``.
+    # After this many seconds uvicorn cancels the stragglers and proceeds.
+    UVICORN_GRACEFUL_SHUTDOWN_TIMEOUT_S: int = 10
 
     # ─── GC (B2) ──────────────────────────────────────────
     # Retention windows for the nightly garbage collector. Soft-deleted rows

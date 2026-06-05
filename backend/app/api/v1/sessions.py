@@ -1290,6 +1290,16 @@ async def session_ws(websocket: WebSocket, session_id: uuid.UUID) -> None:
                         log.exception("kernel cancel failed")
                 if turn_task is not None and not turn_task.done():
                     turn_task.cancel()
+                    # Await the cancelled turn so it fully unwinds before we
+                    # read the next frame. Without this a quick stop→resend
+                    # races the cooperative cancel: the new user_message would
+                    # observe ``not turn_task.done()`` and be rejected with
+                    # ``session.turn_busy``.
+                    try:
+                        await turn_task
+                    except (asyncio.CancelledError, Exception):
+                        pass
+                turn_task = None
 
                 # Inform the streaming client that the turn is over so the
                 # ``ReadableStream`` controller closes and the composer's

@@ -11,9 +11,10 @@
  *   - system    → muted single-line strip (rare; warning-only).
  */
 
-import { IconRobot, IconUser } from "@tabler/icons-react";
+import { IconUser } from "@tabler/icons-react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 import { cn } from "@/lib/utils";
 
 type MessageRole = "user" | "assistant" | "system" | "tool";
@@ -80,7 +81,18 @@ function MessageAvatar({
   authorName?: string | null;
   avatarUrl?: string | null;
 }) {
-  const isUser = role === "user";
+  if (role !== "user") {
+    // Reuse the same agent avatar (image or themed initial) shown in the
+    // chat header / switcher so the conversation thread stays consistent.
+    return (
+      <AgentAvatar
+        name={authorName}
+        avatarUrl={avatarUrl}
+        className="size-7"
+        fallbackClassName="text-[12px]"
+      />
+    );
+  }
   if (avatarUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -93,16 +105,11 @@ function MessageAvatar({
   }
   return (
     <div
-      className={cn(
-        "flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full",
-        isUser
-          ? "sh-primary"
-          : "bg-[rgb(var(--color-primary))]/10 text-[rgb(var(--color-primary))]",
-      )}
+      className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full sh-primary"
       title={authorName ?? undefined}
       aria-hidden="true"
     >
-      {isUser ? <IconUser className="size-3.5" /> : <IconRobot className="size-3.5" />}
+      <IconUser className="size-3.5" />
     </div>
   );
 }

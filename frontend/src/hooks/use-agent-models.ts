@@ -46,8 +46,12 @@ export function useAgentModels(agentId: string | null | undefined) {
   const ws = useWorkspaceStore((s) => s.activeWorkspaceId);
   return useQuery<AgentModelsResponse>({
     queryKey: ["agents", agentId, "models", ws],
-    queryFn: () =>
-      api.get<AgentModelsResponse>(`/api/v1/agents/${agentId}/models`),
+    queryFn: async () => {
+      const res = await api.get<AgentModelsResponse>(
+        `/api/v1/agents/${agentId}/models`,
+      );
+      return res;
+    },
     enabled: Boolean(token && ws && agentId),
     staleTime: 5 * 60_000,
   });

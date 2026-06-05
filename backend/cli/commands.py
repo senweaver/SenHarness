@@ -64,6 +64,7 @@ def server_run(host: str | None, port: int | None, reload: bool | None) -> None:
         "port": port or settings.BACKEND_PORT,
         "reload": use_reload,
         "access_log": settings.APP_DEBUG,
+        "timeout_graceful_shutdown": settings.UVICORN_GRACEFUL_SHUTDOWN_TIMEOUT_S,
     }
     if use_reload:
         from pathlib import Path

@@ -339,11 +339,33 @@ export default function ChatSessionPage({
     };
   }, [sessionId]);
 
-  // ─── 4) Bind a Chat instance — must be created exactly once per session. ───
-  const chat = useMemo(
-    () => new Chat<UIMessage>({ id: sessionId, transport, messages: [] }),
-    [sessionId, transport],
-  );
+  // ─── 4) Bind a Chat instance — exactly once per session id. ───
+  // The transport may be recreated (Strict Mode remount, reconnect) without
+  // churning the chat: ``useChat`` only re-subscribes its message store when
+  // ``chat.id`` changes, so a fresh Chat for the same session orphans the
+  // subscription and leaves restored history invisible until a hard reload.
+  // Re-point the transport on the existing chat instead.
+  const chatBindingRef = useRef<{
+    sessionId: string;
+    chat: Chat<UIMessage>;
+  } | null>(null);
+  if (
+    !chatBindingRef.current ||
+    chatBindingRef.current.sessionId !== sessionId
+  ) {
+    chatBindingRef.current = {
+      sessionId,
+      chat: new Chat<UIMessage>({ id: sessionId, transport, messages: [] }),
+    };
+  } else {
+    const bound = chatBindingRef.current.chat as unknown as {
+      transport: unknown;
+    };
+    if (bound.transport !== transport) {
+      bound.transport = transport;
+    }
+  }
+  const chat = chatBindingRef.current.chat;
 
   const {
     messages: rawMessages,
@@ -622,7 +644,14 @@ export default function ChatSessionPage({
             const isStreamingThis =
               isLast && status === "streaming" && m.role === "assistant";
             return (
-              <Message key={m.id} role={m.role}>
+              <Message
+                key={m.id}
+                role={m.role}
+                authorName={m.role === "assistant" ? agentQ.data?.name : undefined}
+                avatarUrl={
+                  m.role === "assistant" ? agentQ.data?.avatar_url : undefined
+                }
+              >
                 {(m.parts ?? []).map((part, idx) => {
                   const type = (part as { type?: string }).type ?? "";
                   if (type === "attachment") {

@@ -10,6 +10,7 @@ limit per the M0 cross-cutting checklist.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import uuid
 
 from fastapi import APIRouter, Depends, Query, WebSocket
@@ -277,14 +278,36 @@ async def notifications_ws(websocket: WebSocket) -> None:
 
     await websocket.accept()
     queue = await notif_svc.NOTIFICATION_HUB.subscribe(workspace_id, identity_id)
+
+    # This socket only writes (push events + keepalive ping); it never
+    # reads. A send-only loop can't observe the peer — or uvicorn's
+    # graceful-shutdown close — until its next write fails, which would
+    # stall worker shutdown / ``--reload`` by up to the ping interval.
+    # Race a ``receive()`` detector so a disconnect ends the loop at once.
+    async def _wait_disconnect() -> None:
+        with contextlib.suppress(Exception):
+            while True:
+                await websocket.receive()
+
+    disconnect_task = asyncio.create_task(_wait_disconnect())
     try:
         while True:
-            try:
-                payload = await asyncio.wait_for(queue.get(), timeout=20.0)
-                await websocket.send_json(payload)
-            except TimeoutError:
+            get_task = asyncio.create_task(queue.get())
+            done, _ = await asyncio.wait(
+                {get_task, disconnect_task},
+                timeout=20.0,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if disconnect_task in done:
+                get_task.cancel()
+                break
+            if get_task in done:
+                await websocket.send_json(get_task.result())
+            else:
+                get_task.cancel()
                 await websocket.send_json({"type": "ping"})
     except Exception:
         pass
     finally:
+        disconnect_task.cancel()
         await notif_svc.NOTIFICATION_HUB.unsubscribe(workspace_id, identity_id, queue)

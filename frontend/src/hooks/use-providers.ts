@@ -1,9 +1,29 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useWorkspaceStore } from "@/stores/workspace-store";
+
+/**
+ * Editing a provider's model pool changes what the chat composer can
+ * offer, so refresh the per-agent model lists (``["agents", id,
+ * "models", ws]``) and the workspace-wide probe (``["workspace-models"]``)
+ * alongside the provider-models cache. Without this the composer keeps
+ * its 5-minute-cached list until a full reload.
+ */
+function invalidateChatModelCaches(qc: QueryClient): void {
+  qc.invalidateQueries({
+    predicate: (q) =>
+      q.queryKey[0] === "agents" && q.queryKey[2] === "models",
+  });
+  qc.invalidateQueries({ queryKey: ["workspace-models"] });
+}
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -291,6 +311,7 @@ export function useAddProviderModel(providerId: string) {
       ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["provider-models", providerId] });
+      invalidateChatModelCaches(qc);
     },
   });
 }
@@ -309,6 +330,7 @@ export function useUpdateProviderModel(providerId: string) {
       ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["provider-models", providerId] });
+      invalidateChatModelCaches(qc);
     },
   });
 }
@@ -320,6 +342,7 @@ export function useDeleteProviderModel(providerId: string) {
       api.delete(`/api/v1/providers/${providerId}/models/${modelId}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["provider-models", providerId] });
+      invalidateChatModelCaches(qc);
     },
   });
 }
@@ -334,6 +357,7 @@ export function useReorderProviderModels(providerId: string) {
       ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["provider-models", providerId] });
+      invalidateChatModelCaches(qc);
     },
   });
 }
@@ -360,6 +384,7 @@ export function useApplyDiscoveredModels(providerId: string) {
       ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["provider-models", providerId] });
+      invalidateChatModelCaches(qc);
     },
   });
 }

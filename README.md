@@ -1,9 +1,5 @@
 # SenHarness
 
-<p align="center">
-  <img src="assets/hero-demo.gif" alt="SenHarness 30-second demo" width="720">
-</p>
-
 > **Production-ready, multi-tenant runtime for enterprise AI agents.** One binary serves a single team on-prem (`docker compose up`) or thousands of tenants in SaaS — under MIT license, no AGPL trap, no patent clauses, no "open core" gatekeeping. The whole runtime is in this repository.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -34,34 +30,10 @@ Provider failover keeps the prompt-cache prefix stable across providers, so swap
 
 ## See it in action
 
-<table>
-<tr>
-<td width="50%">
-<img src="assets/screenshot-chat.png" alt="Chat with goal lock">
+<p align="center">
+  <img src="assets/screenshot-chat.png" alt="Chat with goal lock" width="720">
+</p>
 <p align="center"><b>Chat with goal lock</b><br>Slash commands (<code>/goal</code>, <code>/insights</code>), per-message alignment scoring against a locked north-star, and an evidence trail every assistant turn can link back to.</p>
-</td>
-<td width="50%">
-<img src="assets/screenshot-skills.png" alt="Skill self-evolution">
-<p align="center"><b>Skill self-evolution</b><br>9-state lifecycle, immutable version snapshots, evolver-proposed patches with admin approval, unified diff viewer per release, and one-click rollback.</p>
-</td>
-</tr>
-<tr>
-<td width="50%">
-<img src="assets/screenshot-runtime.png" alt="Runtime console">
-<p align="center"><b>Runtime console</b><br>See every running agent across the workspace, inspect heartbeats and provider routing, force-recycle stuck runs without restarting the backend.</p>
-</td>
-<td width="50%">
-<img src="assets/screenshot-approvals.png" alt="Approval queue">
-<p align="center"><b>Approval queue</b><br>Skill drafts, cron-job proposals, and hub promotions all land here with diffs, sanitized payloads, and per-resource TTLs before anything ships.</p>
-</td>
-</tr>
-<tr>
-<td colspan="2">
-<img src="assets/screenshot-notifications.png" alt="Notification UX" width="100%">
-<p align="center"><b>Notification UX</b><br>19 event types · in-app inbox + email · quiet hours · per-event preferences · stable audit chain · search and deep-link into the source — operators see signal, not spam.</p>
-</td>
-</tr>
-</table>
 
 ---
 

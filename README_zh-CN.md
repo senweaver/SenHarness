@@ -1,9 +1,5 @@
 # SenHarness
 
-<p align="center">
-  <img src="assets/hero-demo.gif" alt="SenHarness 30 秒演示" width="720">
-</p>
-
 > **企业级多租户 AI Agent 运行时。** 一份代码同时支持单团队私有部署（`docker compose up`）和 SaaS 跨千租户运营 —— MIT 许可，没有 AGPL 传染陷阱、没有 patent clause、没有 "open core" 套娃。整个运行时全在这个仓库里。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -34,34 +30,10 @@ provider failover 切换时 prompt cache prefix 不变 —— 换底层模型不
 
 ## 产品截图
 
-<table>
-<tr>
-<td width="50%">
-<img src="assets/screenshot-chat.png" alt="带目标锁的 Chat">
+<p align="center">
+  <img src="assets/screenshot-chat.png" alt="带目标锁的 Chat" width="720">
+</p>
 <p align="center"><b>带目标锁的 Chat</b><br>Slash 命令（<code>/goal</code>、<code>/insights</code>），按消息打 alignment 分对齐锁定的 north-star，每条 assistant 回复都能跳回支撑证据。</p>
-</td>
-<td width="50%">
-<img src="assets/screenshot-skills.png" alt="技能自演化">
-<p align="center"><b>技能自演化</b><br>9 状态生命周期、不可变版本快照、evolver 提议补丁 + admin 审批、统一 diff 视图、一键 rollback。</p>
-</td>
-</tr>
-<tr>
-<td width="50%">
-<img src="assets/screenshot-runtime.png" alt="运行时控制台">
-<p align="center"><b>运行时控制台</b><br>看见整个工作区跑着的所有 agent、检查心跳与 provider 路由、不重启后端就强制回收卡死的 run。</p>
-</td>
-<td width="50%">
-<img src="assets/screenshot-approvals.png" alt="审批队列">
-<p align="center"><b>审批队列</b><br>技能草案、定时任务提议、hub 发布申请都汇聚在这里，diff、脱敏 payload、按 resource_type 的 TTL 一应俱全。</p>
-</td>
-</tr>
-<tr>
-<td colspan="2">
-<img src="assets/screenshot-notifications.png" alt="通知 UX" width="100%">
-<p align="center"><b>通知 UX</b><br>19 种事件 · 站内信 + 邮件 · 静默时段 · 按事件偏好 · 完整 audit 链 · 搜索 + 深度跳转 —— 运营者看到信号，不看到噪声。</p>
-</td>
-</tr>
-</table>
 
 ---
 

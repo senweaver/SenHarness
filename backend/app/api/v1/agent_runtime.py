@@ -305,9 +305,30 @@ async def agent_runtime_ws(websocket: WebSocket) -> None:
 
     forwarders = [asyncio.create_task(_forward(q)) for _, q in queues]
 
+    # This socket only ever writes (on bus events); it never reads. A
+    # send-only loop blocked on ``fan_in.get()`` would never observe the
+    # peer closing — including uvicorn's graceful-shutdown close — so the
+    # connection task hangs and stalls worker shutdown / ``--reload``.
+    # Drain ``receive()`` concurrently so a disconnect (client or server)
+    # unblocks the loop reactively and stops stalling worker shutdown.
+    async def _wait_disconnect() -> None:
+        with contextlib.suppress(WebSocketDisconnect, RuntimeError):
+            while True:
+                await websocket.receive()
+
+    disconnect_task = asyncio.create_task(_wait_disconnect())
+
     try:
         while True:
-            event = await fan_in.get()
+            get_task = asyncio.create_task(fan_in.get())
+            done, _ = await asyncio.wait(
+                {get_task, disconnect_task},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if disconnect_task in done:
+                get_task.cancel()
+                break
+            event = get_task.result()
             try:
                 await websocket.send_text(json.dumps(event))
             except (WebSocketDisconnect, RuntimeError):
@@ -315,6 +336,7 @@ async def agent_runtime_ws(websocket: WebSocket) -> None:
     except WebSocketDisconnect:
         pass
     finally:
+        disconnect_task.cancel()
         for t in forwarders:
             t.cancel()
         for ws_id, q in queues:
