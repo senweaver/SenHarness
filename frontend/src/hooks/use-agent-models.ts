@@ -54,6 +54,10 @@ export function useAgentModels(agentId: string | null | undefined) {
     },
     enabled: Boolean(token && ws && agentId),
     staleTime: 5 * 60_000,
+    // The model pool is often edited in a separate browser tab, which has
+    // its own QueryClient — same-tab invalidation can't reach this cache.
+    // Refetch when the chat tab regains focus so edits land without a reload.
+    refetchOnWindowFocus: "always",
   });
 }
 
@@ -80,6 +84,7 @@ export function useWorkspaceModelOptions() {
     },
     enabled: Boolean(token && ws && probeId),
     staleTime: 5 * 60_000,
+    refetchOnWindowFocus: "always",
   });
 }
 
