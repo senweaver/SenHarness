@@ -23,7 +23,7 @@ forwards here.
 | Layer    | Stack                                                                                |
 |----------|--------------------------------------------------------------------------------------|
 | Backend  | Python 3.12 · FastAPI · SQLAlchemy 2 async · Pydantic 2 · pydantic-ai 1.84 · Alembic |
-| Frontend | Next.js 15 · React 19 · TypeScript 5.7 · shadcn/ui · Tailwind 4 · next-intl · pnpm 9 |
+| Frontend | Next.js 16 · React 19 · TypeScript 5.7 · shadcn/ui · Tailwind 4 · next-intl · pnpm 9 |
 | Data     | PostgreSQL + pgvector · Redis                                                        |
 | Runtime  | Docker Compose · APScheduler · arq                                                   |
 

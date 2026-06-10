@@ -2,7 +2,7 @@
 
 ## Stack
 
-Next.js 15 (App Router) · React 19 · TypeScript 5.7 · shadcn/ui (Radix)
+Next.js 16 (App Router) · React 19 · TypeScript 5.7 · shadcn/ui (Radix)
 · Tailwind 4 · next-intl · next-themes · TanStack Query 5 (server state)
 · Zustand 5 (client state) · @xyflow/react · Vitest · Playwright ·
 **pnpm 9** (pinned in `packageManager`).
