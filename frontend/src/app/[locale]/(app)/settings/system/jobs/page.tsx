@@ -103,6 +103,7 @@ export default function BackgroundJobsPage() {
     () =>
       (queueStats.data?.by_function ?? [])
         .map((r) => r.function_name)
+        .filter(Boolean)
         .sort(),
     [queueStats.data],
   );
