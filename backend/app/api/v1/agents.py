@@ -623,6 +623,10 @@ async def list_agent_models(
         )
 
     def _display_for(kind: str, fallback: str) -> str:
+        # Custom OpenAI-compatible providers carry a user-given label on the
+        # provider row; the catalog entry only holds the generic "Custom" name.
+        if kind == "custom":
+            return fallback
         entry = get_provider_entry(kind)
         if entry is None:
             return fallback
