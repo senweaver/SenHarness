@@ -8,8 +8,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { usePathname, useRouter } from "@/lib/navigation";
+import { usePathname } from "@/lib/navigation";
 import { type Locale, locales } from "@/lib/i18n-config";
+import { applyLocale } from "@/lib/locale";
 
 const LABELS: Record<Locale, string> = {
   "en-US": "English",
@@ -18,7 +19,6 @@ const LABELS: Record<Locale, string> = {
 
 export function AuthLocaleSwitcher() {
   const locale = useLocale() as Locale;
-  const router = useRouter();
   const pathname = usePathname() ?? "/";
   const t = useTranslations("avatar");
 
@@ -38,7 +38,8 @@ export function AuthLocaleSwitcher() {
           <DropdownMenuItem
             key={target}
             onSelect={() => {
-              router.replace(pathname, { locale: target });
+              if (target === locale) return;
+              applyLocale(pathname, target);
             }}
             data-testid={`auth-locale-option-${target}`}
             className={target === locale ? "font-semibold" : undefined}

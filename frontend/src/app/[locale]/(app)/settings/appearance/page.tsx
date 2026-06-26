@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "@/lib/navigation";
+import { usePathname } from "@/lib/navigation";
 import {
   IconDeviceDesktop,
   IconLanguage,
@@ -25,6 +25,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/ui/page-header";
 import { locales, type Locale } from "@/lib/i18n-config";
+import { applyLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/stores/sidebar-store";
 
@@ -37,17 +38,13 @@ export default function AppearanceSettingsPage() {
   const t = useTranslations("settings.appearance");
   const { theme, setTheme } = useTheme();
   const locale = useLocale();
-  const router = useRouter();
   const pathname = usePathname() ?? "/";
   const collapsed = useSidebarStore((s) => s.collapsed);
   const setCollapsed = useSidebarStore((s) => s.setCollapsed);
 
   const switchLocale = (target: Locale) => {
-    // ``usePathname`` from next-intl is already locale-stripped and
-    // ``router.push`` re-applies the prefix per ``localePrefix``. Passing
-    // the ``locale`` option lets next-intl swap the prefix correctly;
-    // hand-building ``/${target}/...`` double-prefixed the path.
-    router.push(pathname, { locale: target });
+    if (target === locale) return;
+    applyLocale(pathname, target);
   };
 
   return (

@@ -2,7 +2,7 @@
 
 import { IconLanguage } from "@tabler/icons-react";
 import { useLocale, useTranslations } from "next-intl";
-import { usePathname, useRouter } from "@/lib/navigation";
+import { usePathname } from "@/lib/navigation";
 import {
   DropdownMenuItem,
   DropdownMenuSub,
@@ -10,6 +10,7 @@ import {
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { type Locale } from "@/lib/i18n-config";
+import { applyLocale } from "@/lib/locale";
 
 const LABELS: Record<Locale, string> = {
   "zh-CN": "简体中文",
@@ -20,14 +21,12 @@ const ALL_LOCALES: Locale[] = ["zh-CN", "en-US"];
 
 export function LanguageSubMenu() {
   const locale = useLocale();
-  const router = useRouter();
   const pathname = usePathname() ?? "/";
   const t = useTranslations("avatar");
 
-  // router.push from @/lib/navigation automatically preserves the current
-  // locale. To switch locale we use the `locale` option.
   const switchTo = (target: Locale) => {
-    router.push(pathname, { locale: target });
+    if (target === locale) return;
+    applyLocale(pathname, target);
   };
 
   return (
